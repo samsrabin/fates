@@ -982,7 +982,7 @@ data:
 
 !Hui, this should have higher value for moss and lichen
  fates_leaf_stomatal_intercept = 10000, 10000, 10000, 10000, 10000, 10000, 
-    10000, 10000, 10000, 10000, 10000, 40000, 10000, 10000S ;
+    10000, 10000, 10000, 10000, 10000, 40000, 10000, 10000 ;
 
 !Hui "bb_slop" in code should be high or low for moss and lichen? (bug) C4 plant should have low value???? 
  fates_leaf_stomatal_slope_ballberry = 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 ;
