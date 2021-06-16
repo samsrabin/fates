@@ -2983,7 +2983,17 @@ contains
                       bc_out(s)%fabi_parb(ifp,:), &
                       bc_out(s)%ftdd_parb(ifp,:), &
                       bc_out(s)%ftid_parb(ifp,:), &
-                      bc_out(s)%ftii_parb(ifp,:))
+                      bc_out(s)%ftii_parb(ifp,:), 0)
+                      
+                  call PatchNormanRadiation (currentPatch, &
+                      bc_in(s)%fwet_pa(ifp),              &  ! in
+                      bc_out(s)%albd_parb(ifp,:), &
+                      bc_out(s)%albi_parb(ifp,:), &
+                      bc_out(s)%fabd_parb(ifp,:), &
+                      bc_out(s)%fabi_parb(ifp,:), &
+                      bc_out(s)%ftdd_parb(ifp,:), &
+                      bc_out(s)%ftid_parb(ifp,:), &
+                      bc_out(s)%ftii_parb(ifp,:), 1)
               
               endif ! is there vegetation? 
               
