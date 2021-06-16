@@ -485,7 +485,7 @@ contains
           if(hlm_use_nocomp.eq.itrue)then
              num_new_patches = numpft
              if(hlm_use_sp.eq.itrue)then
-                num_new_patches = numpft + 1 ! bare ground patch in SP mode. 
+                num_new_patches = numpft  ! bare ground patch in SP mode. 
                 start_patch = 0 ! start at the bare ground patch
              endif
              !           allocate(newppft(numpft))
@@ -503,7 +503,7 @@ contains
              else
                 nocomp_pft = fates_unset_int
              end if
-
+             print *, "test_hui:", n, nocomp_pft
              if(hlm_use_nocomp.eq.itrue)then 
                 ! In no competition mode, if we are using the fixed_biogeog filter 
                 ! then each PFT has the area dictated  by the surface dataset.
@@ -512,18 +512,18 @@ contains
                 ! i.e. each grid cell is divided exactly into the number of FATES PFTs.  
 
                 if(hlm_use_fixed_biogeog.eq.itrue)then
-                   newparea = sites(s)%area_pft(nocomp_pft)
+                  if(hlm_use_sp.eq.itrue.and.n.eq.0)then ! bare ground patch
+                     newparea = sites(s)%area_bareground 
+                     nocomp_pft = 0
+                  else
+                     newparea = sites(s)%area_pft(nocomp_pft)
+                  endif
                 else
                    newparea = area / numpft
                 end if
              else  ! The default case is initialized w/ one patch with the area of the whole site. 
                 newparea = area       
              end if  !nocomp mode
-
-             if(hlm_use_sp.eq.itrue.and.n.eq.0)then ! bare ground patch
-                newparea = sites(s)%area_bareground 
-                nocomp_pft = 0
-             end if
 
              if(newparea.gt.0._r8)then ! Stop patches being initilialized when PFT not present in nocomop mode 
                 allocate(newp)
