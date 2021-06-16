@@ -1085,6 +1085,8 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
 
                  ! C3: Product-limited photosynthesis 
                  ap = 3._r8 * tpu
+                 
+                 print *, "test_rad13:", ac, aj, ap
 
               else
 
@@ -1251,6 +1253,21 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
            ! weight per unit sun and sha leaves.
            if(sunsha == 1)then !sunlit       
               psn_out     = psn_out + agross * f_sun_lsl
+              print *, "test_rad8: psn_out, agross, f_sun_lsl=",  psn_out, agross, f_sun_lsl
+              print *, parsun_lsl        ! Absorbed PAR in sunlist leaves
+              print *, parsha_lsl        ! Absorved PAR in shaded leaves
+              print *, laisun_lsl        ! LAI in sunlit leaves
+              print *, laisha_lsl        ! LAI in shaded leaves
+              print *, canopy_area_lsl   ! 
+              print *, ft                ! (plant) Functional Type Index
+              print *, vcmax             ! maximum rate of carboxylation (umol co2/m**2/s)
+              print *, jmax              ! maximum electron transport rate (umol electrons/m**2/s)
+              print *, tpu               ! triose phosphate utilization rate (umol CO2/m**2/s)
+              print *, veg_tempk         ! vegetation temperature
+              print *, veg_esat          ! saturation vapor pressure at veg_tempk (Pa)
+              print *, fwet   ! vegetation intercepted water fraction
+              print *, btran           ! transpiration wetness factor (0 to 1) 
+              
               anet_av_out = anet_av_out + anet * f_sun_lsl
               gstoma  = gstoma + 1._r8/(min(1._r8/gs, rsmax0)) * f_sun_lsl
            else
