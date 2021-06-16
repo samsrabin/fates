@@ -19,6 +19,7 @@ module FatesBstressMod
    use FatesGlobals      , only : fates_log
    use EDBtranMod        , only : check_layer_water
    use FatesAllometryMod , only : set_root_fraction
+   use EDPftvarcon       , only : EDPftvarcon_inst
 
    implicit none
    private
@@ -68,7 +69,12 @@ contains
               do ft = 1,numpft
                  cpatch%bstress_sal_ft(ft) = 0.0_r8
 
-                 call set_root_fraction(sites(s)%rootfrac_scr, ft, sites(s)%zi_soil )
+                 if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+                    sites(s)%rootfrac_scr(:) = 0.0_r8
+                 else
+                   call set_root_fraction(sites(s)%rootfrac_scr, ft, sites(s)%zi_soil )
+                 end if 
+
 
                  do j = 1,bc_in(s)%nlevsoil
                     

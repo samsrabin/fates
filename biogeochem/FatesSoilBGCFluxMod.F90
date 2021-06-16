@@ -505,7 +505,11 @@ contains
                 comp_per_pft(pft) = comp_per_pft(pft) + 1
              end if
              
-             call set_root_fraction(csite%rootfrac_scr, pft, csite%zi_soil)
+             if (EDPftvarcon_inst%stomatal_model(pft) >= 3) then
+                csite%rootfrac_scr(:) = 0.0_r8
+             else
+                call set_root_fraction(csite%rootfrac_scr, pft, csite%zi_soil)
+             end if
              
              fnrt_c   = ccohort%prt%GetState(fnrt_organ, all_carbon_elements)
              
