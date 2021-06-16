@@ -205,6 +205,8 @@ contains
     fates%bc_in(s)%pop_density(:)      = 0.0_r8
     fates%bc_in(s)%solad_parb(:,:)     = 0.0_r8
     fates%bc_in(s)%solai_parb(:,:)     = 0.0_r8
+    fates%bc_in(s)%flx_absdv(:)        = 0.0_r8
+    fates%bc_in(s)%flx_absiv(:)        = 0.0_r8
     fates%bc_in(s)%smp_sl(:)           = 0.0_r8
     fates%bc_in(s)%eff_porosity_sl(:)  = 0.0_r8
     fates%bc_in(s)%watsat_sl(:)        = 0.0_r8
@@ -418,6 +420,8 @@ contains
       ! Radiation
       allocate(bc_in%solad_parb(maxPatchesPerSite,hlm_numSWb))
       allocate(bc_in%solai_parb(maxPatchesPerSite,hlm_numSWb))
+      allocate(bc_in%flx_absdv(maxPatchesPerSite))
+      allocate(bc_in%flx_absiv(maxPatchesPerSite))
       
       ! Hydrology
       allocate(bc_in%smp_sl(nlevsoil_in))
@@ -481,9 +485,9 @@ contains
 
       ! Variables for SP mode. 
       if(hlm_use_sp.eq.itrue) then
-        allocate(bc_in%hlm_sp_tlai(maxpft))
-        allocate(bc_in%hlm_sp_tsai(maxpft))     
-        allocate(bc_in%hlm_sp_htop(maxpft))
+        allocate(bc_in%hlm_sp_tlai(0:maxpft))
+        allocate(bc_in%hlm_sp_tsai(0:maxpft))     
+        allocate(bc_in%hlm_sp_htop(0:maxpft))
       end if 
       return
    end subroutine allocate_bcin

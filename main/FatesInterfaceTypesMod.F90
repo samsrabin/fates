@@ -373,7 +373,12 @@ module FatesInterfaceTypesMod
 
       ! Downwelling diffuse (I-ndirect) radiation (patch,radiation-band) [W/m2]
       real(r8), allocatable :: solai_parb(:,:)
+      
+      ! direct flux absorption factor for bottom snow-soil layer, i.e., top soil layer (patch): VIS [frc]
+      real(r8), allocatable :: flx_absdv(:)  
 
+      ! diffuse flux absorption factor for bottom snow-soil layer, i.e., top soil layer (patch): VIS [frc]
+      real(r8), allocatable :: flx_absiv(:)
       
       ! Nutrient input fluxes (these are integrated fluxes over the day, most
       !                        likely calculated over shorter dynamics steps,
