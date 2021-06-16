@@ -271,8 +271,12 @@ contains
        allocate(rootfr_ft(numpft, bc_in(s)%nlevsoil))
 
        do ft = 1,numpft
-          call set_root_fraction(rootfr_ft(ft,:), ft, &
-               bc_in(s)%zi_sisl)
+         if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+            rootfr_ft(ft,:) = 0.0_r8
+         else
+           call set_root_fraction(rootfr_ft(ft,:), ft, &
+                bc_in(s)%zi_sisl)
+         end if
        end do
 
 
