@@ -1117,6 +1117,8 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
   real(r8)          :: sunlai
   real(r8)          :: shalai
   real(r8)          :: elai
+  real(r8)          :: trd
+  real(r8)          :: tri
   integer           :: CL
   integer           :: FT
   integer           :: iv
@@ -1173,6 +1175,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
 
                     cpatch%ed_laisun_z(CL,ft,iv) = cpatch%elai_profile(CL,ft,iv) * &
                          cpatch%f_sun(CL,ft,iv)
+                    print *, "test_rad9: ed_laisun_z=", cpatch%elai_profile(CL,ft,iv), cpatch%f_sun(CL,ft,iv), CL, ft, iv
 
                     if ( debug ) write(fates_log(),*) 'edsurfRad 570 ',cpatch%elai_profile(CL,ft,iv)
                     if ( debug ) write(fates_log(),*) 'edsurfRad 571 ',cpatch%f_sun(CL,ft,iv)
@@ -1225,16 +1228,49 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                        write(fates_log(),*) 'edsurfRad 656 ', cpatch%fabd_sun_z(CL,ft,iv)
                        write(fates_log(),*) 'edsurfRad 657 ', cpatch%fabi_sun_z(CL,ft,iv)
                     endif
-
-                    cpatch%ed_parsun_z(CL,ft,iv) = &
-                         bc_in(s)%solad_parb(ifp,ipar)*cpatch%fabd_sun_z(CL,ft,iv) + &
-                         bc_in(s)%solai_parb(ifp,ipar)*cpatch%fabi_sun_z(CL,ft,iv) 
+                    
+                    if (EDPftvarcon_inst%stomatal_model(FT) >= 3) then              ! Hui: derive radiation for moss and lichen
+                      trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
+                      tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
+                             bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
+                      if (bc_in(s)%frac_sno_eff_si==0) then
+                        cpatch%ed_parsun_z(CL,ft,iv) = &
+                           trd*cpatch%fabd_sun_z(CL,ft,iv) + &
+                           tri*cpatch%fabi_sun_z(CL,ft,iv)
+                        print *, "no_snow_sun, ed_parsun_z=", cpatch%ed_parsun_z(CL,ft,iv)
+                      else
+                         cpatch%ed_parsun_z(CL,ft,iv) = &
+                            bc_in(s)%flx_absdv(ifp)*trd*cpatch%fabd_sun_z(CL,ft,iv) + &
+                            bc_in(s)%flx_absiv(ifp)*tri*cpatch%fabi_sun_z(CL,ft,iv)
+                         print *, "test_rad5: trd, solad, ftdd_parb, flx_absdv, flx_absiv, fabd_sun_z=", trd, bc_in(s)%solad_parb(ifp,ipar),bc_out(s)%ftdd_parb(ifp,ipar),bc_in(s)%flx_absdv(ifp),bc_in(s)%flx_absiv(ifp),cpatch%fabd_sun_z(CL,ft,iv),cpatch%fabi_sun_z(CL,ft,iv)
+                         print *, "yes_snow_sun, ed_parsun_z=", cpatch%ed_parsun_z(CL,ft,iv)
+                      end if 
+                    else
+                       cpatch%ed_parsun_z(CL,ft,iv) = &
+                           bc_in(s)%solad_parb(ifp,ipar)*cpatch%fabd_sun_z(CL,ft,iv) + &
+                           bc_in(s)%solai_parb(ifp,ipar)*cpatch%fabi_sun_z(CL,ft,iv) 
+                    endif
 
                     if ( debug )write(fates_log(),*) 'edsurfRad 663 ', cpatch%ed_parsun_z(CL,ft,iv)
 
-                    cpatch%ed_parsha_z(CL,ft,iv) = &
+                    if (EDPftvarcon_inst%stomatal_model(FT) >= 3) then
+                      if (bc_in(s)%frac_sno_eff_si==0) then
+                        cpatch%ed_parsha_z(CL,ft,iv) = &
+                           trd*cpatch%fabd_sha_z(CL,ft,iv) + &
+                           tri*cpatch%fabi_sha_z(CL,ft,iv)
+                        print *, "no_snow_sha, ed_parsha_z=", cpatch%ed_parsha_z(CL,ft,iv)
+                      else
+                        cpatch%ed_parsha_z(CL,ft,iv) = &
+                           bc_in(s)%flx_absdv(ifp)*trd*cpatch%fabd_sha_z(CL,ft,iv) + &
+                            bc_in(s)%flx_absiv(ifp)*tri*cpatch%fabi_sha_z(CL,ft,iv)
+                        print *, "test_rad6: trd, tri=", trd, tri, cpatch%fabd_sha_z(CL,ft,iv), cpatch%fabi_sha_z(CL,ft,iv)
+                        print *, "yes_snow_sha, ed_parsha_z=", cpatch%ed_parsha_z(CL,ft,iv)
+                      end if
+                    else
+                       cpatch%ed_parsha_z(CL,ft,iv) = &
                          bc_in(s)%solad_parb(ifp,ipar)*cpatch%fabd_sha_z(CL,ft,iv) + &
                          bc_in(s)%solai_parb(ifp,ipar)*cpatch%fabi_sha_z(CL,ft,iv)          
+                    endif
 
                     if ( debug ) write(fates_log(),*) 'edsurfRad 669 ', cpatch%ed_parsha_z(CL,ft,iv)
 
@@ -1247,18 +1283,33 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
            do CL = 1, cpatch%NCL_p
               do FT = 1,numpft
                  do iv = 1, cpatch%nrad(CL,ft)
-                    cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%solad_parb(ifp,ipar) * &
+                    ! Hui: need separate treatment for non-vascular plants
+                    if (EDPftvarcon_inst%stomatal_model(FT) >= 3) then
+                      trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
+                      tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
+                             bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
+                      cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
+                         cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
+                         (bc_in(s)%flx_absiv(ifp)*tri * &
+                         cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv))
+                      cpatch%parprof_pft_dif_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
+                         cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv)) + &
+                         (bc_in(s)%flx_absiv(ifp)*tri * &
+                         cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv))
+                    else
+                      cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%solad_parb(ifp,ipar) * &
                          cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
                          (bc_in(s)%solai_parb(ifp,ipar) * &
                          cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv))
-                    cpatch%parprof_pft_dif_z(CL,FT,iv) = (bc_in(s)%solad_parb(ifp,ipar) * &
+                      cpatch%parprof_pft_dif_z(CL,FT,iv) = (bc_in(s)%solad_parb(ifp,ipar) * &
                          cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv)) + &
                          (bc_in(s)%solai_parb(ifp,ipar) * &
                          cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv))
+                    endif
                  end do ! iv
               end do    ! FT
            end do       ! CL
-
+           ! Hui: This part is sum of pft, need a better treatment to separte non-vascular plants and other plants (????)
            do CL = 1, cpatch%NCL_p
               do iv = 1, maxval(cpatch%nrad(CL,:))
                  cpatch%parprof_dir_z(CL,iv) = (bc_in(s)%solad_parb(ifp,ipar) * &
