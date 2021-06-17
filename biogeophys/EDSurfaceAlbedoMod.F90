@@ -32,6 +32,7 @@ module EDSurfaceRadiationMod
   use EDCanopyStructureMod, only: calc_areaindex
   use FatesGlobals      , only : fates_log
   use FatesGlobals, only      : endrun => fates_endrun
+  use EDPftvarcon       , only : EDPftvarcon_inst 
 
   ! CIME globals
   use shr_log_mod       , only : errMsg => shr_log_errMsg
@@ -51,7 +52,7 @@ module EDSurfaceRadiationMod
 
 contains
 
-  subroutine ED_Norman_Radiation (nsites, sites, bc_in, bc_out )
+  subroutine ED_Norman_Radiation (nsites, sites, bc_in, bc_out, mosslichen)
     !
 
     !
@@ -64,6 +65,7 @@ contains
     ! !ARGUMENTS:
 
     integer,            intent(in)            :: nsites 
+    integer,            intent(in)            :: mosslichen 
     type(ed_site_type), intent(inout), target :: sites(nsites)      ! FATES site vector
     type(bc_in_type),   intent(in)            :: bc_in(nsites)
     type(bc_out_type),  intent(inout)         :: bc_out(nsites)
@@ -94,20 +96,22 @@ contains
              ! and (more impotantly) do not iterate ifp or it will mess up the indexing wherein 
              ! ifp=1 is the first vegetated patch. 
              ifp = ifp+1
-
-             currentPatch%f_sun      (:,:,:) = 0._r8
-             currentPatch%fabd_sun_z (:,:,:) = 0._r8
-             currentPatch%fabd_sha_z (:,:,:) = 0._r8
-             currentPatch%fabi_sun_z (:,:,:) = 0._r8
-             currentPatch%fabi_sha_z (:,:,:) = 0._r8
              currentPatch%fabd       (:)     = 0._r8
              currentPatch%fabi       (:)     = 0._r8
+             
+             if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved)
+                currentPatch%f_sun      (:,:,:) = 0._r8
+                currentPatch%fabd_sun_z (:,:,:) = 0._r8
+                currentPatch%fabd_sha_z (:,:,:) = 0._r8
+                currentPatch%fabi_sun_z (:,:,:) = 0._r8
+                currentPatch%fabi_sha_z (:,:,:) = 0._r8
 
              ! zero diagnostic radiation profiles
-             currentPatch%nrmlzd_parprof_pft_dir_z(:,:,:,:) = 0._r8
-             currentPatch%nrmlzd_parprof_pft_dif_z(:,:,:,:) = 0._r8
-             currentPatch%nrmlzd_parprof_dir_z(:,:,:) = 0._r8
-             currentPatch%nrmlzd_parprof_dif_z(:,:,:) = 0._r8
+                currentPatch%nrmlzd_parprof_pft_dir_z(:,:,:,:) = 0._r8
+                currentPatch%nrmlzd_parprof_pft_dif_z(:,:,:,:) = 0._r8
+                currentPatch%nrmlzd_parprof_dir_z(:,:,:) = 0._r8
+                currentPatch%nrmlzd_parprof_dif_z(:,:,:) = 0._r8
+             end if
 
              currentPatch%solar_zenith_flag         = bc_in(s)%filter_vegzen_pa(ifp)
              currentPatch%solar_zenith_angle        = bc_in(s)%coszen_pa(ifp)
@@ -124,9 +128,10 @@ contains
                 bc_out(s)%ftid_parb(ifp,:)            = 1._r8 ! output HLM
                 bc_out(s)%ftii_parb(ifp,:)            = 1._r8 ! output HLM
 
-                if (maxval(currentPatch%nrad(1,:))==0)then
+                !if (maxval(currentPatch%nrad(1,:))==0)then
                    !there are no leaf layers in this patch. it is effectively bare ground. 
                    ! no radiation is absorbed  
+                if (mosslichen==0)then    !Hui: temporal solution, need more dedicated solution to separate no-vascular pfts from normal pfts. (?????)  
                    bc_out(s)%fabd_parb(ifp,:) = 0.0_r8
                    bc_out(s)%fabi_parb(ifp,:) = 0.0_r8
                    do ib = 1,hlm_numSWb
@@ -147,7 +152,7 @@ contains
                         bc_out(s)%fabi_parb(ifp,:), &
                         bc_out(s)%ftdd_parb(ifp,:), &
                         bc_out(s)%ftid_parb(ifp,:), &
-                        bc_out(s)%ftii_parb(ifp,:))
+                        bc_out(s)%ftii_parb(ifp,:), mosslichen)
 
 
                 endif ! is there vegetation? 
@@ -172,7 +177,7 @@ contains
        fabi_parb_out, &   ! (ifp,ib)
        ftdd_parb_out, &   ! (ifp,ib)
        ftid_parb_out, &   ! (ifp,ib)
-       ftii_parb_out)     ! (ifp,ib)
+       ftii_parb_out, mosslichen)     ! (ifp,ib)
 
     ! -----------------------------------------------------------------------------------
     !
@@ -191,6 +196,7 @@ contains
 
     type(ed_patch_type), intent(inout), target :: currentPatch
     real(r8), intent(in)    :: fwet   ! vegetation intercepted water fraction
+    integer,  intent(in)    :: mosslichen   ! mosslichen switch
     real(r8), intent(inout) :: albd_parb_out(hlm_numSWb)
     real(r8), intent(inout) :: albi_parb_out(hlm_numSWb)
     real(r8), intent(inout) :: fabd_parb_out(hlm_numSWb)
@@ -293,16 +299,34 @@ contains
     ftii_parb_out(1:hlm_numSWb) = 1.0_r8
 
     ! Is this pft/canopy layer combination present in this patch?
-
+! Hui: ft arrey ?
     do L = 1,nclmax
        do ft = 1,numpft
-          currentPatch%canopy_mask(L,ft) = 0
-          do  iv = 1, currentPatch%nrad(L,ft)
-             if (currentPatch%canopy_area_profile(L,ft,iv) > 0._r8)then
-                currentPatch%canopy_mask(L,ft) = 1
-                !I think 'present' is only used here...
-             endif
-          end do !iv
+         if (mosslichen == 1) then 
+            if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
+                currentPatch%canopy_mask(L,ft) = 0
+            else
+               currentPatch%canopy_mask(L,ft) = 0
+               do  iv = 1, currentPatch%nrad(L,ft)
+                  if (currentPatch%canopy_area_profile(L,ft,iv) > 0._r8)then
+                      currentPatch%canopy_mask(1,ft) = 1  ! Hui: only consider moss&lichen as top canopy
+                  !I think 'present' is only used here...
+                  endif
+               end do !iv
+            endif ! stomatal_model
+         else
+           if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+               currentPatch%canopy_mask(L,ft) = 0
+           else
+              currentPatch%canopy_mask(L,ft) = 0
+              do  iv = 1, currentPatch%nrad(L,ft)
+                 if (currentPatch%canopy_area_profile(L,ft,iv) > 0._r8)then
+                     currentPatch%canopy_mask(L,ft) = 1
+                 !I think 'present' is only used here...
+                 endif
+              end do !iv
+            endif ! stomatal_model
+         endif  ! mosslichen
        end do !ft
     end do !L
 
@@ -324,9 +348,6 @@ contains
        k_dir(ft) = clumping_index(ft) * gdir / sin(sb)
     end do !FT
 
-
-
-
     !do this once for one unit of diffuse, and once for one unit of direct radiation
     do radtype = 1, n_rad_stream_types 
 
@@ -339,7 +360,27 @@ contains
           do ft = 1,numpft
              do  iv = 1, currentPatch%nrad(L,ft)
                 !this is already corrected for area in CLAP
-                ftweight(L,ft,iv) = currentPatch%canopy_area_profile(L,ft,iv) 
+                if (mosslichen == 1) then 
+                   if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+                      ! Option 1: 
+                      ftweight(1,ft,iv) = ftweight(1,ft,iv)+currentPatch%canopy_area_profile(L,ft,iv)
+                      print *, "test_rad10: canopy_area_profile=", currentPatch%canopy_area_profile(L,ft,iv), ftweight(1,ft,iv), L, ft, iv 
+                      ! Hui: Put all the canopy to the top canopy for moss and lichen. This is not done properly here (but ok for our testing case). 
+                      !      because moss and lichen will still be separated into 2 layers in the following calculation
+                      !      Also because iv can be different for top and under canopy!!!!!
+                      ! Hui: It should be done in EDCanopyStructureMod.F90. currentCohort%canopy_layer should alway be 1 for moss and lichen (?????)
+                      !      currentPatch%NCL_p should be modified, currentPatch%nrad(L,ft) is pft dependent, so no need to change
+                      ! Hui: Here moss and lichen are allowed to grow in both top or under-canopy, but when calculating radiation, 
+                      ! they are treated like top canopy 
+                      ! Option 2: mosslichen cover the whole canopy
+                      ! ftweight(1,ft,iv) = 1
+                      
+                   endif
+                else
+                   if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
+                      ftweight(L,ft,iv) = currentPatch%canopy_area_profile(L,ft,iv) 
+                   endif
+                endif                                 
              end do  !iv
           end do  !ft1
        end do  !L
@@ -459,6 +500,7 @@ contains
                    if (L == 1)then !top canopy layer
                       currentPatch%f_sun(L,ft,iv) = exp(-k_dir(ft) * laisum)* &
                            (ftweight(L,ft,iv)/ftweight(L,ft,1))
+                      print *, "test_rad14: f_sun=", currentPatch%f_sun(L,ft,iv), k_dir(ft), laisum, ftweight(L,ft,iv), ftweight(L,ft,1)
                    else
                       currentPatch%f_sun(L,ft,iv) = weighted_fsun(L-1)* exp(-k_dir(ft) * laisum)* &
                            (ftweight(L,ft,iv)/ftweight(L,ft,1))
@@ -479,6 +521,7 @@ contains
                               (ftweight(L,ft,1)-ftweight(L,ft,iv))/ftweight(L,ft,1)
                       endif
                    endif
+                   print *, "test_rad15: f_sun=", currentPatch%f_sun(L,ft,iv)
 
                 end do !iv
 
@@ -509,13 +552,13 @@ contains
                    ! and transmitted by a layer
                    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
       ! Hui: add influence of water content on albedo, need to check if this way of assign values work.
-                  if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then 
-                       rhol(ft,ib)=EDPftvarcon_inst%rhol(ft,ib) - 0.5 * EDPftvarcon_inst%rhol(ft,ib) * fwet
-                       taul(ft,ib)=EDPftvarcon_inst%taul(ft,ib) - 0.5 * EDPftvarcon_inst%rhol(ft,ib) * fwet 
-                  else 
+             !     if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then 
+             !          rhol(ft,ib)=EDPftvarcon_inst%rhol(ft,ib) - 0.5 * EDPftvarcon_inst%rhol(ft,ib) * fwet
+             !          taul(ft,ib)=EDPftvarcon_inst%taul(ft,ib) - 0.5 * EDPftvarcon_inst%taul(ft,ib) * fwet 
+             !     else 
                        taul(ft,ib)=EDPftvarcon_inst%taul(ft,ib) 
                        rhol(ft,ib)=EDPftvarcon_inst%rhol(ft,ib)
-                  end if
+             !     end if
                    
                    f_not_abs(ft,ib) = rhol(ft,ib) + taul(ft,ib) !leaf level fraction NOT absorbed.
                    !tr_dif_z is a term that uses the LAI in each layer, whereas rhol and taul do not,
@@ -866,6 +909,7 @@ contains
                    ! Albefor
                    if (L==1)then !top canopy layer.
                       if (radtype == idirect)then
+                         print *, "test_rad1: L, ft=", L,ft
                          albd_parb_out(ib) = albd_parb_out(ib) + &
                               Dif_up(L,ft,1) * ftweight(L,ft,1)
                       else
@@ -881,7 +925,9 @@ contains
                               forc_dir(radtype) * tr_dir_z(L,ft,iv)
                          currentPatch%nrmlzd_parprof_pft_dif_z(radtype,L,ft,iv) = &
                               Dif_dn(L,ft,iv) + Dif_up(L,ft,iv)
-                         !
+                         !Hui: The following part will not consider non-vascular plants, 
+                         !     The values for non-vascular plants calculated in the previous call will be overwritten 
+                         !     by the second call of the subroutine.
                          currentPatch%nrmlzd_parprof_dir_z(radtype,L,iv) = &
                               currentPatch%nrmlzd_parprof_dir_z(radtype,L,iv) + &
                               (forc_dir(radtype) * tr_dir_z(L,ft,iv)) * &
@@ -894,34 +940,38 @@ contains
                    end if ! ib = visible
                 end if ! present
              end do !ft
-             if (radtype == idirect)then
-                fabd_parb_out(ib) = currentPatch%fabd(ib)
-             else
-                fabi_parb_out(ib) = currentPatch%fabi(ib)
-             endif
+             
+             !Hui: This part is dangerous for the second call of the radiation for normal plants, the values for the first call of non-vascular plants will be overwritten
+             if (sum(ftweight(1,:,1)) > 0)then ! Hui: in second call, only when the canopy is larger than 0, the following part is updated.
 
+                if (radtype == idirect)then
+                   fabd_parb_out(ib) = currentPatch%fabd(ib)
+                else
+                    fabi_parb_out(ib) = currentPatch%fabi(ib)
+                endif
 
              !radiation absorbed from fluxes through unfilled part of lower canopy.
-             if (currentPatch%NCL_p > 1.and.L == currentPatch%NCL_p)then 
-                abs_rad(ib) = abs_rad(ib) + weighted_dif_down(L-1) * &
-                     (1.0_r8-sum(ftweight(L,1:numpft,1)))*(1.0_r8-currentPatch%gnd_alb_dif(ib) )
-                abs_rad(ib) = abs_rad(ib) + forc_dir(radtype) * weighted_dir_tr(L-1) * &
-                     (1.0_r8-sum(ftweight(L,1:numpft,1)))*(1.0_r8-currentPatch%gnd_alb_dir(ib) )
-                tr_soili = tr_soili + weighted_dif_down(L-1) * (1.0_r8-sum(ftweight(L,1:numpft,1)))
-                tr_soild = tr_soild + forc_dir(radtype) * weighted_dir_tr(L-1) * (1.0_r8-sum(ftweight(L,1:numpft,1)))
-             endif
+                if (currentPatch%NCL_p > 1.and.L == currentPatch%NCL_p)then 
+                   abs_rad(ib) = abs_rad(ib) + weighted_dif_down(L-1) * &
+                        (1.0_r8-sum(ftweight(L,1:numpft,1)))*(1.0_r8-currentPatch%gnd_alb_dif(ib) )
+                   abs_rad(ib) = abs_rad(ib) + forc_dir(radtype) * weighted_dir_tr(L-1) * &
+                        (1.0_r8-sum(ftweight(L,1:numpft,1)))*(1.0_r8-currentPatch%gnd_alb_dir(ib) )
+                   tr_soili = tr_soili + weighted_dif_down(L-1) * (1.0_r8-sum(ftweight(L,1:numpft,1)))
+                   tr_soild = tr_soild + forc_dir(radtype) * weighted_dir_tr(L-1) * (1.0_r8-sum(ftweight(L,1:numpft,1)))
+                 endif
 
-             if (radtype == idirect)then
-                currentPatch%tr_soil_dir(ib) = tr_soild
-                currentPatch%tr_soil_dir_dif(ib) = tr_soili
-                currentPatch%sabs_dir(ib)     = abs_rad(ib)
-                ftdd_parb_out(ib)  = tr_soild
-                ftid_parb_out(ib) =  tr_soili
-             else
-                currentPatch%tr_soil_dif(ib) = tr_soili
-                currentPatch%sabs_dif(ib)     = abs_rad(ib)
-                ftii_parb_out(ib) =  tr_soili
-             end if
+                 if (radtype == idirect)then
+                    currentPatch%tr_soil_dir(ib) = tr_soild
+                    currentPatch%tr_soil_dir_dif(ib) = tr_soili
+                    currentPatch%sabs_dir(ib)     = abs_rad(ib)
+                    ftdd_parb_out(ib)  = tr_soild
+                    ftid_parb_out(ib) =  tr_soili
+                 else
+                    currentPatch%tr_soil_dif(ib) = tr_soili
+                    currentPatch%sabs_dif(ib)     = abs_rad(ib)
+                    ftii_parb_out(ib) =  tr_soili
+                 end if
+             end if ! Hui
 
           end do!l
 
