@@ -1627,7 +1627,8 @@ contains
                    currentPatch%elai_profile(1,ft,iv) = currentPatch%tlai_profile(1,ft,iv) * fraction_exposed
                    currentPatch%esai_profile(1,ft,iv) = currentPatch%tsai_profile(1,ft,iv) * fraction_exposed
 
-                   if ( debug ) write(fates_log(), *) 'leaf_area_profile()', currentPatch%elai_profile(1,ft,iv)
+                   !if ( debug ) write(fates_log(), *) 'leaf_area_profile()', currentPatch%elai_profile(1,ft,iv)
+                   write(fates_log(), *) 'test_rad11: leaf_area_profile()', currentPatch%elai_profile(1,ft,iv), currentPatch%tlai_profile(1,ft,iv), fraction_exposed
 
                 enddo ! (iv) hite bins
 
@@ -1734,9 +1735,9 @@ contains
                            (layer_top_hite-layer_bottom_hite ))))
                    endif
 
-! Hui: allow snow burial in this option
+! Hui: allow snow burial in this option; for vegetation under snow, snow burial needs to be treated in a different way.
                    ! =========== OVER-WRITE =================
-!                   fraction_exposed= 1.0_r8
+                          fraction_exposed= 1.0_r8
                    ! =========== OVER-WRITE =================
 
                    if(iv==currentCohort%NV) then
@@ -1758,6 +1759,7 @@ contains
                    currentPatch%elai_profile(cl,ft,iv) = currentPatch%elai_profile(cl,ft,iv) + &
                         remainder * fleaf * currentCohort%c_area/currentPatch%total_canopy_area * &
                         fraction_exposed
+                   print *, "test_rad12: elai_profile=", currentPatch%elai_profile(cl,ft,iv), remainder, fleaf, currentCohort%c_area, currentPatch%total_canopy_area, fraction_exposed
 
                    currentPatch%tsai_profile(cl,ft,iv) = currentPatch%tsai_profile(cl,ft,iv) + &
                         remainder * (1._r8 - fleaf) * currentCohort%c_area/currentPatch%total_canopy_area
