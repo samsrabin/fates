@@ -29,6 +29,7 @@ module FATESPlantRespPhotosynthMod
   use FatesInterfaceTypesMod, only : hlm_parteh_mode
   use FatesInterfaceTypesMod, only : numpft
   use FatesInterfaceTypesMod, only : nleafage
+  use FatesInterfaceTypesMod , only : hlm_use_mosslichen, hlm_use_mosslichen_photosyn
   use EDTypesMod,        only : maxpft
   use EDTypesMod,        only : nlevleaf
   use EDTypesMod,        only : nclmax
@@ -271,7 +272,7 @@ contains
        allocate(rootfr_ft(numpft, bc_in(s)%nlevsoil))
 
        do ft = 1,numpft
-         if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+         if (hlm_use_mosslichen.eq.itrue .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
             rootfr_ft(ft,:) = 0.0_r8
          else
            call set_root_fraction(rootfr_ft(ft,:), ft, &
@@ -715,7 +716,7 @@ contains
 
                       ! add on whole plant respiration values in kgC/indiv/s-1  
                       
-                      if ( stomatal_model(ft) >= 3 ) then
+                      if ( hlm_use_mosslichen.eq.itrue .and. stomatal_model(ft) >= 3 ) then
                       currentCohort%resp_m = currentCohort%livestem_mr                     
                       else
                       currentCohort%resp_m = currentCohort%livestem_mr + &
@@ -1160,9 +1161,10 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
 
                  call quadratic_f (aquad, bquad, cquad, r1, r2)
                  gs_mol = max(r1,r2)
-              else if ( stomatal_model(ft) >= 3 ) then         !stomatal conductance calculated from Ball et al. (1987)                     
+              else if ( stomatal_model(ft) == 3 ) then         !moss and lichen photosynthesis without stomatal control (default, https://doi.org/10.5194/bg-10-6989-2013)                      
                  print *, "moss or lichen 4"           
-                 gs_mol = stomatal_intercept_btran                               
+                 gs_mol = stomatal_intercept_btran
+!             else if ( stomatal_model(ft) == 4 ) then        !moss and lichen photosynthesis with explicit treatment of Mesophyll conductance (not implemented yet, https://doi.org/10.1111/nph.15675; https://doi.org/10.1111/tpj.14587)
               end if
                             
 !BHui Another option for moss and lichen without a water stress       
@@ -1186,12 +1188,12 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
 !                 wco2=12
 !                 diffuse_co2=(wmax-wmin)(1.0-fwet)**wco2 + wmin 
               print *, "check3=", stomatal_model(ft)                         
-              if ( stomatal_model(ft) >= 3 ) then             
+              if ( stomatal_model(ft) == 3 ) then             
                  !co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / (gb_mol*max((max(1.0-fwet,0.1))**12,0.000001))
                  co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol 
 !  Alternative
 !                co2_inter_c = ((max(1.0-fwet,0.01))**12) * (can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol)
-                 
+              !else if ( stomatal_model(ft) == 4 ) then
               else                  
                  ! Derive new estimate for co2_inter_c                 
                  co2_inter_c = can_co2_ppress - anet * can_press * &
@@ -1224,12 +1226,12 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
 !BHui Modify co_inter_c is dependent on CO2 diffusivity related to water saturation
 ! "h2o_co2_stoma_diffuse_ratio" is dependent on water content?
 ! gs_mol is 1?
-          if ( stomatal_model(ft) >= 3 ) then            
+          if ( stomatal_model(ft) == 3 ) then            
              ! co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / (gb_mol*max((max(1.0-fwet,0.1))**12,0.000001))
              co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol       
 !  Alternative
 !             co2_inter_c = ((max(1.0-fwet,0.01))**12) * (can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol)
-                 
+          !else if ( stomatal_model(ft) == 4 ) then
           else                  
               co2_inter_c = can_co2_ppress - anet * can_press * &
                 (h2o_co2_bl_diffuse_ratio*gs_mol+h2o_co2_stoma_diffuse_ratio*gb_mol) / (gb_mol*gs_mol)
@@ -2025,7 +2027,7 @@ end if
 ! Adjust for water limitations
 
 ! EHui, btran should be changed to fwet to affect photosynthesis 
-    if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+    if (hlm_use_mosslichen.eq.itrue .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
       vcmax = vcmax   !* min(1.0, fwet/0.6)   ! According to Porada et al. 2013, threshhold saturation is set to 0.6
     else
       vcmax = vcmax * btran
