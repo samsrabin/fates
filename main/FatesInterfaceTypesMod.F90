@@ -188,6 +188,21 @@ module FatesInterfaceTypesMod
 
   integer, public ::  hlm_use_sp                                    !  Flag to use FATES satellite phenology (LAI) mode
                                                                     !  1 = TRUE, 0 = FALSE
+                                                                    
+  integer, public ::  hlm_use_mosslichen                            ! Flag to use FATES moss and lichen functionalities: 
+                                                                    ! photosynthesis, radiation (implemented)
+                                                                    ! carbon allocation, nutrient cycle, fire, cohort&patch dynamics (not yet implemented) 
+                                                                    ! 1 = TRUE, 0= FALSE
+                                                                    
+  integer, public ::  hlm_use_mosslichen_undersnow                  ! Flag to allow the existence of moss&lichen under snow for radiation and photosynthesis. 
+                                                                    ! This flag can be used for more pfts (e.g., dwarf shrub) in the cold region,
+                                                                    ! if their impact on radiation and photosynthesis when they are under snow is not negligible.
+                                                                    ! 1 = TRUE, 0= FALSE
+  integer, public ::  hlm_use_mosslichen_photosyn                   ! Flag to run different type of photosynthesis for moss and lichen
+                                                                    ! 0: normal photosynthesis as other pfts with stomatal control (for testing purpose)
+                                                                    ! 1: moss and lichen photosynthesis without stomatal control (default, https://doi.org/10.5194/bg-10-6989-2013)
+                                                                    ! 2: moss and lichen photosynthesis with explicit treatment of Mesophyll conductance (not implemented yet, https://doi.org/10.1111/nph.15675; https://doi.org/10.1111/tpj.14587)
+
    ! -------------------------------------------------------------------------------------
    ! Parameters that are dictated by FATES and known to be required knowledge
    !  needed by the HLMs
