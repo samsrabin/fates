@@ -30,6 +30,7 @@ module EDCanopyStructureMod
   use FatesInterfaceTypesMod     , only : hlm_use_cohort_age_tracking
   use FatesInterfaceTypesMod     , only : hlm_use_sp
   use FatesInterfaceTypesMod     , only : numpft
+  use FatesInterfaceTypesMod , only : hlm_use_mosslichen, hlm_use_mosslichen_undersnow
   use FatesPlantHydraulicsMod, only : UpdateH2OVeg,InitHydrCohort, RecruitWaterStorage
   use EDTypesMod            , only : maxCohortsPerPatch
   use PRTGenericMod,          only : leaf_organ
@@ -1737,7 +1738,9 @@ contains
 
 ! Hui: allow snow burial in this option; for vegetation under snow, snow burial needs to be treated in a different way.
                    ! =========== OVER-WRITE =================
+                   if ( hlm_use_mosslichen_undersnow.eq.itrue .and. EDPftvarcon_inst%stomatal_model(ft) >= 3 ) then
                           fraction_exposed= 1.0_r8
+                   end if
                    ! =========== OVER-WRITE =================
 
                    if(iv==currentCohort%NV) then
