@@ -74,7 +74,7 @@ contains
 
     ! !LOCAL VARIABLES:
     integer :: s                                   ! site loop counter
-    integer :: ifp                                 ! patch loop counter
+    integer :: ifp,ft, nrad_tot                    ! patch loop counter
     integer :: ib                                  ! radiation broad band counter
     type(ed_patch_type), pointer :: currentPatch   ! patch pointer
 
@@ -142,8 +142,22 @@ contains
                 bc_out(s)%ftdd_parb(ifp,:)            = 1._r8 ! output HLM
                 bc_out(s)%ftid_parb(ifp,:)            = 1._r8 ! output HLM
                 bc_out(s)%ftii_parb(ifp,:)            = 1._r8 ! output HLM
+                
+                nrad_tot=0
+                do ft = 1,numpft
+                    if (mosslichen==0) then
+                       if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
+                          nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
+                       end if
+                    else
+                       if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+                          nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
+                       end if
+                    end if
+                end do
 
-                if (maxval(currentPatch%nrad(1,:))==0)then
+!                if (maxval(currentPatch%nrad(1,:))==0)then
+                if (nrad_tot==0)then
                   !there are no leaf layers in this patch. it is effectively bare ground.
                   !no radiation is absorbed
                      bc_out(s)%fabd_parb(ifp,:) = 0.0_r8
