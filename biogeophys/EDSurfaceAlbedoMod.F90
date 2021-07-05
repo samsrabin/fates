@@ -101,7 +101,7 @@ contains
              currentPatch%fabi       (:)     = 0._r8
              
              if (hlm_use_mosslichen_undersnow.eq.itrue) then
-               if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved)
+               if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved), this will be used in "ED_SunShadeFracs"
                   currentPatch%f_sun      (:,:,:) = 0._r8
                   currentPatch%fabd_sun_z (:,:,:) = 0._r8
                   currentPatch%fabd_sha_z (:,:,:) = 0._r8
@@ -144,17 +144,21 @@ contains
                 bc_out(s)%ftii_parb(ifp,:)            = 1._r8 ! output HLM
                 
                 nrad_tot=0
-                do ft = 1,numpft
-                    if (mosslichen==0) then
-                       if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
-                          nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
+                if (hlm_use_mosslichen_undersnow.eq.itrue) then
+                   do ft = 1,numpft
+                       if (mosslichen==0) then
+                          if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
+                             nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
+                          end if
+                       else
+                          if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+                             nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
+                          end if
                        end if
-                    else
-                       if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
-                          nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
-                       end if
-                    end if
-                end do
+                   end do
+                else
+                   nrad_tot=maxval(currentPatch%nrad(1,:))
+                end if
 
 !                if (maxval(currentPatch%nrad(1,:))==0)then
                 if (nrad_tot==0)then
