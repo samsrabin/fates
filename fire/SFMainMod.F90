@@ -675,6 +675,7 @@ contains
     real(r8) df               !distance fire has travelled forward in m
     real(r8) db               !distance fire has travelled backward in m
     real(r8) AB               !daily area burnt in m2 per km2
+    real(r8) fire_threshold   !energy threshold for successful fire
     
     real(r8) size_of_fire !in m2
     real(r8) cloud_to_ground_strikes  ! [fraction] depends on hlm_spitfire_mode
@@ -813,8 +814,15 @@ contains
              if( hlm_masterproc == itrue ) write(fates_log(),*) 'fire_intensity',currentPatch%fi,W,currentPatch%ROS_front
          endif
 
+         if (tree_fraction_patch > forest_grassland_lengthtobreadth_threshold) then      !benchmark forest cover, Staver 2010
+            fire_threshold = SF_val_fire_threshold + 75.                                 !100kW/m for forest per Brando
+         else
+            fire_threshold = SF_val_fire_threshold
+         endif
+         
          !'decide_fire' subroutine 
-         if (currentPatch%FI > SF_val_fire_threshold) then !track fires greater than kW/m energy threshold
+         !if (currentPatch%FI > SF_val_fire_threshold) then !track fires greater than kW/m energy threshold
+         if (currentPatch%FI > fire_threshold) then !track fires greater than kW/m energy threshold
             currentPatch%fire = 1 ! Fire...    :D
             !
             currentSite%NF_successful = currentSite%NF_successful + &
