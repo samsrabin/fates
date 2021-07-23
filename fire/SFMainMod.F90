@@ -909,6 +909,9 @@ contains
     type(ed_patch_type) , pointer :: currentPatch
     type(ed_cohort_type), pointer :: currentCohort
 
+    real(r8) :: crown_base_height ! (m) also clear branch bole height
+    real(r8) :: crown_length      ! length or depth of crown (m)
+
     currentPatch => currentSite%oldest_patch
 
     do while(associated(currentPatch)) 
@@ -919,29 +922,15 @@ contains
           do while(associated(currentCohort))  
              currentCohort%fraction_crown_burned = 0.0_r8
              if ( int(prt_params%woody(currentCohort%pft)) == itrue) then !trees only
-                ! Flames lower than bottom of canopy. 
-                ! c%hite is height of cohort
-                if (currentPatch%Scorch_ht(currentCohort%pft) < &
-                     (currentCohort%hite-currentCohort%hite*EDPftvarcon_inst%crown(currentCohort%pft))) then 
-                   currentCohort%fraction_crown_burned = 0.0_r8
-                else
-                   ! Flames part of way up canopy. 
-                   ! Equation 17 in Thonicke et al. 2010. 
-                   ! flames over bottom of canopy but not over top.
-                   if ((currentCohort%hite > 0.0_r8).and.(currentPatch%Scorch_ht(currentCohort%pft) >=  &
-                        (currentCohort%hite-currentCohort%hite*EDPftvarcon_inst%crown(currentCohort%pft)))) then 
+                crown_length = currentCohort%hite*EDPftvarcon_inst%crown(currentCohort%pft)
+                crown_base_height = currentCohort%hite - crown_length
 
-                        currentCohort%fraction_crown_burned = (currentPatch%Scorch_ht(currentCohort%pft) - &
-                                currentCohort%hite*(1.0_r8 - &
-                                EDPftvarcon_inst%crown(currentCohort%pft)))/(currentCohort%hite* &
-                                EDPftvarcon_inst%crown(currentCohort%pft)) 
-
-                   else 
-                      ! Flames over top of canopy. 
-                      currentCohort%fraction_crown_burned =  1.0_r8 
-                   endif
-
-                endif
+                ! flame scorch into canopy, and potentially over top of canopy
+                if (currentCohort%hite > 0.0_r8 .and. (currentPatch%Scorch_ht(currentCohort%pft) >= crown_base_height)) then
+                   currentCohort%fraction_crown_burned = min(1.0_r8, &
+                        ((currentPatch%Scorch_ht(currentCohort%pft) - crown_base_height)/crown_length))
+                endif  !SH frac crown burnt calc
+                
                 ! Check for strange values. 
                 currentCohort%fraction_crown_burned = min(1.0_r8, max(0.0_r8,currentCohort%fraction_crown_burned))              
              endif !trees only
