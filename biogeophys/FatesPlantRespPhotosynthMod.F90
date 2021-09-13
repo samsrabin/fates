@@ -29,7 +29,7 @@ module FATESPlantRespPhotosynthMod
   use FatesInterfaceTypesMod, only : hlm_parteh_mode
   use FatesInterfaceTypesMod, only : numpft
   use FatesInterfaceTypesMod, only : nleafage
-  use FatesInterfaceTypesMod , only : hlm_use_mosslichen, hlm_use_mosslichen_photosyn
+  use FatesInterfaceTypesMod , only : hlm_use_mosslichen, hlm_use_mosslichen_photosyn, hlm_use_mosslichen_undersnow
   use EDTypesMod,        only : maxpft
   use EDTypesMod,        only : nlevleaf
   use EDTypesMod,        only : nclmax
@@ -321,7 +321,8 @@ contains
                 !  CO2 compensation point (Pa)
                 !  leaf boundary layer conductance of h20
                 !  constrained vapor pressure
-                call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
+                if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                   call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
                      bc_in(s)%oair_pa(ifp),    & ! in
                      bc_in(s)%t_soisno_sl(1),   & ! in
                      bc_in(s)%tgcm_pa(ifp),    & ! in
@@ -334,9 +335,21 @@ contains
                      cf,                       & ! out
                      gb_mol,                   & ! out
                      ceair)                      ! out
-
-
-
+                else
+                   call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
+                    bc_in(s)%oair_pa(ifp),    & ! in
+                    bc_in(s)%t_veg_pa(ifp),   & ! in
+                    bc_in(s)%tgcm_pa(ifp),    & ! in
+                    bc_in(s)%eair_pa(ifp),    & ! in
+                    bc_in(s)%esat_tv_pa(ifp), & ! in
+                    bc_in(s)%rb_pa(ifp),      & ! in
+                    mm_kco2,                  & ! out              
+                    mm_ko2,                   & ! out
+                    co2_cpoint,               & ! out
+                    cf,                       & ! out
+                    gb_mol,                   & ! out
+                    ceair)                      ! out
+                end if
 
                 ! ------------------------------------------------------------------------
                 ! Part VI: Loop over all leaf layers.
@@ -484,11 +497,20 @@ contains
 
 
                                ! Part VII: Calculate dark respiration (leaf maintenance) for this layer
-                               call LeafLayerMaintenanceRespiration( lmr25top,                 &  ! in
-                                    nscaler,                  &  ! in
-                                    ft,                       &  ! in
-                                    bc_in(s)%t_soisno_sl(1),   &  ! in
-                                    lmr_z(iv,ft,cl))             ! out
+                               if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                                 call LeafLayerMaintenanceRespiration( lmr25top,                 &  ! in
+                                      nscaler,                  &  ! in
+                                      ft,                       &  ! in
+                                      bc_in(s)%t_soisno_sl(1),   &  ! in
+                                      lmr_z(iv,ft,cl))             ! out
+                               else
+                                 call LeafLayerMaintenanceRespiration( lmr25top,                 &  ! in
+                                      nscaler,                  &  ! in
+                                      ft,                       &  ! in
+                                      bc_in(s)%t_veg_pa(ifp),   &  ! in
+                                      lmr_z(iv,ft,cl))             ! out
+                               end if
+                               
 
                                ! Part VII: Calculate (1) maximum rate of carboxylation (vcmax), 
                                ! (2) maximum electron transport rate, (3) triose phosphate 
@@ -501,8 +523,8 @@ contains
                                ! into consideration.
 
 
-
-                               call LeafLayerBiophysicalRates(currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
+                               if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                                  call LeafLayerBiophysicalRates(currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
                                     ft,                                 &  ! in
                                     currentCohort%vcmax25top,           &  ! in
                                     currentCohort%jmax25top,            &  ! in
@@ -516,11 +538,27 @@ contains
                                     jmax_z,                             &  ! out
                                     tpu_z,                              &  ! out
                                     kp_z )                                 ! out
+                               else
+                                 call LeafLayerBiophysicalRates(currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
+                                   ft,                                 &  ! in
+                                   currentCohort%vcmax25top,           &  ! in
+                                   currentCohort%jmax25top,            &  ! in
+                                   currentCohort%tpu25top,             &  ! in
+                                   currentCohort%kp25top,              &  ! in
+                                   nscaler,                            &  ! in
+                                   bc_in(s)%t_veg_pa(ifp),             &  ! in
+                                   bc_in(s)%fwet_pa(ifp),              &  ! in
+                                   btran_eff,                          &  ! in
+                                   vcmax_z,                            &  ! out
+                                   jmax_z,                             &  ! out
+                                   tpu_z,                              &  ! out
+                                   kp_z )                                 ! out
+                               end if 
 
                                ! Part IX: This call calculates the actual photosynthesis for the 
                                ! leaf layer, as well as the stomatal resistance and the net assimilated carbon.
-
-                               call LeafLayerPhotosynthesis(currentPatch%f_sun(cl,ft,iv),    &  ! in
+                               if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                                  call LeafLayerPhotosynthesis(currentPatch%f_sun(cl,ft,iv),    &  ! in
                                     currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
                                     currentPatch%ed_parsha_z(cl,ft,iv), &  ! in
                                     currentPatch%ed_laisun_z(cl,ft,iv), &  ! in
@@ -532,7 +570,7 @@ contains
                                     tpu_z,                              &  ! in
                                     kp_z,                               &  ! in
                                     bc_in(s)%t_soisno_sl(1),             &  ! in
-                                    bc_in(s)%esat_tv_pa(ifp),           &  ! in
+                                    bc_in(s)%esat_tv(ifp),           &  ! in
                                     bc_in(s)%forc_pbot,                 &  ! in
                                     bc_in(s)%cair_pa(ifp),              &  ! in
                                     bc_in(s)%oair_pa(ifp),              &  ! in
@@ -550,6 +588,38 @@ contains
                                     rs_z(iv,ft,cl),                     &  ! out
                                     anet_av_z(iv,ft,cl),                &  ! out
                                     c13disc_z(cl,ft,iv))                   ! out
+                                else
+                                   call LeafLayerPhotosynthesis(currentPatch%f_sun(cl,ft,iv),    &  ! in
+                                    currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
+                                    currentPatch%ed_parsha_z(cl,ft,iv), &  ! in
+                                    currentPatch%ed_laisun_z(cl,ft,iv), &  ! in
+                                    currentPatch%ed_laisha_z(cl,ft,iv), &  ! in
+                                    currentPatch%canopy_area_profile(cl,ft,iv), &  ! in
+                                    ft,                                 &  ! in
+                                    vcmax_z,                            &  ! in
+                                    jmax_z,                             &  ! in
+                                    tpu_z,                              &  ! in
+                                    kp_z,                               &  ! in
+                                    bc_in(s)%t_veg_pa(ifp),             &  ! in
+                                    bc_in(s)%esat_tv(ifp),           &  ! in
+                                    bc_in(s)%forc_pbot,                 &  ! in
+                                    bc_in(s)%cair_pa(ifp),              &  ! in
+                                    bc_in(s)%oair_pa(ifp),              &  ! in
+                                    bc_in(s)%fwet_pa(ifp),              &  ! in
+                                    btran_eff,                          &  ! in
+                                    stomatal_intercept_btran,           &  ! in
+                                    cf,                                 &  ! in
+                                    gb_mol,                             &  ! in
+                                    ceair,                              &  ! in
+                                    mm_kco2,                            &  ! in
+                                    mm_ko2,                             &  ! in
+                                    co2_cpoint,                         &  ! in
+                                    lmr_z(iv,ft,cl),                    &  ! in
+                                    currentPatch%psn_z(cl,ft,iv),       &  ! out
+                                    rs_z(iv,ft,cl),                     &  ! out
+                                    anet_av_z(iv,ft,cl),                &  ! out
+                                    c13disc_z(cl,ft,iv))                   ! out
+                                end if
 
                                rate_mask_z(iv,ft,cl) = .true.
                             end if
