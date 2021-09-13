@@ -1264,7 +1264,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
-                      if (bc_in(s)%frac_sno_eff_si==0) then          ! no snow cover
+                      if (bc_in(s)%snow_depth_si==0) then          ! no snow cover
                         cpatch%ed_parsun_z(CL,ft,iv) = &
                            trd*cpatch%fabd_sun_z(CL,ft,iv) + &
                            tri*cpatch%fabi_sun_z(CL,ft,iv)
@@ -1285,7 +1285,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                     if ( debug )write(fates_log(),*) 'edsurfRad 663 ', cpatch%ed_parsun_z(CL,ft,iv)
 
                     if (hlm_use_mosslichen_undersnow.eq.itrue .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
-                      if (bc_in(s)%frac_sno_eff_si==0) then
+                      if (bc_in(s)%snow_depth_si==0) then
                         cpatch%ed_parsha_z(CL,ft,iv) = &
                            trd*cpatch%fabd_sha_z(CL,ft,iv) + &
                            tri*cpatch%fabi_sha_z(CL,ft,iv)
