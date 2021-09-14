@@ -321,7 +321,7 @@ contains
                 !  CO2 compensation point (Pa)
                 !  leaf boundary layer conductance of h20
                 !  constrained vapor pressure
-                if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                if ( hlm_use_mosslichen_undersnow.eq.itrue ) then ! Hui: Problematic if one patch have multi-pfts
                    call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
                      bc_in(s)%oair_pa(ifp),    & ! in
                      bc_in(s)%t_soisno_sl(1),   & ! in
