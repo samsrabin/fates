@@ -570,7 +570,7 @@ contains
                                     tpu_z,                              &  ! in
                                     kp_z,                               &  ! in
                                     bc_in(s)%t_soisno_sl(1),             &  ! in
-                                    bc_in(s)%esat_tv(ifp),           &  ! in
+                                    bc_in(s)%esat_tv_pa(ifp),           &  ! in
                                     bc_in(s)%forc_pbot,                 &  ! in
                                     bc_in(s)%cair_pa(ifp),              &  ! in
                                     bc_in(s)%oair_pa(ifp),              &  ! in
@@ -601,7 +601,7 @@ contains
                                     tpu_z,                              &  ! in
                                     kp_z,                               &  ! in
                                     bc_in(s)%t_veg_pa(ifp),             &  ! in
-                                    bc_in(s)%esat_tv(ifp),           &  ! in
+                                    bc_in(s)%esat_tv_pa(ifp),           &  ! in
                                     bc_in(s)%forc_pbot,                 &  ! in
                                     bc_in(s)%cair_pa(ifp),              &  ! in
                                     bc_in(s)%oair_pa(ifp),              &  ! in
