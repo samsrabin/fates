@@ -1529,8 +1529,8 @@ contains
             call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
          
-         if(hlm_use_mosslichen_photosyn >= 3)then
-            write(fates_log(), *) 'hlm_use_mosslichen_photosyn cannot be over 2. Exiting.'
+         if(hlm_use_mosslichen_photosyn >= 4)then
+            write(fates_log(), *) 'hlm_use_mosslichen_photosyn cannot be over 3. Exiting.'
             call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
          

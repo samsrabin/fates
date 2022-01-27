@@ -199,9 +199,9 @@ module FatesInterfaceTypesMod
                                                                     ! if their impact on radiation and photosynthesis when they are under snow is not negligible.
                                                                     ! 1 = TRUE, 0= FALSE
   integer, public ::  hlm_use_mosslichen_photosyn                   ! Flag to run different type of photosynthesis for moss and lichen
-                                                                    ! 0: normal photosynthesis as other pfts with stomatal control (for testing purpose)
-                                                                    ! 1: moss and lichen photosynthesis without stomatal control (default, https://doi.org/10.5194/bg-10-6989-2013)
-                                                                    ! 2: moss and lichen photosynthesis with explicit treatment of Mesophyll conductance (not implemented yet, https://doi.org/10.1111/nph.15675; https://doi.org/10.1111/tpj.14587)
+                                                                    ! 1: normal photosynthesis as other pfts with stomatal control (for testing purpose)
+                                                                    ! 2: moss and lichen photosynthesis without stomatal control (default, https://doi.org/10.5194/bg-10-6989-2013)
+                                                                    ! 3: moss and lichen photosynthesis with explicit treatment of Mesophyll conductance (not implemented yet, https://doi.org/10.1111/nph.15675; https://doi.org/10.1111/tpj.14587)
 
    ! -------------------------------------------------------------------------------------
    ! Parameters that are dictated by FATES and known to be required knowledge
