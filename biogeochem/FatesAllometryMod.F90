@@ -124,6 +124,7 @@ module FatesAllometryMod
   public :: set_root_fraction  ! Generic wrapper to calculate normalized
                                ! root profiles
   public :: leafc_from_treelai ! Calculate target leaf carbon for a given treelai for SP mode
+  public :: mosslichen_allom  ! Calculate target biomass for a given moss&lichen LAI
 
   logical         , parameter :: verbose_logging = .false.
   character(len=*), parameter :: sourcefile = __FILE__
@@ -839,12 +840,41 @@ contains
  
     return
   end function leafc_from_treelai
- 
+  
+
+  ! ============================================================================
+  ! Generic moss/lichen allometry wrapper (lai <-> biomass)
+  ! ============================================================================
+
+  subroutine mosslichen_allom(nv_biomass,treelai,pft,inverse)
+    ! !ARGUMENTS
+    real(r8),intent(inout) :: nv_biomass   ! moss and lichen biomass (g/m2)
+    real(r8), intent(inout):: treelai                    ! desired tree lai m2/m2
+    integer(i4),intent(in) :: pft         ! PFT index
+    logical,optional,intent(in) :: inverse ! if true, calculate nv_biomass from treelai 
+                                           ! instead of treelai from nv_biomass
+
   ! =====================================================================================
-
-
-
-
+    ! !LOCAL VARIABLES:
+    real(r8) :: nv_sla =            ! m2/g C  leaf area per leaf carbon;
+    real(r8) :: nv_c2b = 2          ! convert tissue carbon to biomass (no available data for moss).
+    real(r8) :: nv_t2l = 1          ! convert total tissue biomass to leaf biomass (no available data for moss)
+    
+    !----------------------------------------------------------------------
+    if( treelai  < 0._r8.or. pft  ==  0 ) then
+       write(fates_log(),*) 'negative tree lai in mosslichen_allom?'
+       write(fates_log(),*) 'or.. pft was zero?'
+       write(fates_log(),*) 'problem in mosslichen_allom',treelai,pft
+       call endrun(msg=errMsg(sourcefile, __LINE__))
+    endif
+    
+    if (inverse) then
+       nv_biomass = treelai/nv_sla*nv_c2b/nv_t2l
+    else
+       treelai = nv_biomass/nv_c2b*nv_t2l*nv_sla
+    endif
+    
+  end subroutine mosslichen_allom
 
 
   ! ============================================================================
