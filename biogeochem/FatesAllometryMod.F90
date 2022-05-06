@@ -856,8 +856,8 @@ contains
 
   ! =====================================================================================
     ! !LOCAL VARIABLES:
-    real(r8) :: nv_sla =            ! m2/g C  leaf area per leaf carbon;
-    real(r8) :: nv_c2b = 2          ! convert tissue carbon to biomass (no available data for moss).
+    real(r8) :: nv_sla = 0.3           ! 0.465 - 0.0465 m2/g C  big variation,  leaf area per leaf carbon (based on Roos, et al. 2019);
+    real(r8) :: nv_c2b = 2.32       ! convert tissue carbon to biomass (based on Zuijlen et al. 2021).
     real(r8) :: nv_t2l = 1          ! convert total tissue biomass to leaf biomass (no available data for moss)
     
     !----------------------------------------------------------------------
