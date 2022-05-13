@@ -100,7 +100,7 @@ contains
              currentPatch%fabd       (:)     = 0._r8
              currentPatch%fabi       (:)     = 0._r8
              
-             if (hlm_use_mosslichen_undersnow.eq.itrue) then
+             if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) then
                if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved), this will be used in "ED_SunShadeFracs"
                   currentPatch%f_sun      (:,:,:) = 0._r8
                   currentPatch%fabd_sun_z (:,:,:) = 0._r8
@@ -144,7 +144,7 @@ contains
                 bc_out(s)%ftii_parb(ifp,:)            = 1._r8 ! output HLM
                 
                 nrad_tot=0
-                if (hlm_use_mosslichen_undersnow.eq.itrue) then
+                if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) then
                    do ft = 1,numpft
                        if (mosslichen==0) then
                           if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
@@ -177,13 +177,15 @@ contains
                      ! Hui: PatchNormanRadiation will take care of different treatment of moss&lichen.
                      call PatchNormanRadiation (currentPatch, &
                           bc_in(s)%fwet_pa(ifp),              &  ! in
+                          bc_in(s)%snow_depth_si,             &  ! in
                           bc_out(s)%albd_parb(ifp,:), &
                           bc_out(s)%albi_parb(ifp,:), &
                           bc_out(s)%fabd_parb(ifp,:), &
                           bc_out(s)%fabi_parb(ifp,:), &
                           bc_out(s)%ftdd_parb(ifp,:), &
                           bc_out(s)%ftid_parb(ifp,:), &
-                          bc_out(s)%ftii_parb(ifp,:), mosslichen)
+                          bc_out(s)%ftii_parb(ifp,:), &
+                          mosslichen)
                 endif ! is there vegetation? 
              end if    ! if the vegetation and zenith filter is active
           endif ! not bare ground
@@ -199,6 +201,7 @@ contains
 
   subroutine PatchNormanRadiation (currentPatch, &
        fwet,          &   ! (ifp)
+       snow_depth,    &   ! site
        albd_parb_out, &   ! (ifp,ib)
        albi_parb_out, &   ! (ifp,ib)
        fabd_parb_out, &   ! (ifp,ib)
@@ -224,6 +227,7 @@ contains
 
     type(ed_patch_type), intent(inout), target :: currentPatch
     real(r8), intent(in)    :: fwet   ! vegetation intercepted water fraction
+    real(r8), intent(in)    :: snow_depth   ! snow depth
     integer,  intent(in)    :: mosslichen   ! mosslichen switch
     real(r8), intent(inout) :: albd_parb_out(hlm_numSWb)
     real(r8), intent(inout) :: albi_parb_out(hlm_numSWb)
@@ -330,7 +334,7 @@ contains
 ! Hui: ft arrey ?
     do L = 1,nclmax
        do ft = 1,numpft
-         if (hlm_use_mosslichen_undersnow.eq.itrue .and. mosslichen == 1) then 
+         if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) .and. mosslichen == 1) then 
             if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
                currentPatch%canopy_mask(L,ft) = 0
             else
@@ -343,7 +347,7 @@ contains
                end do !iv
             endif ! stomatal_model
          else
-            if (hlm_use_mosslichen_undersnow.eq.itrue  .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+            if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
               currentPatch%canopy_mask(L,ft) = 0
             else
               currentPatch%canopy_mask(L,ft) = 0
@@ -388,7 +392,7 @@ contains
           do ft = 1,numpft
              do  iv = 1, currentPatch%nrad(L,ft)
                 !this is already corrected for area in CLAP
-                if (hlm_use_mosslichen_undersnow.eq.itrue) then
+                if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) then
                    if (mosslichen == 1) then 
                       if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
                          ! Option 1: 
@@ -1260,7 +1264,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                        write(fates_log(),*) 'edsurfRad 657 ', cpatch%fabi_sun_z(CL,ft,iv)
                     endif
                       
-                    if (hlm_use_mosslichen_undersnow.eq.itrue .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then              ! Hui: derive radiation for moss and lichen
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then              ! Hui: derive radiation for moss and lichen
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
@@ -1284,7 +1288,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
 
                     if ( debug )write(fates_log(),*) 'edsurfRad 663 ', cpatch%ed_parsun_z(CL,ft,iv)
 
-                    if (hlm_use_mosslichen_undersnow.eq.itrue .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
                       if (bc_in(s)%snow_depth_si==0) then
                         cpatch%ed_parsha_z(CL,ft,iv) = &
                            trd*cpatch%fabd_sha_z(CL,ft,iv) + &
@@ -1315,7 +1319,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
               do FT = 1,numpft
                  do iv = 1, cpatch%nrad(CL,ft)
                     ! Hui: need separate treatment for non-vascular plants
-                    if (hlm_use_mosslichen_undersnow.eq.itrue .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
