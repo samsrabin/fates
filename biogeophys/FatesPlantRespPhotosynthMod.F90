@@ -321,7 +321,7 @@ contains
                 !  CO2 compensation point (Pa)
                 !  leaf boundary layer conductance of h20
                 !  constrained vapor pressure
-                if ( hlm_use_mosslichen_undersnow.eq.itrue ) then ! Hui: Problematic if one patch have multi-pfts
+                if ( hlm_use_mosslichen_photosyn.eq.3) then ! Hui: Problematic if one patch have multi-pfts
                    call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
                      bc_in(s)%oair_pa(ifp),    & ! in
                      bc_in(s)%t_soisno_sl(1),   & ! in
@@ -497,7 +497,7 @@ contains
 
 
                                ! Part VII: Calculate dark respiration (leaf maintenance) for this layer
-                               if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                               if ( hlm_use_mosslichen_photosyn.eq.3 .and. stomatal_model(ft) >= 3 ) then
                                  call LeafLayerMaintenanceRespiration( lmr25top,                 &  ! in
                                       nscaler,                  &  ! in
                                       ft,                       &  ! in
@@ -523,7 +523,7 @@ contains
                                ! into consideration.
 
 
-                               if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                               if ( hlm_use_mosslichen_photosyn.eq.3 .and. stomatal_model(ft) >= 3 ) then
                                   call LeafLayerBiophysicalRates(currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
                                     ft,                                 &  ! in
                                     currentCohort%vcmax25top,           &  ! in
@@ -557,7 +557,7 @@ contains
 
                                ! Part IX: This call calculates the actual photosynthesis for the 
                                ! leaf layer, as well as the stomatal resistance and the net assimilated carbon.
-                               if ( hlm_use_mosslichen_undersnow.eq.itrue .and. stomatal_model(ft) >= 3 ) then
+                               if ( hlm_use_mosslichen_photosyn.eq.3 .and. stomatal_model(ft) >= 3 ) then
                                   call LeafLayerPhotosynthesis(currentPatch%f_sun(cl,ft,iv),    &  ! in
                                     currentPatch%ed_parsun_z(cl,ft,iv), &  ! in
                                     currentPatch%ed_parsha_z(cl,ft,iv), &  ! in
