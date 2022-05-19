@@ -2977,6 +2977,7 @@ contains
                  
                  call PatchNormanRadiation (currentPatch, &
                       bc_in(s)%fwet_pa(ifp),              &  ! in
+                      bc_in(s)%snow_depth_si,             &  ! in
                       bc_out(s)%albd_parb(ifp,:), &
                       bc_out(s)%albi_parb(ifp,:), &
                       bc_out(s)%fabd_parb(ifp,:), &
@@ -2987,6 +2988,7 @@ contains
                       
                   call PatchNormanRadiation (currentPatch, &
                       bc_in(s)%fwet_pa(ifp),              &  ! in
+                      bc_in(s)%snow_depth_si,             &  ! in
                       bc_out(s)%albd_parb(ifp,:), &
                       bc_out(s)%albi_parb(ifp,:), &
                       bc_out(s)%fabd_parb(ifp,:), &
