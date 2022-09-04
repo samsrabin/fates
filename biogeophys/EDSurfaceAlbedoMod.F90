@@ -101,7 +101,7 @@ contains
              currentPatch%fabi       (:)     = 0._r8
              
              if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) then
-               if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved), this will be used in "ED_SunShadeFracs"
+               if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved) when calling "wrap_canopy_radiation" after "wrap_mosslichen_radiation", this will be used in "ED_SunShadeFracs"
                   currentPatch%f_sun      (:,:,:) = 0._r8
                   currentPatch%fabd_sun_z (:,:,:) = 0._r8
                   currentPatch%fabd_sha_z (:,:,:) = 0._r8
@@ -146,17 +146,17 @@ contains
                 nrad_tot=0
                 if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) then
                    do ft = 1,numpft
-                       if (mosslichen==0) then
-                          if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
+                       if (mosslichen==0) then     ! Hui: call of "wrap_canopy_radiation" after "wrap_mosslichen_radiation"
+                          if (EDPftvarcon_inst%stomatal_model(ft) < 3) then  ! If  mosslichen==0, only PFTs other than moss and lichen
                              nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
                           end if
                        else
-                          if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+                          if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then  ! If  mosslichen==1, only PFTs moss and lichen
                              nrad_tot=nrad_tot+currentPatch%nrad(1,ft)
                           end if
                        end if
                    end do
-                else
+                else                                                        ! If normal case (oth)
                    nrad_tot=maxval(currentPatch%nrad(1,:))
                 end if
 
@@ -170,7 +170,7 @@ contains
                         bc_out(s)%albd_parb(ifp,ib) = bc_in(s)%albgr_dir_rb(ib)
                         bc_out(s)%albi_parb(ifp,ib) = bc_in(s)%albgr_dif_rb(ib)
                         bc_out(s)%ftdd_parb(ifp,ib)= 1.0_r8
-                        bc_out(s)%ftid_parb(ifp,ib)= 0.0_r8
+                        bc_out(s)%ftid_parb(ifp,ib)= 0.0_r8            ! ftdd_parb + ftid_parb should be 1
                         bc_out(s)%ftii_parb(ifp,ib)= 1.0_r8
                      enddo
                 else
@@ -331,10 +331,11 @@ contains
     ftii_parb_out(1:hlm_numSWb) = 1.0_r8
 
     ! Is this pft/canopy layer combination present in this patch?
-! Hui: ft arrey ?
+ ! Hui: ft array ?
     do L = 1,nclmax
        do ft = 1,numpft
          if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) .and. mosslichen == 1) then 
+         ! Hui: When call wrap_mosslichen_radiation
             if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
                currentPatch%canopy_mask(L,ft) = 0
             else
@@ -347,9 +348,12 @@ contains
                end do !iv
             endif ! stomatal_model
          else
+         ! Hui: When call wrap_canopy_radiation
             if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+              ! Hui: if PFT is moss or lichen, no need to consider anymore
               currentPatch%canopy_mask(L,ft) = 0
             else
+              ! Hui: if PFT is other than moss or lichen, need to consider
               currentPatch%canopy_mask(L,ft) = 0
               do  iv = 1, currentPatch%nrad(L,ft)
                  if (currentPatch%canopy_area_profile(L,ft,iv) > 0._r8)then
@@ -394,6 +398,7 @@ contains
                 !this is already corrected for area in CLAP
                 if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) then
                    if (mosslichen == 1) then 
+                      ! Hui: When call wrap_mosslichen_radiation
                       if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
                          ! Option 1: 
                          ftweight(1,ft,iv) = ftweight(1,ft,iv)+currentPatch%canopy_area_profile(L,ft,iv)
@@ -409,11 +414,13 @@ contains
                          ! ftweight(1,ft,iv) = 1
                       endif
                    else    
+                     ! Hui: When call wrap_canopy_radiation after calling wrap_mosslichen_radiation, no consideration of moss anymore
                      if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
                         ftweight(L,ft,iv) = currentPatch%canopy_area_profile(L,ft,iv)
                      end if
                    end if
                 else
+                   ! Hui: When call wrap_canopy_radiation (hlm_use_mosslichen_undersnow = false)
                    ftweight(L,ft,iv) = currentPatch%canopy_area_profile(L,ft,iv)
                 endif
              end do  !iv
@@ -1265,6 +1272,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                     endif
                       
                     if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then              ! Hui: derive radiation for moss and lichen
+                      !Hui: Consider the radiation from upper layer (not directly from solar radiation) to moss&lichen 
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
@@ -1274,6 +1282,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                            tri*cpatch%fabi_sun_z(CL,ft,iv)
                         print *, "no_snow_sun, ed_parsun_z=", cpatch%ed_parsun_z(CL,ft,iv)
                       else                                           ! snow cover
+                         ! Hui: Consider the radiation at the bottom of snow to moss&lichen
                          cpatch%ed_parsun_z(CL,ft,iv) = &
                             bc_in(s)%flx_absdv(ifp)*trd*cpatch%fabd_sun_z(CL,ft,iv) + &
                             bc_in(s)%flx_absiv(ifp)*tri*cpatch%fabi_sun_z(CL,ft,iv)
