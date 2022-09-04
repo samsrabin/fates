@@ -1332,14 +1332,25 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
-                      cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
-                         cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
-                         (bc_in(s)%flx_absiv(ifp)*tri * &
-                         cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv))
-                      cpatch%parprof_pft_dif_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
-                         cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv)) + &
-                         (bc_in(s)%flx_absiv(ifp)*tri * &
-                         cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv))
+                      if (bc_in(s)%snow_depth_si==0) then
+                        cpatch%parprof_pft_dir_z(CL,FT,iv) = trd * &
+                            cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
+                            tri * &
+                            cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv))
+                        cpatch%parprof_pft_dif_z(CL,FT,iv) = trd * &
+                            cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv)) + &
+                            tri * &
+                            cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv))
+                      else
+                         cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
+                             cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
+                             (bc_in(s)%flx_absiv(ifp)*tri * &
+                             cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv))
+                         cpatch%parprof_pft_dif_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
+                             cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv)) + &
+                             (bc_in(s)%flx_absiv(ifp)*tri * &
+                             cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv))
+                      end if
                     else
                       cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%solad_parb(ifp,ipar) * &
                          cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
