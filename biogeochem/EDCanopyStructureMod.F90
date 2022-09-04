@@ -1607,7 +1607,7 @@ contains
                         currentCohort%sai
 
                    !snow burial
-!Hui: snow burial is taken care in FATES, not in CLM. should modify FATES instead of CLM
+                   !Hui: snow burial is taken care in FATES, not in CLM. should modify FATES instead of CLM
                    !write(fates_log(), *) 'calc snow'
                    snow_depth_avg = snow_depth_si * frac_sno_eff_si
                    if(snow_depth_avg  > maxh(iv))then
@@ -1706,7 +1706,7 @@ contains
                    ! We calculate the absolute elevation of each layer to help determine if the layer
                    ! is obscured by snow.
 
-! Hui: snow burial for moss and lichen, moss totally buried, lichen similar to other pft
+                   ! Hui: snow burial for moss and lichen, moss totally buried, lichen similar to other pft
 
                    if ( EDPftvarcon_inst%stomatal_model(ft) == 3 ) then
                        print *, "moss 3"
