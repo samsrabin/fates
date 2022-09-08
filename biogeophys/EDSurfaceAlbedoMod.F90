@@ -354,13 +354,17 @@ contains
               currentPatch%canopy_mask(L,ft) = 0
             else
               ! Hui: if PFT is other than moss or lichen, need to consider
-              currentPatch%canopy_mask(L,ft) = 0
-              do  iv = 1, currentPatch%nrad(L,ft)
-                 if (currentPatch%canopy_area_profile(L,ft,iv) > 0._r8)then
-                     currentPatch%canopy_mask(L,ft) = 1
-                 !I think 'present' is only used here...
-                 endif
-              end do !iv
+              if (mosslichen == 1) then  ! Hui: if rad=5, snow depth=0, no calculation when calling wrap_mosslichen_albedo
+                 currentPatch%canopy_mask(L,ft) = 0
+              else
+                 currentPatch%canopy_mask(L,ft) = 0
+                 do  iv = 1, currentPatch%nrad(L,ft)
+                    if (currentPatch%canopy_area_profile(L,ft,iv) > 0._r8)then
+                        currentPatch%canopy_mask(L,ft) = 1
+                    !I think 'present' is only used here...
+                    endif
+                 end do !iv
+              end if
             endif ! stomatal_model
          endif  ! mosslichen
        end do !ft
@@ -421,7 +425,10 @@ contains
                    end if
                 else
                    ! Hui: When call wrap_canopy_radiation (hlm_use_mosslichen_undersnow = false)
-                   ftweight(L,ft,iv) = currentPatch%canopy_area_profile(L,ft,iv)
+                   !if (mosslichen == 0) then  
+                   ! If undersnow is not required, do calculation only for normal vegetation (to avoid double calculation of radiation for undersnow 5)
+                      ftweight(L,ft,iv) = currentPatch%canopy_area_profile(L,ft,iv)
+                   !end if 
                 endif
              end do  !iv
           end do  !ft1
