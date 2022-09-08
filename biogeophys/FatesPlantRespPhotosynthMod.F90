@@ -324,7 +324,7 @@ contains
                 if ( hlm_use_mosslichen_photosyn.eq.3) then ! Hui: Problematic if one patch have multi-pfts
                    call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
                      bc_in(s)%oair_pa(ifp),    & ! in
-                     bc_in(s)%t_soisno_sl(1),   & ! in
+                     bc_in(s)%t_moss_pa(ifp),   & ! in
                      bc_in(s)%tgcm_pa(ifp),    & ! in
                      bc_in(s)%eair_pa(ifp),    & ! in
                      bc_in(s)%esat_tv_pa(ifp), & ! in
@@ -501,7 +501,7 @@ contains
                                  call LeafLayerMaintenanceRespiration( lmr25top,                 &  ! in
                                       nscaler,                  &  ! in
                                       ft,                       &  ! in
-                                      bc_in(s)%t_soisno_sl(1),   &  ! in
+                                      bc_in(s)%t_moss_pa(ifp),   &  ! in
                                       lmr_z(iv,ft,cl))             ! out
                                else
                                  call LeafLayerMaintenanceRespiration( lmr25top,                 &  ! in
@@ -531,7 +531,7 @@ contains
                                     currentCohort%tpu25top,             &  ! in
                                     currentCohort%kp25top,              &  ! in
                                     nscaler,                            &  ! in
-                                    bc_in(s)%t_soisno_sl(1),             &  ! in
+                                    bc_in(s)%t_moss_pa(ifp),             &  ! in
                                     bc_in(s)%fwet_pa(ifp),              &  ! in
                                     btran_eff,                          &  ! in
                                     vcmax_z,                            &  ! out
@@ -569,7 +569,7 @@ contains
                                     jmax_z,                             &  ! in
                                     tpu_z,                              &  ! in
                                     kp_z,                               &  ! in
-                                    bc_in(s)%t_soisno_sl(1),             &  ! in
+                                    bc_in(s)%t_moss_pa(ifp),             &  ! in
                                     bc_in(s)%esat_tv_pa(ifp),           &  ! in
                                     bc_in(s)%forc_pbot,                 &  ! in
                                     bc_in(s)%cair_pa(ifp),              &  ! in
