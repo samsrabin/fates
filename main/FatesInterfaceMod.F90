@@ -444,6 +444,7 @@ contains
       allocate(bc_in%cair_pa(maxPatchesPerSite))
       allocate(bc_in%rb_pa(maxPatchesPerSite))
       allocate(bc_in%t_veg_pa(maxPatchesPerSite))
+      allocate(bc_in%t_moss_pa(maxPatchesPerSite))
       allocate(bc_in%tgcm_pa(maxPatchesPerSite))
       allocate(bc_in%t_soisno_sl(nlevsoil_in))
       allocate(bc_in%fwet_pa(maxPatchesPerSite))

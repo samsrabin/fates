@@ -448,6 +448,9 @@ module FatesInterfaceTypesMod
       ! soil temperature (Kelvin)
       real(r8), allocatable :: t_soisno_sl(:)
       
+      ! moss temperature patch level(Kelvin)
+      real(r8), allocatable :: t_moss_pa(:)
+      
       ! vegetation water fraction
       real(r8), allocatable :: fwet_pa(:) 
 
