@@ -1259,8 +1259,8 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
 !                 diffuse_co2=(wmax-wmin)(1.0-fwet)**wco2 + wmin 
               print *, "check3=", stomatal_model(ft)                         
               if ( stomatal_model(ft) == 3 ) then             
-                 !co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / (gb_mol*max((max(1.0-fwet,0.1))**12,0.000001))
-                 co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol 
+                 co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / (gb_mol*max((max(1.0-fwet,0.1))**12,0.000001))
+!                 co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol 
 !  Alternative
 !                co2_inter_c = ((max(1.0-fwet,0.01))**12) * (can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol)
               !else if ( stomatal_model(ft) == 4 ) then
@@ -1297,8 +1297,8 @@ subroutine LeafLayerPhotosynthesis(f_sun_lsl,         &  ! in
 ! "h2o_co2_stoma_diffuse_ratio" is dependent on water content?
 ! gs_mol is 1?
           if ( stomatal_model(ft) == 3 ) then            
-             ! co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / (gb_mol*max((max(1.0-fwet,0.1))**12,0.000001))
-             co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol       
+             co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / (gb_mol*max((max(1.0-fwet,0.1))**12,0.000001))
+!            co2_inter_c = can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol       
 !  Alternative
 !             co2_inter_c = ((max(1.0-fwet,0.01))**12) * (can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / gb_mol)
           !else if ( stomatal_model(ft) == 4 ) then
@@ -2098,9 +2098,10 @@ end if
 
 ! EHui, btran should be changed to fwet to affect photosynthesis 
     if (hlm_use_mosslichen.eq.itrue .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
-      vcmax = vcmax   !* min(1.0, fwet/0.6)   ! According to Porada et al. 2013, threshhold saturation is set to 0.6
+!      vcmax = vcmax   !* min(1.0, fwet/0.6)   ! According to Porada et al. 2013, threshhold saturation is set to 0.6
+       vcmax = vcmax * min(1.0, fwet/0.6)
     else
-      vcmax = vcmax * btran
+       vcmax = vcmax * btran
     end if
 return
 end subroutine LeafLayerBiophysicalRates
