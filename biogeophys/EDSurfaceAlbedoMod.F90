@@ -594,13 +594,13 @@ contains
                    ! and transmitted by a layer
                    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
       ! Hui: add influence of water content on albedo, need to check if this way of assign values work.
-             !     if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then 
-             !          rhol(ft,ib)=EDPftvarcon_inst%rhol(ft,ib) - 0.5 * EDPftvarcon_inst%rhol(ft,ib) * fwet
-             !          taul(ft,ib)=EDPftvarcon_inst%taul(ft,ib) - 0.5 * EDPftvarcon_inst%taul(ft,ib) * fwet 
-             !     else 
+                  if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then 
+                       rhol(ft,ib)=EDPftvarcon_inst%rhol(ft,ib) - 0.5 * EDPftvarcon_inst%rhol(ft,ib) * fwet
+                       taul(ft,ib)=EDPftvarcon_inst%taul(ft,ib) - 0.5 * EDPftvarcon_inst%taul(ft,ib) * fwet 
+                  else 
                        taul(ft,ib)=EDPftvarcon_inst%taul(ft,ib) 
                        rhol(ft,ib)=EDPftvarcon_inst%rhol(ft,ib)
-             !     end if
+                  end if
                    
                    f_not_abs(ft,ib) = rhol(ft,ib) + taul(ft,ib) !leaf level fraction NOT absorbed.
                    !tr_dif_z is a term that uses the LAI in each layer, whereas rhol and taul do not,
