@@ -1341,13 +1341,13 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
                       if (bc_in(s)%snow_depth_si==0) then
                         cpatch%parprof_pft_dir_z(CL,FT,iv) = trd * &
-                            cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
+                            cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv) + &
                             tri * &
-                            cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv))
+                            cpatch%nrmlzd_parprof_pft_dir_z(idiffuse,CL,FT,iv)
                         cpatch%parprof_pft_dif_z(CL,FT,iv) = trd * &
-                            cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv)) + &
+                            cpatch%nrmlzd_parprof_pft_dif_z(idirect,CL,FT,iv) + &
                             tri * &
-                            cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv))
+                            cpatch%nrmlzd_parprof_pft_dif_z(idiffuse,CL,FT,iv)
                       else
                          cpatch%parprof_pft_dir_z(CL,FT,iv) = (bc_in(s)%flx_absdv(ifp)*trd * &
                              cpatch%nrmlzd_parprof_pft_dir_z(idirect,CL,FT,iv)) + &
