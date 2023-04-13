@@ -1738,7 +1738,8 @@ contains
 
 ! Hui: allow snow burial in this option; for vegetation under snow, snow burial needs to be treated in a different way.
                    ! =========== OVER-WRITE =================
-                   if ( hlm_use_mosslichen_undersnow.eq.itrue .and. EDPftvarcon_inst%stomatal_model(ft) >= 3 ) then
+                   !if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3 ) then
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. hlm_use_mosslichen_undersnow.eq.2) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3 ) then
                           fraction_exposed= 1.0_r8
                    end if
                    ! =========== OVER-WRITE =================
