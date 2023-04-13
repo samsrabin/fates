@@ -100,7 +100,7 @@ contains
              currentPatch%fabd       (:)     = 0._r8
              currentPatch%fabi       (:)     = 0._r8
              
-             if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) then
+             if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) then
                if (mosslichen == 1) then ! Hui: no re-initialization of patch variables (pft resolved) when calling "wrap_canopy_radiation" after "wrap_mosslichen_radiation", this will be used in "ED_SunShadeFracs"
                   currentPatch%f_sun      (:,:,:) = 0._r8
                   currentPatch%fabd_sun_z (:,:,:) = 0._r8
@@ -144,7 +144,7 @@ contains
                 bc_out(s)%ftii_parb(ifp,:)            = 1._r8 ! output HLM
                 
                 nrad_tot=0
-                if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) then
+                if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) then
                    do ft = 1,numpft
                        if (mosslichen==0) then     ! Hui: call of "wrap_canopy_radiation" after "wrap_mosslichen_radiation"
                           if (EDPftvarcon_inst%stomatal_model(ft) < 3) then  ! If  mosslichen==0, only PFTs other than moss and lichen
@@ -334,7 +334,7 @@ contains
  ! Hui: ft array ?
     do L = 1,nclmax
        do ft = 1,numpft
-         if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) .and. mosslichen == 1) then 
+         if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0.05))) .and. mosslichen == 1) then 
          ! Hui: When call wrap_mosslichen_radiation
             if (EDPftvarcon_inst%stomatal_model(ft) < 3) then
                currentPatch%canopy_mask(L,ft) = 0
@@ -349,7 +349,7 @@ contains
             endif ! stomatal_model
          else
          ! Hui: When call wrap_canopy_radiation
-            if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+            if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0.05))) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3) then
               ! Hui: if PFT is moss or lichen, no need to consider anymore
               currentPatch%canopy_mask(L,ft) = 0
             else
@@ -400,7 +400,7 @@ contains
           do ft = 1,numpft
              do  iv = 1, currentPatch%nrad(L,ft)
                 !this is already corrected for area in CLAP
-                if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0))) then
+                if (hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(snow_depth>0.05))) then
                    if (mosslichen == 1) then 
                       ! Hui: When call wrap_mosslichen_radiation
                       if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
@@ -1278,7 +1278,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
                        write(fates_log(),*) 'edsurfRad 657 ', cpatch%fabi_sun_z(CL,ft,iv)
                     endif
                       
-                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then              ! Hui: derive radiation for moss and lichen
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then              ! Hui: derive radiation for moss and lichen
                       !Hui: Consider the radiation from upper layer (not directly from solar radiation) to moss&lichen 
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
@@ -1304,7 +1304,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
 
                     if ( debug )write(fates_log(),*) 'edsurfRad 663 ', cpatch%ed_parsun_z(CL,ft,iv)
 
-                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
                       if (bc_in(s)%snow_depth_si==0) then
                         cpatch%ed_parsha_z(CL,ft,iv) = &
                            trd*cpatch%fabd_sha_z(CL,ft,iv) + &
@@ -1335,7 +1335,7 @@ subroutine ED_SunShadeFracs(nsites, sites,bc_in,bc_out)
               do FT = 1,numpft
                  do iv = 1, cpatch%nrad(CL,ft)
                     ! Hui: need separate treatment for non-vascular plants
-                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) .and. EDPftvarcon_inst%stomatal_model(FT) >= 3) then
                       trd = bc_in(s)%solad_parb(ifp,ipar)* bc_out(s)%ftdd_parb(ifp,ipar)
                       tri = bc_in(s)%solad_parb(ifp,ipar)*bc_out(s)%ftid_parb(ifp,ipar) + &
                              bc_in(s)%solai_parb(ifp,ipar)*bc_out(s)%ftii_parb(ifp,ipar)
