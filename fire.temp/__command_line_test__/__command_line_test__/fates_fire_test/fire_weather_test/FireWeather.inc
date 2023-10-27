@@ -1,0 +1,1 @@
+ADD_TEST_SUITE(SFFireWeather_suite)
