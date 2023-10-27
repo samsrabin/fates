@@ -168,7 +168,7 @@
       currentSite%acc_NI = 0.0_r8
     else 
       ! Accumulate Nesterov index over fire season. 
-      call fireWeather%NesterovIndex(temp_in_C, rainfall, rh, d_NI)
+      d_NI = fireWeather%NesterovIndex(temp_in_C, rainfall, rh)
       currentSite%acc_NI = currentSite%acc_NI + d_NI
     end if 
   end subroutine fire_danger_index

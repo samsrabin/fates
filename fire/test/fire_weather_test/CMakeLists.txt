@@ -1,4 +1,4 @@
-set(pfunit_sources SFFireWeather.F90)
+set(pfunit_sources test_FireWeather.pf)
 
 add_pfunit_ctest(FireWeather
   TEST_SOURCES "${pfunit_sources}"

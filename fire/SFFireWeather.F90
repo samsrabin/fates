@@ -35,7 +35,7 @@ module SFFireWeather
 
     !=====================================================================================
 
-    subroutine NesterovIndex(this, temp_C, precip, rh, NI)
+    real function NesterovIndex(this, temp_C, precip, rh)
       !
       !  DESCRIPTION:
       !  Calculates current day's Nesterov Index for a given input values
@@ -48,14 +48,13 @@ module SFFireWeather
       real(r8),            intent(in)    :: temp_C ! daily averaged temperature [degrees C]
       real(r8),            intent(in)    :: precip ! daily precipitation [mm]
       real(r8),            intent(in)    :: rh     ! daily relative humidity [rh]
-      real(r8),            intent(out)   :: NI   ! daily Nesterov Index [C^2] 
 
       ! LOCALS:
       real(r8) :: yipsolon ! intermediate varable for dewpoint calculation
       real(r8) :: dewpoint ! dewpoint
 
       if (precip > min_precip_thresh) then ! NI is 0.0 if it rains
-        NI = 0.0_r8
+        NesterovIndex = 0.0_r8
       else 
         
         ! Calculate dewpoint temperature 
@@ -63,10 +62,10 @@ module SFFireWeather
         dewpoint = (SF_val_fdi_b*yipsolon)/(SF_val_fdi_a - yipsolon) 
         
         ! Nesterov 1968.  Eq 5, Thonicke et al. 2010
-        NI = (temp_C - dewpoint)*temp_C 
-        if (NI < 0.0_r8) NI = 0.0_r8 ! can't be negative
+        NesterovIndex = (temp_C - dewpoint)*temp_C 
+        if (NesterovIndex < 0.0_r8) NesterovIndex = 0.0_r8 ! can't be negative
       endif
 
-    end subroutine NesterovIndex
+    end function NesterovIndex
 
 end module SFFireWeather
