@@ -136,7 +136,6 @@
     type(bc_in_type),   intent(in)            :: bc_in       ! driver data
     type(fire_weather), intent(in)            :: fireWeather ! fire weather object
     
-
     ! LOCALS:
     type(fates_patch_type), pointer :: currentPatch ! FATES patch object
     real(r8)                        :: temp_in_C    ! daily averaged temperature [degrees C]

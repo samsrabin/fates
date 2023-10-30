@@ -1,1 +1,2 @@
 add_subdirectory(fire_weather_test)
+add_subdirectory(fire_test)

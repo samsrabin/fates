@@ -3,3 +3,5 @@
 
 rm -r fire.temp
 ../../cime/scripts/fortran_unit_testing/run_tests.py --build-dir fire.temp 
+
+cp fire.temp/__command_line_test__/__command_line_test__/fates_fire_test/fire_test/FATES_fire_exe .

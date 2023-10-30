@@ -23,9 +23,8 @@ target_link_libraries(FATES_fire_exe
                   csm_share
                   funit)
 
-#add_test(fire_test FATES_fire_exe)
+add_test(fire_test FATES_fire_exe)
 
 # Tell CTest how to figure out that "STOP 1" fails for the current
-#define_Fortran_stop_failure(fire_test)
+define_Fortran_stop_failure(fire_test)
 
-create_pFUnit_test(pFunit_fire FATES_fire_exe "test_circle.pf" ${test_sources})
