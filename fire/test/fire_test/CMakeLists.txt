@@ -1,4 +1,4 @@
-set(fire_sources FatesUnitTestSF.F90)
+set(fire_sources FatesUnitTestSF.F90 FatesUnitTestSFMod.F90)
 
 set(NETCDF_C_DIR "/usr/local/Cellar/netcdf/4.9.2_1")
 set(NETCDF_FORTRAN_DIR "/usr/local/Cellar/netcdf-fortran/4.6.1")

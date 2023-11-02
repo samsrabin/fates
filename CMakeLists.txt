@@ -21,7 +21,7 @@ add_subdirectory(${HLM_ROOT}/src/fates/parteh fates_parteh)
 add_subdirectory(${HLM_ROOT}/src/fates/fire fates_fire)
 
 # Add general unit test directories
-#add_subdirectory(${HLM_ROOT}/src/fates/unit_test_shr)
+add_subdirectory(${HLM_ROOT}/src/fates/unit_test_shr)
 
 # Remove shr_mpi_mod from share_sources.
 # This is needed because we want to use the mock shr_mpi_mod in place of the real one

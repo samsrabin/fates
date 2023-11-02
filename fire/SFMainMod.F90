@@ -37,7 +37,6 @@
   use PRTGenericMod,          only : struct_organ
   use FatesInterfaceTypesMod, only : numpft
   use FatesAllometryMod,      only : CrownDepth
-  use SFFireWeather,          only : fire_weather
 
   implicit none
   private
@@ -72,20 +71,17 @@
     !  Runs main SPITFIRE code across all patches on a FATES site
     !
     ! ARGUMENTS:
-    type(ed_site_type), intent(inout), target :: currentSite
-    type(bc_in_type),   intent(in)            :: bc_in
+    type(ed_site_type), intent(inout), target :: currentSite ! site object
+    type(bc_in_type),   intent(in)            :: bc_in       ! site driver data object
 
     ! LOCALS:
     type(fates_patch_type), pointer :: currentPatch     ! patch to work with
-    type(fire_weather)              :: fireWeather      ! fire weather object
+
     real(r8)                        :: canopy_fuel_load ! available canopy fuel load in patch [kg biomass]
     real(r8)                        :: passive_crown_FI ! fire intensity for ignition of passive canopy fuel [kW/m]
     real(r8)                        :: ROS_torch        ! ROS for crown torch initation [m/min]
     real(r8)                        :: lb               ! length to breadth ratio of fire ellipse [unitless]
     real(r8)                        :: heat_per_area    ! heat release per unit area [kJ/m2] for surface fuel
-
-    ! initialize fire weather
-    call fireWeather%Init(1)
 
     ! zero fire things
     currentPatch => currentSite%youngest_patch
@@ -103,7 +99,7 @@
     if (write_SF) write(fates_log(), *) 'spitfire_mode', hlm_spitfire_mode
 
     if (hlm_spitfire_mode > hlm_sf_nofire_def) then
-      call fire_danger_index(currentSite, bc_in, fireWeather)
+      call fire_danger_index(currentSite, bc_in)
       call wind_effect(currentSite, bc_in) 
       call characteristics_of_fuel(currentSite)
       call characteristics_of_crown(currentSite, canopy_fuel_load, passive_crown_FI)
@@ -122,7 +118,7 @@
 
   !---------------------------------------------------------------------------------------
 
-  subroutine fire_danger_index(currentSite, bc_in, fireWeather)
+  subroutine fire_danger_index(currentSite, bc_in)
     !
     ! DESCRIPTION:
     !  Calculates site-level accumulated Nesterov Index
@@ -134,7 +130,6 @@
     ! ARGUMENTS:
     type(ed_site_type), intent(inout), target :: currentSite ! FATES site object
     type(bc_in_type),   intent(in)            :: bc_in       ! driver data
-    type(fire_weather), intent(in)            :: fireWeather ! fire weather object
     
     ! LOCALS:
     type(fates_patch_type), pointer :: currentPatch ! FATES patch object
@@ -167,7 +162,7 @@
       currentSite%acc_NI = 0.0_r8
     else 
       ! Accumulate Nesterov index over fire season. 
-      d_NI = fireWeather%NesterovIndex(temp_in_C, rainfall, rh)
+      d_NI = currentSite%fireWeather%Calculate(temp_in_C, rainfall, rh)
       currentSite%acc_NI = currentSite%acc_NI + d_NI
     end if 
   end subroutine fire_danger_index

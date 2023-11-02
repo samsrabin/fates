@@ -216,6 +216,10 @@ contains
     allocate(site_in%seed_in(1:numpft))
     allocate(site_in%seed_out(1:numpft))
 
+    ! Fire weather
+    allocate(site_in%fireWeather)
+    
+
   end subroutine init_site_vars
 
   ! ============================================================================
