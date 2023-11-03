@@ -34,6 +34,7 @@ module EDInitMod
   use EDTypesMod                , only : AREA
   use EDTypesMod                , only : init_spread_near_bare_ground
   use EDTypesMod                , only : init_spread_inventory
+  use EDTypesMod                , only : fire_weather_type
   use FatesConstantsMod         , only : leaves_on
   use FatesConstantsMod         , only : leaves_off
   use FatesConstantsMod         , only : ihard_stress_decid
@@ -217,9 +218,10 @@ contains
     allocate(site_in%seed_out(1:numpft))
 
     ! Fire weather
-    allocate(site_in%fireWeather)
-    
-
+    if (fire_weather_type == 1) then 
+      allocate(nesterov_index :: site%fireWeather)
+    end if 
+  
   end subroutine init_site_vars
 
   ! ============================================================================
