@@ -11,8 +11,9 @@ module FatesPatchMod
   use FatesUtilsMod,       only : check_var_real
   use FatesCohortMod,      only : fates_cohort_type
   use FatesRunningMeanMod, only : rmean_type, rmean_arr_type
-  use FatesLitterMod,      only : nfsc
+  use FatesFuelMod,        only : nfsc
   use FatesLitterMod,      only : litter_type
+  use FatesFuelMod,        only : fuel_type
   use PRTGenericMod,       only : num_elements
   use PRTGenericMod,       only : element_list
   use EDParamsMod,         only : maxSWb, nlevleaf, nclmax, maxpft

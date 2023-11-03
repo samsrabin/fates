@@ -2,7 +2,6 @@ module SFNesterovMod
 
   use FatesConstantsMod, only : r8 => fates_r8
   use SFFireWeatherMod,  only : fire_weather
-  use SFParamsMod,       only : min_precip_thresh
   
   implicit none
   private
@@ -11,10 +10,12 @@ module SFNesterovMod
 
     contains 
 
-      procedure, public :: Calculate => update_nesterov_index
+      procedure, public :: Update => update_nesterov_index
       procedure         :: calc_nesterov_index 
 
   end type nesterov_index
+
+  real(r8), parameter :: min_precip_thresh = 3.0_r8 ! threshold for precipitation above which to 0.0 NI
 
   contains 
 
@@ -42,7 +43,7 @@ module SFNesterovMod
       !  DESCRIPTION:
       !  Calculates current day's Nesterov Index for a given input values
 
-      use SFParamsMod, only : SF_val_fdi_a, SF_val_fdi_b, min_precip_thresh
+      use SFParamsMod, only : SF_val_fdi_a, SF_val_fdi_b
       
       ! ARGUMENTS:
       class(nesterov_index), intent(in) :: this   ! nesterov index extended class

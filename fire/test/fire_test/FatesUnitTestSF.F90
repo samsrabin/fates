@@ -8,7 +8,6 @@ program FatesUnitTestSF
   use FatesUnitTestIOMod, only : logf, OpenFile
   use SFFireWeatherMod,   only : fire_weather
   use SFNesterovMod,      only : nesterov_index
-  use SFParamsMod,        only : min_precip_thresh
 
   implicit none
 
@@ -44,7 +43,7 @@ program FatesUnitTestSF
   ! run on time steps
   do i = 1, n
     time(i) = i
-    call fireWeather%Calculate(temp_degC(i), precip(i), rh(i))
+    call fireWeather%Update(temp_degC(i), precip(i), rh(i))
     NI(i) = fireWeather%fire_weather_index
   end do 
 

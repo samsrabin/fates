@@ -43,7 +43,7 @@ module test_FireWeather
       ! test that over 3 mm of rain is 0.0
       class(TestFireWeather), intent(inout) :: this ! fire weather object
 
-      call this%fireWeather%Calculate(25.0_r8, 3.1_r8, 10.0_r8)
+      call this%fireWeather%Update(25.0_r8, 3.1_r8, 10.0_r8)
       @assertEqual(this%fireWeather%fire_weather_index, 0.0_r8, tolerance=tol)
     end subroutine zero_NI_rain
 
@@ -52,7 +52,7 @@ module test_FireWeather
       ! test that at 3 mm is over zero
       class(TestFireWeather), intent(inout) :: this ! fire weather object
 
-      call this%fireWeather%Calculate(25.0_r8, 3.0_r8, 10.0_r8)
+      call this%fireWeather%Update(25.0_r8, 3.0_r8, 10.0_r8)
       @assertGreaterThan(this%fireWeather%fire_weather_index, 0.0_r8, tolerance=tol)
     end subroutine NI_rain_min
 
@@ -61,7 +61,7 @@ module test_FireWeather
       ! test that NI is not negative
       class(TestFireWeather), intent(inout) :: this ! fire weather object
 
-      call this%fireWeather%Calculate(-30.0_r8, 0.0_r8, 99.0_r8)
+      call this%fireWeather%Update(-30.0_r8, 0.0_r8, 99.0_r8)
       @assertEqual(this%fireWeather%fire_weather_index, 0.0_r8, tolerance=tol)
     end subroutine NI_not_negative
 

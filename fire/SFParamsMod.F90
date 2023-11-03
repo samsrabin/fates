@@ -4,7 +4,7 @@ module SFParamsMod
    !
    use FatesConstantsMod , only: r8 => fates_r8
    use FatesConstantsMod , only: fates_check_param_set
-   use FatesLitterMod    , only: NFSC
+   use FatesFuelMod    , only: NFSC
    use FatesLitterMod    , only: ncwd
    use FatesParametersInterface, only : param_string_length
    use FatesGlobals,   only : fates_log
@@ -40,7 +40,6 @@ module SFParamsMod
    real(r8),protected, public :: SF_val_low_moisture_Slope(NFSC)
    real(r8),protected, public :: SF_val_mid_moisture_Coeff(NFSC)
    real(r8),protected, public :: SF_val_mid_moisture_Slope(NFSC)
-   real(r8),parameter, public :: min_precip_thresh = 3.0_r8 ! threshold for precipitation above which to 0.0 NI
 
    character(len=param_string_length),parameter :: SF_name_fdi_a = "fates_fire_fdi_a"
    character(len=param_string_length),parameter :: SF_name_fdi_b = "fates_fire_fdi_b"
