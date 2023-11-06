@@ -50,7 +50,7 @@ module EDPhysiologyMod
   use EDTypesMod          , only : site_massbal_type
   use EDTypesMod          , only : numlevsoil_max
   use EDTypesMod          , only : numWaterMem
-  use FatesLitterMod      , only : dl_sf
+  use FatesFuelMod        , only : dl_sf
   use EDParamsMod         , only : dinc_vai, dlower_vai
   use EDTypesMod          , only : area_inv
   use EDTypesMod          , only : AREA

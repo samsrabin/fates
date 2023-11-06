@@ -77,7 +77,7 @@ module EDParamsMod
                                                                       ! (3) for the Tree Recruitment Scheme without seedling dynamics
    
    
-   logical,protected, public :: active_crown_fire        ! flag, 1=active crown fire 0=no active crown fire
+   logical,protected, public :: active_crown_fire_switch        ! flag, 1=active crown fire 0=no active crown fire
    character(len=param_string_length),parameter :: fates_name_active_crown_fire = "fates_fire_active_crown_fire"
 
    real(r8), protected, public :: cg_strikes             ! fraction of cloud to ground lightning strikes (0-1)
@@ -607,6 +607,9 @@ contains
 
     call fates_params%RegisterParameter(name=fates_name_cg_strikes, dimension_shape=dimension_shape_scalar, &
          dimension_names=dim_names_scalar)
+
+    call fates_params%RegisterParameter(name=fates_name_cg_strikes, dimension_shape=dimension_shape_scalar, &
+         dimension_names=dim_names_scalar)
     
     call fates_params%RegisterParameter(name=ED_name_history_coageclass_bin_edges, dimension_shape=dimension_shape_1d, &
          dimension_names=dim_names_coageclass)
@@ -812,6 +815,10 @@ contains
     call fates_params%RetrieveParameter(name=name_dev_arbitrary, &
          data=dev_arbitrary)
 
+    call fates_params%RetrieveParameter(name=fates_name_active_crown_fire, & 
+         data=tmpreal)
+    active_crown_fire_switch = (abs(tmpreal-1.0_r8)<nearzero)
+
     call fates_params%RetrieveParameter(name=fates_name_cg_strikes, &
           data=cg_strikes)
 
@@ -911,7 +918,7 @@ contains
         write(fates_log(),fmt0) 'q10_mr = ',q10_mr
         write(fates_log(),fmt0) 'q10_froz = ',q10_froz
         write(fates_log(),fmt0) 'cg_strikes = ',cg_strikes
-        write(fates_log(),'(a,L2)') 'active_crown_fire = ',active_crown_fire
+        write(fates_log(),'(a,L2)') 'active_crown_fire = ',active_crown_fire_switch
         write(fates_log(),fmt0) 'damage_event_code = ',damage_event_code
         write(fates_log(),fmt0) 'damage_canopy_layer_code = ', damage_canopy_layer_code
         write(fates_log(),*) '------------------------------------------------------'

@@ -2113,7 +2113,7 @@ end subroutine flush_hvars
     ! ---------------------------------------------------------------------------------
 
 
-    use FatesLitterMod      , only : nfsc
+    use FatesFuelMod        , only : nfsc
     use FatesLitterMod      , only : ncwd
     use FatesConstantsMod   , only : ican_upper
     use FatesConstantsMod   , only : ican_ustory

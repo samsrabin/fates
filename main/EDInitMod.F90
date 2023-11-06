@@ -88,6 +88,7 @@ module EDInitMod
   use PRTGenericMod,          only : SetState
   use FatesSizeAgeTypeIndicesMod,only : get_age_class_index
   use DamageMainMod,          only : undamaged_class
+  use SFNesterovMod,          only : nesterov_index
 
   ! CIME GLOBALS
   use shr_log_mod               , only : errMsg => shr_log_errMsg
@@ -219,7 +220,7 @@ contains
 
     ! Fire weather
     if (fire_weather_type == 1) then 
-      allocate(nesterov_index :: site%fireWeather)
+      allocate(nesterov_index :: site_in%fireWeather)
     end if 
   
   end subroutine init_site_vars

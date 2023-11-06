@@ -106,8 +106,8 @@
       call rate_of_spread(currentSite, passive_crown_FI, ROS_torch, heat_per_area)
       call ground_fuel_consumption(currentSite)
       call area_burnt_intensity(currentSite, bc_in, lb)
-      call active_crown_fire (currentSite, passive_crown_FI, canopy_fuel_load,           &
-        ROS_torch, heat_per_area, lb)
+      !call active_crown_fire (currentSite, passive_crown_FI, canopy_fuel_load,           &
+      !  ROS_torch, heat_per_area, lb)
       call crown_scorching(currentSite)
       call crown_damage(currentSite)
       call cambial_damage_kill(currentSite)

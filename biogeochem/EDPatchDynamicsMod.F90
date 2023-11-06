@@ -38,8 +38,8 @@ module EDPatchDynamicsMod
   use FatesConstantsMod    , only : ican_upper
   use PRTGenericMod        , only : num_elements
   use PRTGenericMod        , only : element_list
-  use FatesLitterMod       , only : lg_sf
-  use FatesLitterMod       , only : dl_sf
+  use FatesFuelMod       , only : lg_sf
+  use FatesFuelMod       , only : dl_sf
   use FatesConstantsMod    , only : N_DIST_TYPES
   use EDTypesMod           , only : AREA_INV
   use FatesConstantsMod    , only : rsnbl_math_prec
