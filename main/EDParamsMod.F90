@@ -605,9 +605,9 @@ contains
     call fates_params%RegisterParameter(name=ED_name_history_height_bin_edges, dimension_shape=dimension_shape_1d, &
          dimension_names=dim_names_height)
 
-     call fates_params%RegisterParameter(name=fates_name_active_crown_fire, dimension_shape=dimension_shape_scalar, &
+    call fates_params%RegisterParameter(name=fates_name_active_crown_fire, dimension_shape=dimension_shape_scalar, &
          dimension_names=dim_names_scalar)
-
+    
     call fates_params%RegisterParameter(name=fates_name_cg_strikes, dimension_shape=dimension_shape_scalar, &
          dimension_names=dim_names_scalar)
 
@@ -921,7 +921,7 @@ contains
         write(fates_log(),fmt0) 'q10_mr = ',q10_mr
         write(fates_log(),fmt0) 'q10_froz = ',q10_froz
         write(fates_log(),fmt0) 'cg_strikes = ',cg_strikes
-        write(fates_log(),'(a,L2)') 'active_crown_fire = ',active_crown_fire_switch
+        !write(fates_log(),'(a,L2)') 'active_crown_fire = ',active_crown_fire_switch
         write(fates_log(),fmt0) 'damage_event_code = ',damage_event_code
         write(fates_log(),fmt0) 'damage_canopy_layer_code = ', damage_canopy_layer_code
         write(fates_log(),*) '------------------------------------------------------'

@@ -385,10 +385,6 @@ contains
     call fates_params%RegisterParameter(name=name, dimension_shape=dimension_shape_1d, &
          dimension_names=dim_names, lower_bounds=dim_lower_bound)
 
-    name = 'fates_fire_active_crown_fire'
-    call fates_params%RegisterParameter(name=name, dimension_shape=dimension_shape_1d, &
-         dimension_names=dim_names, lower_bounds=dim_lower_bound)
-
     name = 'fates_recruit_init_density'
     call fates_params%RegisterParameter(name=name, dimension_shape=dimension_shape_1d, &
          dimension_names=dim_names, lower_bounds=dim_lower_bound)
@@ -829,10 +825,6 @@ contains
     name = 'fates_fire_crown_kill'
     call fates_params%RetrieveParameterAllocate(name=name, &
          data=this%crown_kill)
-
-    name = 'fates_fire_active_crown_fire'
-    call fates_params%RetrieveParameterAllocate(name=name, &
-         data=this%active_crown_fire)
 
     name = 'fates_recruit_init_density'
     call fates_params%RetrieveParameterAllocate(name=name, &
