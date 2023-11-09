@@ -22,11 +22,59 @@ module FatesFuelMod
 
     contains 
 
+      procedure :: Init
       procedure :: UpdateLoading
+      procedure :: SumLoading
+      procedure :: FuseFuel
 
   end type fuel_type
 
+  !=======================================================================================
+
   contains 
+
+    subroutine Init(this) 
+      ! DESCRIPTION:
+      !   Initialize fuel class
+      
+      ! ARGUMENTS:
+      class(fuel_type), intent(inout) :: this ! fuel object
+
+      ! just zero everything
+      this%loading(:) = 0.0_r8
+      this%total_sum  = 0.0_r8
+      this%frac(:)    = 0.0_r8
+
+    end subroutine Init
+
+    !=====================================================================================
+
+    subroutine FuseFuel(this, other_fuel, this_area, other_area)
+      ! DESCRIPTION:
+      ! Fuse this patch with other_fuel patch 
+      
+      ! ARGUMENTS:
+      class(fuel_type),  intent(inout) :: this       ! recipient patch's fuel
+      class(fuel_type),  intent(in)    :: other_fuel ! donor patch fuel
+      real(r8)                         :: this_area  ! area of recipient patch [m2]
+      real(r8)                         :: other_area ! area of donor patch [m2]
+
+      ! LOCALS
+      integer  :: i            ! looping index
+      real(r8) :: inv_sum_area ! inverse sum of patch areas
+
+      inv_sum_area = 1.0_r8/(this_area + other_area)
+
+      do i = 1, NFSC
+        this%loading(i) = (this%loading(i)*this_area + other_fuel%loading(i)*other_area)*inv_sum_area
+      end do 
+
+      ! re-sum loading
+      call this%SumLoading()
+
+    end subroutine FuseFuel
+
+    !=====================================================================================
 
     subroutine UpdateLoading(this, patch_litter, live_grass)
       ! DESCRIPTION:
@@ -46,6 +94,20 @@ module FatesFuelMod
       ! live grass
       this%loading(lg_sf) = live_grass
       
+      ! sum up loading
+      call this%SumLoading()
+
+    end subroutine UpdateLoading
+
+    !=====================================================================================
+
+    subroutine SumLoading(this)
+      ! DESCRIPTION:
+      !   Sum the loading across all fuel classes and update fuel fraction
+      
+      ! ARGUMENTS:
+      class(fuel_type),  intent(inout) :: this         ! fuel object
+
       ! sum across fuel 
       this%total_sum = sum(this%loading(1:nfsc))
 
@@ -55,7 +117,7 @@ module FatesFuelMod
       else 
         this%frac(1:nfsc) = 0.0_r8
       end if
-        
-    end subroutine UpdateLoading
+
+    end subroutine SumLoading
 
 end module FatesFuelMod

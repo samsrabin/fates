@@ -2771,7 +2771,7 @@ end subroutine flush_hvars
 
          ! Fuel sum [kg/m2]
          hio_fire_sum_fuel_si_age(io_si, cpatch%age_class) = hio_fire_sum_fuel_si_age(io_si, cpatch%age_class) +  &
-            cpatch%sum_fuel * cpatch%area * AREA_INV
+            cpatch%fuel%total_sum * cpatch%area * AREA_INV
 
          ! Canopy trimming - degree to which canopy expansion is limited by leaf economics (0-1)
          if(associated(cpatch%tallest))then
@@ -3689,7 +3689,7 @@ end subroutine flush_hvars
          hio_fire_fuel_eff_moist_si(io_si)  = hio_fire_fuel_eff_moist_si(io_si) + cpatch%fuel_eff_moist * cpatch%area * AREA_INV
          hio_fire_fuel_sav_si(io_si)        = hio_fire_fuel_sav_si(io_si) + cpatch%fuel_sav * cpatch%area * AREA_INV / m_per_cm
          hio_fire_fuel_mef_si(io_si)        = hio_fire_fuel_mef_si(io_si) + cpatch%fuel_mef * cpatch%area * AREA_INV
-         hio_sum_fuel_si(io_si)             = hio_sum_fuel_si(io_si) + cpatch%sum_fuel * cpatch%area * AREA_INV
+         hio_sum_fuel_si(io_si)             = hio_sum_fuel_si(io_si) + cpatch%fuel%total_sum * cpatch%area * AREA_INV
 
          do ilyr = 1,sites(s)%nlevsoil
             hio_fragmentation_scaler_sl(io_si,ilyr) = hio_fragmentation_scaler_sl(io_si,ilyr) + cpatch%fragmentation_scaler(ilyr) * cpatch%area * AREA_INV
@@ -3699,13 +3699,13 @@ end subroutine flush_hvars
 
             i_agefuel = get_agefuel_class_index(cpatch%age,i_fuel)
             hio_fuel_amount_age_fuel(io_si,i_agefuel) = hio_fuel_amount_age_fuel(io_si,i_agefuel) + &
-               cpatch%fuel_frac(i_fuel) * cpatch%sum_fuel * cpatch%area * AREA_INV
+               cpatch%fuel%frac(i_fuel) * cpatch%fuel%total_sum * cpatch%area * AREA_INV
 
             hio_litter_moisture_si_fuel(io_si, i_fuel) = hio_litter_moisture_si_fuel(io_si, i_fuel) + &
                cpatch%litter_moisture(i_fuel) * cpatch%area * AREA_INV
 
             hio_fuel_amount_si_fuel(io_si, i_fuel) = hio_fuel_amount_si_fuel(io_si, i_fuel) + &
-               cpatch%fuel_frac(i_fuel) * cpatch%sum_fuel * cpatch%area * AREA_INV
+               cpatch%fuel%frac(i_fuel) * cpatch%fuel%total_sum * cpatch%area * AREA_INV
 
             hio_burnt_frac_litter_si_fuel(io_si, i_fuel) = hio_burnt_frac_litter_si_fuel(io_si, i_fuel) + &
                cpatch%burnt_frac_litter(i_fuel) * cpatch%frac_burnt * cpatch%area * AREA_INV

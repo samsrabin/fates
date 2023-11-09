@@ -1,6 +1,7 @@
 module FatesPatchMod
 
   use FatesConstantsMod,   only : r8 => fates_r8
+  use FatesConstantsMod,   only : ifalse, itrue
   use FatesConstantsMod,   only : fates_unset_r8
   use FatesConstantsMod,   only : fates_unset_int
   use FatesConstantsMod,   only : primaryforest, secondaryforest
@@ -185,19 +186,17 @@ module FatesPatchMod
 
     ! FUELS AND FIRE
     ! fuel characteristics
-    real(r8)              :: sum_fuel                ! total ground fuel related to ROS (omits 1000 hr fuels) [kgC/m2]
-    real(r8)              :: fuel_frac(nfsc)         ! fraction of each litter class in the ros_fuel [0-1]
-    real(r8)              :: livegrass               ! total aboveground grass biomass in patch [kgC/m2]
-    real(r8)              :: fuel_bulkd              ! average fuel bulk density of the ground fuel. [kg/m3]
+    type(fuel_type), pointer :: fuel                 ! fuel characteristics
+    real(r8)                 :: fuel_bulkd              ! average fuel bulk density of the ground fuel. [kg/m3]
                                                        ! (incl. live grasses, omits 1000hr fuels)
-    real(r8)              :: fuel_sav                ! average surface area to volume ratio of the ground fuel [cm-1]
+    real(r8)                 :: fuel_sav                ! average surface area to volume ratio of the ground fuel [cm-1]
                                                        ! (incl. live grasses, omits 1000hr fuels)
-    real(r8)              :: fuel_mef                ! average moisture of extinction factor 
+    real(r8)                 :: fuel_mef                ! average moisture of extinction factor 
                                                        ! of the ground fuel (incl. live grasses, omits 1000hr fuels)
-    real(r8)              :: fuel_eff_moist          ! effective avearage fuel moisture content of the ground fuel 
+    real(r8)                 :: fuel_eff_moist          ! effective avearage fuel moisture content of the ground fuel 
                                                        ! (incl. live grasses. omits 1000hr fuels)
-    real(r8)              :: litter_moisture(nfsc)   ! moisture of litter [m3/m3]
-    real(r8)              :: canopy_bulk_density 
+    real(r8)                 :: litter_moisture(nfsc)   ! moisture of litter [m3/m3]
+    real(r8)                 :: canopy_bulk_density 
 
 
     ! fire spread
@@ -207,7 +206,7 @@ module FatesPatchMod
     real(r8)              :: tau_l                   ! duration of lethal heating [min]
     real(r8)              :: fi                      ! average fire intensity of flaming front [kJ/m/s] or [kW/m]
     integer               :: fire                    ! is there a fire? [1=yes; 0=no]
-    integer               ::  active_crown_fire_flg
+    integer               :: active_crown_fire_flg
     real(r8)              :: fd                      ! fire duration [min]
 
     ! fire effects      
@@ -230,6 +229,7 @@ module FatesPatchMod
       procedure :: InitLitter
       procedure :: Create
       procedure :: FreeMemory
+      procedure :: SumLiveGrass
       procedure :: Dump
       procedure :: CheckVars
 
@@ -250,7 +250,7 @@ module FatesPatchMod
       integer,                 intent(in)    :: num_swb     ! number of shortwave broad-bands to track
       integer,                 intent(in)    :: num_levsoil ! number of soil layers
 
-      ! allocate arrays 
+      ! allocate arrays and pointers
       allocate(this%tr_soil_dir(num_swb))
       allocate(this%tr_soil_dif(num_swb))
       allocate(this%tr_soil_dir_dif(num_swb))
@@ -260,12 +260,16 @@ module FatesPatchMod
       allocate(this%sabs_dir(num_swb))
       allocate(this%sabs_dif(num_swb))
       allocate(this%fragmentation_scaler(num_levsoil))
+      allocate(this%fuel)
 
       ! initialize all values to nan
       call this%NanValues()
 
       ! zero values that should be zeroed
       call this%ZeroValues()
+
+      ! initialize fuel
+      call this%fuel%Init()
 
     end subroutine Init 
 
@@ -372,9 +376,6 @@ module FatesPatchMod
       this%fragmentation_scaler(:)      = nan 
   
       ! FUELS AND FIRE
-      this%sum_fuel                     = nan 
-      this%fuel_frac(:)                 = nan 
-      this%livegrass                    = nan 
       this%fuel_bulkd                   = nan 
       this%fuel_sav                     = nan
       this%fuel_mef                     = nan 
@@ -450,9 +451,6 @@ module FatesPatchMod
       this%fragmentation_scaler(:)           = 0.0_r8
 
       ! FIRE
-      this%sum_fuel                          = 0.0_r8
-      this%fuel_frac(:)                      = 0.0_r8
-      this%livegrass                         = 0.0_r8
       this%fuel_bulkd                        = 0.0_r8
       this%fuel_sav                          = 0.0_r8
       this%fuel_mef                          = 0.0_r8
@@ -559,7 +557,43 @@ module FatesPatchMod
 
     end subroutine InitLitter
 
-    !===========================================================================
+    !=====================================================================================
+
+    subroutine SumLiveGrass(this, live_grass)
+      !
+      ! DESCRIPTION:
+      ! sums up live grass (in kg/m2) on a patch
+      !
+      use PRTParametersMod, only : prt_params
+      use PRTGenericMod,    only : carbon12_element
+      use PRTGenericMod,    only : leaf_organ
+      use PRTGenericMod,    only : sapw_organ
+      use PRTGenericMod,    only : struct_organ
+
+      ! ARGUMENTS:
+      class(fates_patch_type), intent(inout) :: this       ! patch object
+      real(r8),                intent(out)   :: live_grass ! live grass amount [kg/m2]
+
+      ! LOCALS:
+      class(fates_cohort_type), pointer :: currentCohort ! local cohort object
+
+      live_grass = 0.0_r8 
+      currentCohort => this%tallest
+      do while(associated(currentCohort))
+        ! for grasses sum all aboveground tissues
+        if (prt_params%woody(currentCohort%pft) == ifalse) then 
+          live_grass = live_grass +                                      &
+            (currentCohort%prt%GetState(leaf_organ, carbon12_element) +  &
+            currentCohort%prt%GetState(sapw_organ, carbon12_element) +   &
+            currentCohort%prt%GetState(struct_organ, carbon12_element))* &
+            currentCohort%n/this%area*prt_params%c2b(currentCohort%pft)
+        end if
+        currentCohort => currentCohort%shorter
+      end do
+
+    end subroutine SumLiveGrass
+
+    !=====================================================================================
 
     subroutine Create(this, age, area, label, nocomp_pft, num_swb, num_pft,    &
       num_levsoil, current_tod, regeneration_model) 

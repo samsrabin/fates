@@ -189,7 +189,6 @@ module FatesRestartInterfaceMod
   integer :: ir_seed_decay_litt
   integer :: ir_seedgerm_decay_litt
   integer :: ir_seed_prod_co
-  integer :: ir_livegrass_pa
   integer :: ir_age_pa
   integer :: ir_area_pa
   integer :: ir_agesinceanthrodist_pa
@@ -976,11 +975,6 @@ contains
          long_name='dynamic ratio of dbh to canopy area, by patch x canopy-layer', &
          units='cm/m2', flushval = flushzero, &
          hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_spread_si )
-
-    call this%set_restart_var(vname='fates_livegrass', vtype=cohort_r8, &
-         long_name='total AGB from grass, by patch', &
-         units='kgC/m2', flushval = flushzero, &
-         hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_livegrass_pa )
 
     call this%set_restart_var(vname='fates_age', vtype=cohort_r8, &
          long_name='age of the ED patch', units='yr', flushval = flushzero, &
@@ -2047,7 +2041,6 @@ contains
            rio_gnd_alb_dif_pasb        => this%rvars(ir_gnd_alb_dif_pasb)%r81d, &
            rio_gnd_alb_dir_pasb        => this%rvars(ir_gnd_alb_dir_pasb)%r81d, &
            rio_spread_si               => this%rvars(ir_spread_si)%r81d, &
-           rio_livegrass_pa            => this%rvars(ir_livegrass_pa)%r81d, &
            rio_age_pa                  => this%rvars(ir_age_pa)%r81d, &
            rio_patchdistturbcat_pa     => this%rvars(ir_patchdistturbcat_pa)%int1d, &
            rio_agesinceanthrodist_pa   => this%rvars(ir_agesinceanthrodist_pa)%r81d, &
@@ -2378,7 +2371,6 @@ contains
              !
              ! deal with patch level fields here
              !
-             rio_livegrass_pa(io_idx_co_1st)   = cpatch%livegrass
              rio_age_pa(io_idx_co_1st)         = cpatch%age
              rio_patchdistturbcat_pa(io_idx_co_1st)   = cpatch%anthro_disturbance_label
              rio_agesinceanthrodist_pa(io_idx_co_1st) = cpatch%age_since_anthro_disturbance
@@ -2989,7 +2981,6 @@ contains
           rio_gnd_alb_dif_pasb        => this%rvars(ir_gnd_alb_dif_pasb)%r81d, &
           rio_gnd_alb_dir_pasb        => this%rvars(ir_gnd_alb_dir_pasb)%r81d, &
           rio_spread_si               => this%rvars(ir_spread_si)%r81d, &
-          rio_livegrass_pa            => this%rvars(ir_livegrass_pa)%r81d, &
           rio_age_pa                  => this%rvars(ir_age_pa)%r81d, &
           rio_patchdistturbcat_pa     => this%rvars(ir_patchdistturbcat_pa)%int1d,  &
           rio_agesinceanthrodist_pa   => this%rvars(ir_agesinceanthrodist_pa)%r81d, &
@@ -3310,7 +3301,6 @@ contains
              !
              ! deal with patch level fields here
              !
-             cpatch%livegrass          = rio_livegrass_pa(io_idx_co_1st)
              cpatch%age                = rio_age_pa(io_idx_co_1st)
              cpatch%anthro_disturbance_label       = rio_patchdistturbcat_pa(io_idx_co_1st)
              cpatch%age_since_anthro_disturbance   = rio_agesinceanthrodist_pa(io_idx_co_1st)
