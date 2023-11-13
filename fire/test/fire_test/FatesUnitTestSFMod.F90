@@ -4,17 +4,104 @@ module FatesUnitTestSFMod
   !		Module to support testing the FATES SPIFTIRE model
   !
 
-  use FatesConstantsMod,  only : r8 => fates_r8 
-  use FatesUnitTestIOMod, only : OpenNCFile, CloseNCFile, GetVar, RegisterNCDims
-  use FatesUnitTestIOMod, only : RegisterVar1D, type_int, type_double, Check
+  use FatesConstantsMod,        only : r8 => fates_r8 
+  use FatesUnitTestIOMod,       only : OpenNCFile, CloseNCFile, GetVar, RegisterNCDims
+  use FatesUnitTestIOMod,       only : RegisterVar1D, RegisterVar2D, type_int, type_double, Check
+  use FatesFuelMod,             only : nfsc, tw_sf, sb_sf, lb_sf, tr_sf, dl_sf, lg_sf
+  use EDTypesMod,               only : ed_site_type
+  use FatesPatchMod,            only : fates_patch_type
+  use SFNesterovMod,            only : nesterov_index
+  use PRTGenericMod,            only : num_elements
+  use PRTGenericMod,            only : element_list, carbon12_element, element_pos
+  use SFParamsMod,              only : SF_val_fdi_a, SF_val_fdi_b, SF_val_drying_ratio
+  use SFParamsMod,              only : SF_val_SAV, SF_val_FBD
+  use SFParamsMod,              only : SpitFireRegisterParams
+  use FatesParametersInterface, only : fates_parameters_type
   use netcdf
 
   implicit none
   private
 
-  public :: ReadDatmData, WriteFireData
+  public :: ReadDatmData, WriteFireData, SetUpSite, SetUpParams
 
   contains 
+
+    subroutine SetUpParams()
+      !
+      ! DESCRIPTION:
+      ! Sets up parameters
+      !
+
+      ! LOCALS:
+      class(fates_parameters_type), allocatable :: fates_params ! FATES input parameters
+
+      allocate(fates_params)
+      call fates_params%Init()
+      call SpitFireRegisterParams(fates_params)
+
+      SF_val_fdi_a = 17.62_r8
+      SF_val_fdi_b = 243.12_r8
+
+      SF_val_drying_ratio = 66000._r8
+
+      SF_val_SAV(1:nfsc) = (/13.0_r8, 3.58_r8, 0.98_r8, 0.2_r8, 66.0_r8, 66.0_r8/)
+
+      SF_val_FBD(1:nfsc) = (/15.4_r8, 16.8_r8, 19.6_r8, 999.0_r8, 4.0_r8, 4.0_r8/)
+
+      deallocate(fates_params)
+
+    end subroutine SetUpParams
+
+    !=====================================================================================
+
+    subroutine SetUpSite(site)
+      !
+      ! DESCRIPTION:
+      ! Sets up site, patch, litter, and fuel
+      ! This only sets up the stuff we actually need for these subroutines
+      !
+    
+      ! ARGUMENTS:
+      type(ed_site_type), target :: site ! site object
+
+      ! LOCALS:
+      type(fates_patch_type), pointer :: patch
+      integer                         :: el
+      
+      ! set up fire weather class
+      allocate(nesterov_index :: site%fireWeather)
+      call site%fireWeather%Init()
+
+      ! set up one patch
+      allocate(patch)
+      call patch%Init(2, 1)
+
+      patch%patchno = 1
+      patch%younger => null()
+      patch%older   => null()
+
+      ! set up litter
+      num_elements = 1
+      allocate(element_list(num_elements))
+      element_list(1) = carbon12_element
+      element_pos(carbon12_element) = 1
+      
+      allocate(patch%litter(num_elements))
+      do el = 1, num_elements
+        call patch%litter(el)%InitAllocate(12, 1, element_list(el))
+        call patch%litter(el)%ZeroFlux()
+        call patch%litter(el)%InitConditions(init_leaf_fines=0.31_r8,  &
+          init_root_fines=0.0_r8, init_ag_cwd=0.03_r8,                 &
+          init_bg_cwd=0.0_r8, init_seed=0.0_r8,                        &
+          init_seed_germ=0.0_r8)
+      end do
+
+      site%youngest_patch => patch
+      site%oldest_patch   => patch
+
+    end subroutine SetUpSite
+
+    !=====================================================================================
 
     subroutine ReadDatmData(nc_file, temp_degC, precip, rh, wind)
       !
@@ -48,7 +135,8 @@ module FatesUnitTestSFMod
 
     !=====================================================================================
 
-    subroutine WriteFireData(out_file, nsteps, time_counter, temp_degC, precip, rh, NI)
+    subroutine WriteFireData(out_file, nsteps, time_counter, temp_degC, precip, rh, NI,  &
+      loading, moisture)
       !
       ! DESCRIPTION:
       ! writes out data from the unit test
@@ -62,22 +150,24 @@ module FatesUnitTestSFMod
       real(r8),         intent(in) :: precip(:)
       real(r8),         intent(in) :: rh(:)
       real(r8),         intent(in) :: NI(:)
+      real(r8),         intent(in) :: loading(:)
+      real(r8),         intent(in) :: moisture(:,:)
 
       ! LOCALS:
       integer          :: ncid         ! netcdf id
-      character(len=8) :: dim_names(1) ! dimension names
-      integer          :: dimIDs(1)    ! dimension IDs
-      integer          :: timeID
-      integer          :: tempID, precipID, rhID, NIID
+      character(len=8) :: dim_names(2) ! dimension names
+      integer          :: dimIDs(2)    ! dimension IDs
+      integer          :: timeID, litterID
+      integer          :: tempID, precipID, rhID, NIID, loadingID, moistureID
 
       ! dimension names
-      dim_names = [character(len=8) :: 'time']
+      dim_names = [character(len=12) :: 'time', 'litter_class']
 
       ! open file
       call OpenNCFile(trim(out_file), ncid, 'readwrite')
 
       ! register dimensions
-      call RegisterNCDims(ncid, dim_names, (/nsteps/), 1, dimIDs)
+      call RegisterNCDims(ncid, dim_names, (/nsteps, nfsc/), 2, dimIDs)
 
       ! register time
       call RegisterVar1D(ncid, 'time', dimIDs(1), type_int,                             &
@@ -85,6 +175,11 @@ module FatesUnitTestSFMod
         [character(len=150) :: '2018-01-01 00:00:00', 'days since 2018-01-01 00:00:00', &
           'gregorian', 'time'],                                                         &
         4, timeID)
+
+      ! register litter class
+      call RegisterVar1D(ncid, 'litter_class', dimIDs(2), type_int,       &
+        [character(len=20)  :: 'units', 'long_name'],                     &
+        [character(len=150) :: '', 'litter class'], 2, litterID)
 
       ! register temperature
       call RegisterVar1D(ncid, 'temp_degC', dimIDs(1), type_double,      &
@@ -99,25 +194,40 @@ module FatesUnitTestSFMod
         3, precipID)
 
       ! register relative humidity
-      call RegisterVar1D(ncid, 'RH', dimIDs(1), type_double,       &
+      call RegisterVar1D(ncid, 'RH', dimIDs(1), type_double,         &
         [character(len=20)  :: 'coordinates', 'units', 'long_name'], &
         [character(len=150) :: 'time', '%', 'relative humidity'],    &                                                  
         3, rhID)
 
       ! register Nesterov Index
-      call RegisterVar1D(ncid, 'NI', dimIDs(1), type_double,       &
+      call RegisterVar1D(ncid, 'NI', dimIDs(1), type_double,         &
         [character(len=20)  :: 'coordinates', 'units', 'long_name'], &
-        [character(len=150) :: 'time', '', 'Nesterov Index'],    &                                                  
+        [character(len=150) :: 'time', '', 'Nesterov Index'],        &                                                  
         3, NIID)
+
+      ! register loading
+      call RegisterVar1D(ncid, 'loading', dimIDs(1), type_double,    &
+        [character(len=20)  :: 'coordinates', 'units', 'long_name'], &
+        [character(len=150) :: 'time', 'kg m-2', 'fuel loading'],    &                                                  
+        3, loadingID)
+
+      ! register moisture
+      call RegisterVar2D(ncid, 'fuel_moisture', dimIDs(1:2), type_double,       &
+        [character(len=20)  :: 'coordinates', 'units', 'long_name'],            &
+        [character(len=150) :: 'time litter_class', 'm3 m-3', 'fuel moisture'], &                                                  
+        3, moistureID)
 
       call Check(NF90_ENDDEF(ncid))
 
       call Check(NF90_PUT_VAR(ncid, timeID, time_counter))
+      call Check(NF90_PUT_VAR(ncid, litterID, (/tw_sf, sb_sf, lb_sf, tr_sf, dl_sf, lg_sf/)))
       call Check(NF90_PUT_VAR(ncid, tempID, temp_degC(:)))
       call Check(NF90_PUT_VAR(ncid, precipID, precip(:)))
       call Check(NF90_PUT_VAR(ncid, rhID, rh(:)))
       call Check(NF90_PUT_VAR(ncid, NIID, NI(:)))
-
+      call Check(NF90_PUT_VAR(ncid, loadingID, loading(:)))
+      call Check(NF90_PUT_VAR(ncid, moistureID, moisture(:,:)))
+ 
       call CloseNCFile(ncid)
 
     end subroutine WriteFireData

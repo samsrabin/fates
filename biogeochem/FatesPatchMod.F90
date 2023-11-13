@@ -187,22 +187,11 @@ module FatesPatchMod
     ! FUELS AND FIRE
     ! fuel characteristics
     type(fuel_type), pointer :: fuel                 ! fuel characteristics
-    real(r8)                 :: fuel_bulkd              ! average fuel bulk density of the ground fuel. [kg/m3]
-                                                       ! (incl. live grasses, omits 1000hr fuels)
-    real(r8)                 :: fuel_sav                ! average surface area to volume ratio of the ground fuel [cm-1]
-                                                       ! (incl. live grasses, omits 1000hr fuels)
-    real(r8)                 :: fuel_mef                ! average moisture of extinction factor 
-                                                       ! of the ground fuel (incl. live grasses, omits 1000hr fuels)
-    real(r8)                 :: fuel_eff_moist          ! effective avearage fuel moisture content of the ground fuel 
-                                                       ! (incl. live grasses. omits 1000hr fuels)
-    real(r8)                 :: litter_moisture(nfsc)   ! moisture of litter [m3/m3]
     real(r8)                 :: canopy_bulk_density 
-
 
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
     real(r8)              :: ros_back                ! rate of backward spread of fire [m/min]
-    real(r8)              :: effect_wspeed           ! windspeed modified by fraction of relative grass and tree cover [m/min]
     real(r8)              :: tau_l                   ! duration of lethal heating [min]
     real(r8)              :: fi                      ! average fire intensity of flaming front [kJ/m/s] or [kW/m]
     integer               :: fire                    ! is there a fire? [1=yes; 0=no]
@@ -230,6 +219,7 @@ module FatesPatchMod
       procedure :: Create
       procedure :: FreeMemory
       procedure :: SumLiveGrass
+      procedure :: SumCoverArea
       procedure :: Dump
       procedure :: CheckVars
 
@@ -376,14 +366,8 @@ module FatesPatchMod
       this%fragmentation_scaler(:)      = nan 
   
       ! FUELS AND FIRE
-      this%fuel_bulkd                   = nan 
-      this%fuel_sav                     = nan
-      this%fuel_mef                     = nan 
-      this%fuel_eff_moist               = nan 
-      this%litter_moisture(:)           = nan
       this%ros_front                    = nan
       this%ros_back                     = nan   
-      this%effect_wspeed                = nan    
       this%tau_l                        = nan
       this%fi                           = nan 
       this%fire                         = fates_unset_int
@@ -451,14 +435,8 @@ module FatesPatchMod
       this%fragmentation_scaler(:)           = 0.0_r8
 
       ! FIRE
-      this%fuel_bulkd                        = 0.0_r8
-      this%fuel_sav                          = 0.0_r8
-      this%fuel_mef                          = 0.0_r8
-      this%fuel_eff_moist                    = 0.0_r8
-      this%litter_moisture(:)                = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
-      this%effect_wspeed                     = 0.0_r8
       this%tau_l                             = 0.0_r8
       this%fi                                = 0.0_r8
       this%fd                                = 0.0_r8
@@ -562,7 +540,7 @@ module FatesPatchMod
     subroutine SumLiveGrass(this, live_grass)
       !
       ! DESCRIPTION:
-      ! sums up live grass (in kg/m2) on a patch
+      ! sums up live grass (in kgC/m2) on a patch
       !
       use PRTParametersMod, only : prt_params
       use PRTGenericMod,    only : carbon12_element
@@ -586,12 +564,57 @@ module FatesPatchMod
             (currentCohort%prt%GetState(leaf_organ, carbon12_element) +  &
             currentCohort%prt%GetState(sapw_organ, carbon12_element) +   &
             currentCohort%prt%GetState(struct_organ, carbon12_element))* &
-            currentCohort%n/this%area*prt_params%c2b(currentCohort%pft)
+            currentCohort%n/this%area
         end if
         currentCohort => currentCohort%shorter
       end do
 
     end subroutine SumLiveGrass
+
+    !=====================================================================================
+    
+    subroutine SumCoverArea(this, tree_area, grass_area)
+      !
+      ! DESCRIPTION:
+      ! sums up tree and grass crown areas
+      ! Also updates patch-level tree area
+      !
+      use PRTParametersMod,  only : prt_params
+      use FatesConstantsMod, only : nocomp_bareground
+      
+      ! ARGUMENTS:
+      class(fates_patch_type), intent(inout) :: this       ! patch object
+      real(r8),                intent(out)   :: tree_area  ! tree area of patch [m2]
+      real(r8),                intent(out)   :: grass_area ! grass area of patch [m2]
+
+      ! LOCALS:
+      type(fates_cohort_type), pointer :: currentCohort ! cohort object
+
+      tree_area = 0.0_r8
+      grass_area = 0.0_r8
+
+      if (this%nocomp_pft_label /= nocomp_bareground) then
+
+        currentCohort => this%tallest
+        do while(associated(currentCohort))
+          if (prt_params%woody(currentCohort%pft) == itrue) then
+            tree_area = tree_area + currentCohort%c_area
+          else
+            grass_area = grass_area + currentCohort%c_area
+          endif
+          currentCohort => currentCohort%shorter
+        enddo
+
+        ! correct so that the tree/grass area isn't larger than the patch area
+        tree_area = min(tree_area, this%area)
+        grass_area = min(grass_area, this%area)
+
+        ! update patch-level tree area
+        this%total_tree_area = tree_area
+
+      endif 
+
+    end subroutine SumCoverArea
 
     !=====================================================================================
 

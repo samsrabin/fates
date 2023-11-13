@@ -479,7 +479,7 @@ module FatesUnitTestIOMod
 
       ! ARGUMENTS: 
       integer,          intent(in)  :: ncid                ! netcdf file id
-      character(len=*), intent(in)  :: var_name            ! dimension names
+      character(len=*), intent(in)  :: var_name            ! variable name
       integer,          intent(in)  :: dimID(1)            ! dimension ID
       integer,          intent(in)  :: type                ! type: int or double
       character(len=*), intent(in)  :: att_names(num_atts) ! attribute names
@@ -508,6 +508,46 @@ module FatesUnitTestIOMod
       end do
     
     end subroutine RegisterVar1D
+
+    !=====================================================================================
+
+    subroutine RegisterVar2D(ncid, var_name, dimID, type, att_names, atts, num_atts, varID)
+      !
+      ! DESCRIPTION:
+      ! Defines variables and dimensions 
+      !
+
+      ! ARGUMENTS: 
+      integer,          intent(in)  :: ncid                ! netcdf file id
+      character(len=*), intent(in)  :: var_name            ! variable name
+      integer,          intent(in)  :: dimID(1:2)          ! dimension ID
+      integer,          intent(in)  :: type                ! type: int or double
+      character(len=*), intent(in)  :: att_names(num_atts) ! attribute names
+      character(len=*), intent(in)  :: atts(num_atts)      ! attribute values 
+      integer,          intent(in)  :: num_atts            ! number of attributes
+      integer,          intent(out) :: varID               ! variable ID
+
+
+      ! LOCALS:
+      integer :: i       ! looping index
+      integer :: nc_type ! netcdf type
+
+      if (type == type_double) then 
+        nc_type = NF90_DOUBLE
+      else if (type == type_int) then 
+        nc_type = NF90_INT
+      else
+        write(logf, *) "Must pick correct type"
+        stop
+      end if 
+
+      call Check(nf90_def_var(ncid, var_name, nc_type, dimID, varID))
+
+      do i = 1, num_atts 
+        call Check(nf90_put_att(ncid, varID, att_names(i), atts(i)))
+      end do
+    
+    end subroutine RegisterVar2D
 
     !=====================================================================================
 

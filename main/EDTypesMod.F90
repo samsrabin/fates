@@ -323,12 +323,10 @@ module EDTypesMod
 
 
      ! FIRE
-     real(r8) ::  wind                                         ! daily wind in m/min for Spitfire units 
-     real(r8) ::  acc_ni                                       ! daily nesterov index accumulating over time.
      real(r8) ::  fdi                                          ! daily probability an ignition event will start a fire
      real(r8) ::  NF                                           ! daily ignitions in km2
      real(r8) ::  NF_successful                                ! daily ignitions in km2 that actually lead to fire
-     class(fire_weather), allocatable :: fireWeather           ! fire weather object
+     class(fire_weather), pointer :: fireWeather               ! fire weather object
 
      ! PLANT HYDRAULICS
      type(ed_site_hydr_type), pointer :: si_hydr
@@ -442,6 +440,7 @@ module EDTypesMod
 
   ! Make public necessary subroutines and functions
   public :: dump_site
+  public :: CalculateCoverFraction
 
   contains
       
@@ -490,6 +489,44 @@ module EDTypesMod
       return
   end subroutine ZeroMassBalFlux
    
+  ! =====================================================================================
+
+  subroutine CalculateCoverFraction(csite, tree_fraction, grass_fraction, bare_fraction)
+      !
+      ! DESCRIPTION:
+      ! calculates site-wide average of tree, grass, and bare ground fraction by area
+      !
+    
+      ! ARGUMENTS:
+      type(ed_site_type) , intent(in), target :: csite          ! site object
+      real(r8),            intent(out)        :: tree_fraction  ! tree fraction of site by area [0-1]
+      real(r8),            intent(out)        :: grass_fraction ! grass fraction of site by area [0-1]
+      real(r8),            intent(out)        :: bare_fraction  ! bare ground fraction of site by area [0-1]
+
+      ! LOCALS
+      type(fates_patch_type), pointer :: currentPatch     ! patch object
+      real(r8)                        :: patch_tree_area  ! patch-level tree area [m2]
+      real(r8)                        :: patch_grass_area ! patch-level grass area [m2]
+
+      tree_fraction = 0.0_r8
+      grass_fraction = 0.0_r8
+      
+      currentPatch => csite%oldest_patch
+      do while(associated(currentPatch))
+  
+        call currentPatch%SumCoverArea(patch_tree_area, patch_grass_area)
+        tree_fraction = tree_fraction + patch_tree_area/AREA
+        grass_fraction = grass_fraction + patch_grass_area/AREA 
+  
+        currentPatch => currentPatch%younger
+      end do 
+
+      ! if there is a cover of more than one, then the grasses are under the trees
+      grass_fraction = min(grass_fraction, 1.0_r8 - tree_fraction) 
+      bare_fraction = 1.0_r8 - tree_fraction - grass_fraction
+
+  end subroutine CalculateCoverFraction
+
   ! =====================================================================================
 
   subroutine dump_site(csite) 

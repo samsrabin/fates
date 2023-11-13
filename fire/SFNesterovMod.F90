@@ -10,7 +10,9 @@ module SFNesterovMod
 
     contains 
 
+      procedure, public :: Init => init_nesterov_fire_weather
       procedure, public :: Update => update_nesterov_index
+      procedure, public :: CalcFuelMoisture => calc_nesterov_fuel_moisture
       procedure         :: calc_nesterov_index 
 
   end type nesterov_index
@@ -19,12 +21,34 @@ module SFNesterovMod
 
   contains 
 
-    subroutine update_nesterov_index(this, temp_C, precip, rh)
+    subroutine init_nesterov_fire_weather(this)
+      !
+      !  DESCRIPTION:
+      !  Initializes class attributes
+      
+      ! ARGUMENTS
+      class(nesterov_index), intent(inout) :: this ! nesterov index extended class
+
+      ! initialize values to 0.0
+      this%fire_weather_index   = 0.0_r8
+      this%wind_speed           = 0.0_r8
+      this%effective_wind_speed = 0.0_r8
+
+    end subroutine init_nesterov_fire_weather
+
+    !-------------------------------------------------------------------------------------
+
+    subroutine update_nesterov_index(this, temp_C, precip, rh, wind)
+      !
+      !  DESCRIPTION:
+      !  Updates Nesterov Index
+      
       ! ARGUMENTS
       class(nesterov_index), intent(inout) :: this   ! nesterov index extended class
       real(r8),              intent(in)    :: temp_C ! daily averaged temperature [degrees C]
       real(r8),              intent(in)    :: precip ! daily precipitation [mm]
-      real(r8),              intent(in)    :: rh     ! daily relative humidity [rh]
+      real(r8),              intent(in)    :: rh     ! daily relative humidity [%]
+      real(r8),              intent(in)    :: wind   ! daily wind speed [m/min]
 
       if (precip > min_precip_thresh) then ! rezero NI if it rains
         this%fire_weather_index = 0.0_r8
@@ -36,7 +60,7 @@ module SFNesterovMod
 
     end subroutine update_nesterov_index
 
-    !---------------------------------------------------------------------------------------
+    !-------------------------------------------------------------------------------------
 
     real(r8) function calc_nesterov_index(this, temp_C, precip, rh)
       !
@@ -68,5 +92,27 @@ module SFNesterovMod
       endif
 
     end function calc_nesterov_index
+
+    !-------------------------------------------------------------------------------------
+
+    real(r8) function calc_nesterov_fuel_moisture(this, sav)
+      !
+      !  DESCRIPTION:
+      !  Calculates fuel moisture for given input fuel surface area to volume ratio (SAV)
+      !  Based on Equation 6 in Thonicke et al. 2010 
+
+      use SFParamsMod, only : SF_val_drying_ratio
+      
+      ! ARGUMENTS:
+      class(nesterov_index), intent(in) :: this ! nesterov index extended class
+      real(r8),              intent(in) :: sav  ! fuel surface area to volume ratio [/cm]
+
+      ! LOCALS:
+      real(r8) :: alpha_FMC ! intermediate value for calculating moisture
+
+      alpha_FMC = sav/SF_val_drying_ratio 
+      calc_nesterov_fuel_moisture = exp(-1.0_r8*alpha_FMC*this%fire_weather_index)
+
+    end function calc_nesterov_fuel_moisture
 
 end module SFNesterovMod
