@@ -267,7 +267,7 @@
     real(r8)                        :: beta           ! packing ratio [unitless]
     real(r8)                        :: beta_opt       ! optimum packing ratio [unitless]
     real(r8)                        :: beta_ratio     ! ratio of packing ratio to optimum packing ratio [unitless]
-    real(r8)                        :: reaction_v_opt ! reaction velocity [/min]
+    real(r8)                        :: reaction_v_opt ! optimum reaction velocity [/min]
     real(r8)                        :: moist_damp     ! moisture dampening coefficient [0-1]
 
     real(r8) ir                   ! reaction intensity (kJ/m2/min)
