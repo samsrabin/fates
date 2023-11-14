@@ -76,10 +76,7 @@
     type(fates_patch_type), pointer :: currentPatch     ! patch to work with
 
     real(r8)                        :: canopy_fuel_load ! available canopy fuel load in patch [kg biomass]
-    real(r8)                        :: passive_crown_FI ! fire intensity for ignition of passive canopy fuel [kW/m]
-    real(r8)                        :: ROS_torch        ! ROS for crown torch initation [m/min]
     real(r8)                        :: lb               ! length to breadth ratio of fire ellipse [unitless]
-    real(r8)                        :: heat_per_area    ! heat release per unit area [kJ/m2] for surface fuel
 
     ! zero fire things
     currentPatch => currentSite%youngest_patch
@@ -99,7 +96,7 @@
     if (hlm_spitfire_mode > hlm_sf_nofire_def) then
       call UpdateFireWeather(currentSite, bc_in)
       call UpdateFuelCharacteristics(currentSite)
-      call rate_of_spread(currentSite, passive_crown_FI, ROS_torch, heat_per_area)
+      call rate_of_spread(currentSite)
       call ground_fuel_consumption(currentSite)
       call area_burnt_intensity(currentSite, bc_in, lb)
       call crown_scorching(currentSite)
@@ -248,7 +245,7 @@
 
   !=======================================================================================
 
-  subroutine rate_of_spread(currentSite, ROS_torch, passive_crown_FI, heat_per_area)
+  subroutine rate_of_spread(currentSite)
     !
     ! DESCRIPTION:
     !  Calculates rate of spread for each patch
@@ -258,9 +255,6 @@
 
     ! ARGUMENTS:
     type(ed_site_type), intent(in), target :: currentSite       ! site object
-    real(r8),           intent(out)        :: ROS_torch         ! ROS for crown torch initation (m/min)
-    real(r8),           intent(out)        :: heat_per_area     ! heat release per unit area (kJ/m2) for surface fuel
-    real(r8),           intent(in)         :: passive_crown_FI  ! min fire intensity to ignite canopy fuel (kW/m or kJ/m/s)
 
     ! LOCALS:
     type(fates_patch_type), pointer :: currentPatch   ! patch object
@@ -338,7 +332,6 @@
 
         if (((currentPatch%fuel%bulk_density) <= 0.0_r8).or.(eps <= 0.0_r8).or.(q_ig <= 0.0_r8)) then
           currentPatch%ROS_front = 0.0_r8
-          ROS_torch = 0.0_r8   
         else ! Eq 9. Thonicke et al. 2010. 
           ! forward ROS in m/min
           currentPatch%ROS_front = (ir*xi*(1.0_r8+phi_wind)) / (currentPatch%fuel%bulk_density*eps*q_ig)
@@ -346,13 +339,7 @@
           ! calculate heat release per unit area (HPA)(kJ/m2), Eq 2 Scott & Reinhardt 2001
           ! and residence time (min), Eq 3 Scott & Reinhardt 2001
           time_r = 12.595 / currentPatch%fuel%SAV 
-          heat_per_area = ir * time_r          
-
-          ! calculate torching index based on wind speed and crown fuels 
-          ! ROS for crown torch initation (m/min), Eq 18 Scott & Reinhardt 2001 
-          ROS_torch = (1.0 / 54.683 * wind_reduce)* &
-            ((((60.0*passive_crown_FI*currentPatch%fuel%bulk_density*eps*q_ig)/heat_per_area*ir*xi)-1.0) &
-              / (c*beta_ratio)**(-1*e))**1/b
+       
         end if
         ! Eq 10 in Thonicke et al. 2010
         ! backward ROS from Can FBP System (1992) in m/min
