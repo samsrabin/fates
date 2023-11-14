@@ -43,6 +43,8 @@
   private
 
   public :: fire_model
+  public :: UpdateFuelCharacteristics
+  public :: CalcEffectiveWindSpeed
   public :: rate_of_spread
   public :: ground_fuel_consumption
   public :: area_burnt_intensity
@@ -992,7 +994,7 @@
 
   !=======================================================================================
 
-  real(r8) function ReactionIntensity()
+  !real(r8) function ReactionIntensity()
   ! DESCRIPTION:
   ! Calculates moisture dampening coefficients, equation in Table A1 in Thonicke et al. 2010
 
@@ -1008,7 +1010,7 @@
   !MoistureDampeningCoeff = max(0.0_r8, (1.0_r8 - (2.59_r8*mw_weight) +                 &
   !  (5.11_r8*(mw_weight**2.0_r8)) - (3.52_r8*(mw_weight**3.0_r8))))
 
-  end function ReactionIntensity 
+  !end function ReactionIntensity 
 
 !=======================================================================================
   

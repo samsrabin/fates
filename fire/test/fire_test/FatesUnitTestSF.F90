@@ -12,6 +12,8 @@ program FatesUnitTestSF
 
   use FatesLitterMod,     only : litter_type
   use SFMainMod,          only : UpdateFuelCharacteristics
+  use SFMainMod,          only : CalcEffectiveWindSpeed
+  use SFMainMod,          only : rate_of_spread
   use FatesFuelMod,       only : nfsc
   use SFParamsMod,        only : SF_val_fdi_a
 
@@ -27,6 +29,9 @@ program FatesUnitTestSF
   real(r8),               allocatable :: NI(:)        ! cumulative nesterov index
   real(r8),               allocatable :: loading(:)   ! fuel loading [kg/m2]
   real(r8),               allocatable :: moisture(:,:) ! fuel moisture [m3/m3]
+  real(r8),               allocatable :: av_moisture(:) ! average fuel moisture [m3/m3]
+  real(r8),               allocatable :: ROS(:)
+  real(r8)                            :: ROS_torch, passive_crown_FI, heat_per_area
   integer                             :: n = 365      ! number of days to run
   integer                             :: i            ! looping indices
 
@@ -48,6 +53,8 @@ program FatesUnitTestSF
   allocate(NI(n))
   allocate(loading(n))
   allocate(moisture(n, nfsc))
+  allocate(av_moisture(n))
+  allocate(ros(n))
 
   ! read in DATM data
   call ReadDatmData('BONA_datm.nc', temp_degC, precip, rh, wind)
@@ -57,17 +64,24 @@ program FatesUnitTestSF
     
     time(i) = i
     
-    call site%fireWeather%Update(temp_degC(i), precip(i), rh(i))
+    call site%fireWeather%Update(temp_degC(i), precip(i), rh(i), wind(i))
+    site%fireWeather%wind_speed = wind(i)
+    call CalcEffectiveWindSpeed(site)
     NI(i) = site%fireWeather%fire_weather_index
     
     call UpdateFuelCharacteristics(site)
     loading(i) = site%youngest_patch%fuel%total_sum
     moisture(i, 1:nfsc) = site%youngest_patch%fuel%moisture(1:nfsc)
+    av_moisture(i) = site%youngest_patch%fuel%av_moisture
+
+    call rate_of_spread(site, ROS_torch, passive_crown_FI, heat_per_area)
+    ros(i) = site%youngest_patch%ros_front
+
     
   end do 
 
   ! write out data
   call WriteFireData('Fire_unit_out.nc', n, time, temp_degC, precip, rh, NI, loading,    &
-    moisture)
+    moisture, av_moisture, ros)
 
 end program FatesUnitTestSF

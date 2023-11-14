@@ -136,7 +136,7 @@ module FatesUnitTestSFMod
     !=====================================================================================
 
     subroutine WriteFireData(out_file, nsteps, time_counter, temp_degC, precip, rh, NI,  &
-      loading, moisture)
+      loading, moisture, av_moisture, ros)
       !
       ! DESCRIPTION:
       ! writes out data from the unit test
@@ -152,6 +152,8 @@ module FatesUnitTestSFMod
       real(r8),         intent(in) :: NI(:)
       real(r8),         intent(in) :: loading(:)
       real(r8),         intent(in) :: moisture(:,:)
+      real(r8),         intent(in) :: av_moisture(:)
+      real(r8),         intent(in) :: ros(:)
 
       ! LOCALS:
       integer          :: ncid         ! netcdf id
@@ -159,6 +161,7 @@ module FatesUnitTestSFMod
       integer          :: dimIDs(2)    ! dimension IDs
       integer          :: timeID, litterID
       integer          :: tempID, precipID, rhID, NIID, loadingID, moistureID
+      integer          :: av_moistureID, rosID
 
       ! dimension names
       dim_names = [character(len=12) :: 'time', 'litter_class']
@@ -217,6 +220,18 @@ module FatesUnitTestSFMod
         [character(len=150) :: 'time litter_class', 'm3 m-3', 'fuel moisture'], &                                                  
         3, moistureID)
 
+      ! register average moisture
+      call RegisterVar1D(ncid, 'average_moisture', dimIDs(1), type_double,    &
+        [character(len=20)  :: 'coordinates', 'units', 'long_name'], &
+        [character(len=150) :: 'time', 'm3 m-3', 'average fuel moisture'],    &                                                  
+        3, av_moistureID)
+
+      ! register ROS
+      call RegisterVar1D(ncid, 'ros', dimIDs(1), type_double,    &
+        [character(len=20)  :: 'coordinates', 'units', 'long_name'], &
+        [character(len=150) :: 'time', 'm min-1', 'rate of forward spread'],    &                                                  
+        3, rosID)
+
       call Check(NF90_ENDDEF(ncid))
 
       call Check(NF90_PUT_VAR(ncid, timeID, time_counter))
@@ -227,6 +242,8 @@ module FatesUnitTestSFMod
       call Check(NF90_PUT_VAR(ncid, NIID, NI(:)))
       call Check(NF90_PUT_VAR(ncid, loadingID, loading(:)))
       call Check(NF90_PUT_VAR(ncid, moistureID, moisture(:,:)))
+      call Check(NF90_PUT_VAR(ncid, av_moistureID, av_moisture(:)))
+      call Check(NF90_PUT_VAR(ncid, rosID, ros(:)))
  
       call CloseNCFile(ncid)
 
