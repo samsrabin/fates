@@ -219,10 +219,10 @@ contains
     allocate(site_in%seed_out(1:numpft))
 
     ! Fire weather
-    if (fire_weather_type == 1) then 
-      allocate(nesterov_index :: site_in%fireWeather)
-    end if 
-    call site_in%fireWeather%Init()
+    !if (fire_weather_type == 1) then 
+    !  allocate(nesterov_index :: site_in%fireWeather)
+    !end if 
+    !call site_in%fireWeather%Init()
   
   end subroutine init_site_vars
 
@@ -277,6 +277,7 @@ contains
     site_in%disturbance_rates_primary_to_primary(:) = 0.0_r8
 
     ! FIRE
+    site_in%acc_ni           = 0.0_r8     ! daily nesterov index accumulating over time. time unlimited theoretically.
     site_in%FDI              = 0.0_r8     ! daily fire danger index (0-1)
     site_in%NF               = 0.0_r8     ! daily lightning strikes per km2
     site_in%NF_successful    = 0.0_r8     ! daily successful iginitions per km2

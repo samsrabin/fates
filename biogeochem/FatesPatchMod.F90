@@ -186,8 +186,19 @@ module FatesPatchMod
 
     ! FUELS AND FIRE
     ! fuel characteristics
-    type(fuel_type), pointer :: fuel                 ! fuel characteristics
-    real(r8)                 :: canopy_bulk_density 
+    !type(fuel_type), pointer :: fuel                 ! fuel characteristics
+    real(r8)              :: sum_fuel                ! total ground fuel related to ROS (omits 1000 hr fuels) [kgC/m2]
+    real(r8)              :: fuel_frac(nfsc)         ! fraction of each litter class in the ros_fuel [0-1]
+    real(r8)              :: livegrass               ! total aboveground grass biomass in patch [kgC/m2]
+    real(r8)              :: fuel_bulkd              ! average fuel bulk density of the ground fuel. [kg/m3]
+                                                       ! (incl. live grasses, omits 1000hr fuels)
+    real(r8)              :: fuel_sav                ! average surface area to volume ratio of the ground fuel [cm-1]
+                                                       ! (incl. live grasses, omits 1000hr fuels)
+    real(r8)              :: fuel_mef                ! average moisture of extinction factor 
+                                                       ! of the ground fuel (incl. live grasses, omits 1000hr fuels)
+    real(r8)              :: fuel_eff_moist          ! effective avearage fuel moisture content of the ground fuel 
+                                                       ! (incl. live grasses. omits 1000hr fuels)
+    real(r8)              :: litter_moisture(nfsc)   ! moisture of litter [m3/m3]
 
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
@@ -200,6 +211,7 @@ module FatesPatchMod
 
     ! fire effects      
     real(r8)              :: scorch_ht(maxpft)       ! scorch height [m] 
+    real(r8)              :: effect_wspeed           ! windspeed modified by fraction of relative grass and tree cover [m/min]
     real(r8)              :: frac_burnt              ! fraction burnt [0-1/day]  
     real(r8)              :: tfc_ros                 ! total intensity-relevant fuel consumed - no trunks [kgC/m2 of burned ground/day]
     real(r8)              :: burnt_frac_litter(nfsc) ! fraction of each litter pool burned, conditional on it being burned [0-1]
@@ -250,7 +262,7 @@ module FatesPatchMod
       allocate(this%sabs_dir(num_swb))
       allocate(this%sabs_dif(num_swb))
       allocate(this%fragmentation_scaler(num_levsoil))
-      allocate(this%fuel)
+      !allocate(this%fuel)
 
       ! initialize all values to nan
       call this%NanValues()
@@ -259,7 +271,7 @@ module FatesPatchMod
       call this%ZeroValues()
 
       ! initialize fuel
-      call this%fuel%Init()
+      !call this%fuel%Init()
 
     end subroutine Init 
 
@@ -366,8 +378,17 @@ module FatesPatchMod
       this%fragmentation_scaler(:)      = nan 
   
       ! FUELS AND FIRE
+      this%sum_fuel                     = nan 
+      this%fuel_frac(:)                 = nan 
+      this%livegrass                    = nan 
+      this%fuel_bulkd                   = nan 
+      this%fuel_sav                     = nan
+      this%fuel_mef                     = nan 
+      this%fuel_eff_moist               = nan 
+      this%litter_moisture(:)           = nan
       this%ros_front                    = nan
-      this%ros_back                     = nan   
+      this%ros_back                     = nan 
+      this%effect_wspeed                = nan
       this%tau_l                        = nan
       this%fi                           = nan 
       this%fire                         = fates_unset_int
@@ -375,7 +396,6 @@ module FatesPatchMod
       this%fd                           = nan 
       this%scorch_ht(:)                 = nan 
       this%frac_burnt                   = nan
-      this%canopy_bulk_density          = nan 
       this%tfc_ros                      = nan    
       this%burnt_frac_litter(:)         = nan    
   
@@ -435,14 +455,22 @@ module FatesPatchMod
       this%fragmentation_scaler(:)           = 0.0_r8
 
       ! FIRE
+      this%sum_fuel                          = 0.0_r8
+      this%fuel_frac(:)                      = 0.0_r8
+      this%livegrass                         = 0.0_r8
+      this%fuel_bulkd                        = 0.0_r8
+      this%fuel_sav                          = 0.0_r8
+      this%fuel_mef                          = 0.0_r8
+      this%fuel_eff_moist                    = 0.0_r8
+      this%litter_moisture(:)                = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
       this%tau_l                             = 0.0_r8
       this%fi                                = 0.0_r8
+      this%effect_wspeed                     = 0.0_r8
       this%fd                                = 0.0_r8
       this%scorch_ht(:)                      = 0.0_r8  
       this%frac_burnt                        = 0.0_r8
-      this%canopy_bulk_density               = 0.0_r8  
       this%tfc_ros                           = 0.0_r8
       this%burnt_frac_litter(:)              = 0.0_r8
 

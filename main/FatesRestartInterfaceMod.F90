@@ -2445,7 +2445,7 @@ contains
 
                 io_idx_pa_cwd  = io_idx_co_1st
                 do i = 1,nfsc
-                   this%rvars(ir_litter_moisture_pa_nfsc)%r81d(io_idx_pa_cwd) = cpatch%fuel%moisture(i)
+                   this%rvars(ir_litter_moisture_pa_nfsc)%r81d(io_idx_pa_cwd) = cpatch%litter_moisture(i)
                    io_idx_pa_cwd      = io_idx_pa_cwd + 1
                 end do
 
@@ -2593,7 +2593,7 @@ contains
           rio_phenmodeldate_si(io_idx_si) = sites(s)%phen_model_date
 
  
-          rio_fwi_si(io_idx_si)          = sites(s)%fireWeather%fire_weather_index
+          rio_fwi_si(io_idx_si)          = sites(s)%acc_NI
           rio_snow_depth_si(io_idx_si)   = sites(s)%snow_depth
 
           ! Accumulated trunk product
@@ -3369,7 +3369,7 @@ contains
 
                 io_idx_pa_cwd  = io_idx_co_1st
                 do i = 1,nfsc
-                   cpatch%fuel%moisture(i) = this%rvars(ir_litter_moisture_pa_nfsc)%r81d(io_idx_pa_cwd)
+                   cpatch%litter_moisture(i) = this%rvars(ir_litter_moisture_pa_nfsc)%r81d(io_idx_pa_cwd)
                    io_idx_pa_cwd      = io_idx_pa_cwd + 1
                 end do
 
@@ -3569,7 +3569,7 @@ contains
           sites(s)%cndaysleafoff  = rio_cndaysleafoff_si(io_idx_si)
           sites(s)%grow_deg_days  = rio_gdd_si(io_idx_si)
           sites(s)%phen_model_date= rio_phenmodeldate_si(io_idx_si)
-          sites(s)%fireWeather%fire_weather_index = rio_fwi_si (io_idx_si)
+          sites(s)%acc_ni = rio_fwi_si (io_idx_si)
           sites(s)%snow_depth     = rio_snow_depth_si(io_idx_si)
           sites(s)%resources_management%trunk_product_site = rio_trunk_product_si(io_idx_si)
 
