@@ -1308,6 +1308,7 @@ contains
     use FatesSizeAgeTypeIndicesMod, only : coagetype_class_index
     use EDtypesMod           , only : area
     use FatesConstantsMod    , only : itrue
+    use FatesEcotypesMod     , only : is_patch_forest
 
     ! !ARGUMENTS
     integer                 , intent(in)            :: nsites
@@ -1435,6 +1436,8 @@ contains
              end if
              currentPatch%total_canopy_area = currentPatch%area
           endif
+
+          currentPatch%is_forest = is_patch_forest(currentPatch)
 
           currentPatch => currentPatch%younger
        end do !patch loop
