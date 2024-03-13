@@ -348,6 +348,7 @@ contains
     ! currentSite%wind is daily wind converted to m/min for Spitfire units 
 
     use FatesConstantsMod, only : sec_per_min
+    use FatesEcotypesMod , only : is_patch_forest
 
     type(ed_site_type) , intent(inout), target :: currentSite
     type(bc_in_type)   , intent(in)            :: bc_in
@@ -403,6 +404,7 @@ contains
        enddo
        tree_fraction = tree_fraction + min(currentPatch%area,currentPatch%total_tree_area)/AREA
        grass_fraction = grass_fraction + min(currentPatch%area,total_grass_area)/AREA 
+       currentPatch%is_forest = is_patch_forest(currentPatch)
        
        if(debug)then
          write(fates_log(),*) 'SF  currentPatch%area ',currentPatch%area
