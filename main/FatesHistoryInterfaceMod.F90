@@ -244,6 +244,8 @@ module FatesHistoryInterfaceMod
   integer :: ih_trimming_si
   integer :: ih_area_plant_si
   integer :: ih_area_trees_si
+  integer :: ih_is_forest_si
+  integer :: ih_is_forest_si_age
   integer :: ih_litter_in_elem
   integer :: ih_litter_out_elem
   integer :: ih_seed_bank_elem
@@ -2329,6 +2331,8 @@ end subroutine flush_hvars
                hio_trimming_si         => this%hvars(ih_trimming_si)%r81d, &
                hio_area_plant_si       => this%hvars(ih_area_plant_si)%r81d, &
                hio_area_trees_si  => this%hvars(ih_area_trees_si)%r81d, &
+               hio_is_forest_si        => this%hvars(ih_is_forest_si)%r81d, &
+               hio_is_forest_si_age    => this%hvars(ih_is_forest_si_age)%r82d, &
                hio_fates_fraction_si   => this%hvars(ih_fates_fraction_si)%r81d, &
                hio_ba_weighted_height_si  => this%hvars(ih_ba_weighted_height_si)%r81d, &
                hio_ca_weighted_height_si  => this%hvars(ih_ca_weighted_height_si)%r81d, &
@@ -2878,6 +2882,12 @@ end subroutine flush_hvars
          ! area occupied by plants and trees [m2/m2]
          hio_area_plant_si(io_si) = hio_area_plant_si(io_si) + min(cpatch%total_canopy_area,cpatch%area) * AREA_INV
          hio_area_trees_si(io_si) = hio_area_trees_si(io_si) + min(cpatch%total_tree_area,cpatch%area) * AREA_INV
+
+         ! whether patch is forest
+         hio_is_forest_si(io_si) = hio_is_forest_si(io_si) + &
+            merge(1._r8, 0._r8, cpatch%is_forest) * cpatch%area * AREA_INV
+         hio_is_forest_si_age(io_si,cpatch%age_class) = hio_is_forest_si_age(io_si,cpatch%age_class) + &
+            merge(1._r8, 0._r8, cpatch%is_forest) * cpatch%area * AREA_INV
 
          ! loop through cohorts on patch
          ccohort => cpatch%shortest
@@ -5450,6 +5460,18 @@ end subroutine update_history_hifrq
          avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
          upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
          index=ih_area_trees_si)
+
+     call this%set_history_var(vname='FATES_IS_FOREST', units='',              &
+         long='whether patch is forest', use_default='inactive',               &
+         avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
+         upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+         index=ih_is_forest_si)
+
+     call this%set_history_var(vname='FATES_IS_FOREST_AP', units='',           &
+         long='whether patch is forest (by patch age)', use_default='inactive',&
+         avgflag='A', vtype=site_age_r8, hlms='CLM:ALM',                       &
+         upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+         index=ih_is_forest_si_age)
 
     call this%set_history_var(vname='FATES_FRACTION', units='m2 m-2',          &
          long='total gridcell fraction which FATES is running over', use_default='active', &
