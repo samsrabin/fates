@@ -2,14 +2,13 @@ module FatesEcotypesMod
 
   use FatesConstantsMod, only : r8 => fates_r8
   use FatesPatchMod, only : fates_patch_type
+  use EDParamsMod, only : forest_tree_fraction_threshold
 
   implicit none
   private  ! By default everything is private
 
   ! Make public necessary subroutines and functions
   public :: is_patch_forest
-  
-  real(r8) :: forest_tree_fraction_threshold = 0.10_r8  ! FAO: "Forest" is > 10% tree cover
 
 contains
 
