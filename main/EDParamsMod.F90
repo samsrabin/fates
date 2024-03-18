@@ -242,7 +242,9 @@ module EDParamsMod
    integer, protected, public :: max_cohort_per_patch
    character(len=param_string_length), parameter, public :: maxcohort_name = "fates_maxcohort"
 
-   
+   ! Ecotypes parameters
+   real(r8),protected,public :: forest_tree_fraction_threshold  ! Tree fraction above which a patch is "forest"
+   character(len=param_string_length),parameter,public :: forest_tree_fraction_threshold_name = "fates_forest_tree_fraction_threshold"
    
    ! Logging Control Parameters (ONLY RELEVANT WHEN USE_FATES_LOGGING = TRUE)
    ! ----------------------------------------------------------------------------------------------
@@ -367,6 +369,7 @@ contains
     dev_arbitrary                         = nan
     damage_event_code                     = -9
     damage_canopy_layer_code              = -9
+    forest_tree_fraction_threshold        = nan
   end subroutine FatesParamsInit
 
   !-----------------------------------------------------------------------
@@ -574,6 +577,9 @@ contains
     call fates_params%RegisterParameter(name=damage_name_canopy_layer_code, dimension_shape=dimension_shape_scalar, &
          dimension_names=dim_names_scalar)
     
+    call fates_params%RegisterParameter(name=forest_tree_fraction_threshold_name, dimension_shape=dimension_shape_scalar, &
+         dimension_names=dim_names_scalar)
+
     ! non-scalar parameters
 
     call fates_params%RegisterParameter(name=ED_name_hydr_htftype_node, dimension_shape=dimension_shape_1d, &
@@ -816,6 +822,9 @@ contains
          data=tmpreal)
     damage_canopy_layer_code = nint(tmpreal)
     
+    call fates_params%RetrieveParameter(name=forest_tree_fraction_threshold_name, &
+         data=forest_tree_fraction_threshold)
+
     ! parameters that are arrays of size defined within the params file and thus need allocating as well
     call fates_params%RetrieveParameterAllocate(name=ED_name_history_sizeclass_bin_edges, &
           data=ED_val_history_sizeclass_bin_edges)
@@ -914,6 +923,7 @@ contains
         write(fates_log(),'(a,L2)') 'active_crown_fire = ',active_crown_fire
         write(fates_log(),fmt0) 'damage_event_code = ',damage_event_code
         write(fates_log(),fmt0) 'damage_canopy_layer_code = ', damage_canopy_layer_code
+        write(fates_log(),fmt0) 'forest_tree_fraction_threshold = ', forest_tree_fraction_threshold
         write(fates_log(),*) '------------------------------------------------------'
 
      end if
