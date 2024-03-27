@@ -1,6 +1,7 @@
 module FatesEdgeForestMod
 
   use FatesConstantsMod, only : r8 => fates_r8
+  use FatesConstantsMod, only : num_edge_forest_bins
   use FatesGlobals, only : fates_log
   use FatesGlobals, only : endrun => fates_endrun
   use shr_log_mod, only : errMsg => shr_log_errMsg
@@ -103,6 +104,7 @@ contains
           currentPatch => currentPatch%younger
           cycle
        end if
+
        f = f + 1
        index_forestpatches_to_allpatches(p) = f
 
@@ -134,6 +136,24 @@ contains
 ! !   end subroutine insert_forest_patch
 
 
+  subroutine get_fraction_of_forest_in_each_bin(fraction_forest_in_each_bin)
+    ! DESCRIPTION:
+    ! Get the fraction of forest in each bin.
+    ! PLACEHOLDER FOR NOW that just returns 1/num_edge_forest_bins for each.
+    ! TODO: Replace this with real equations for each bin as a function of deforested area
+    !
+    ! ARGUMENTS
+    real(r8), dimension(:), pointer, intent(in) :: fraction_forest_in_each_bin
+    !
+    ! LOCAL VARIABLES
+    integer :: b  ! Bin index
+
+    binloop: do b = 1, num_edge_forest_bins
+       fraction_forest_in_each_bin(b) = 1._r8 / real(num_edge_forest_bins, r8)
+    end do binloop
+  end subroutine get_fraction_of_forest_in_each_bin
+
+
   subroutine calculate_edge_area(site)
     ! DESCRIPTION:
     ! Loop through forest patches in decreasing order of proximity, calculating the
@@ -147,6 +167,7 @@ contains
     integer, dimension(:), allocatable :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
     integer :: n_forest_patches  ! Number of forest patches
     integer :: n_patches  ! Number of patches in site
+    real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
 
     ! Skip sites with no forest patches
     n_forest_patches = get_number_of_forest_patches(site)
@@ -161,6 +182,9 @@ contains
 
     ! Get ranks
     call rank_forest_edge_proximity(site, ranks, index_forestpatches_to_allpatches)
+
+    ! Get fraction of forest area in each bin
+    call get_fraction_of_forest_in_each_bin(fraction_forest_in_each_bin)
 
     ! Clean up
     deallocate(ranks)
