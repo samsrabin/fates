@@ -6,6 +6,7 @@ module FatesPatchMod
   use FatesConstantsMod,   only : primaryland, secondaryland
   use FatesConstantsMod,   only : n_landuse_cats
   use FatesConstantsMod,   only : TRS_regeneration
+  use FatesConstantsMod,   only : num_edge_forest_bins
   use FatesGlobals,        only : fates_log
   use FatesGlobals,        only : endrun => fates_endrun
   use FatesUtilsMod,       only : check_hlm_list
@@ -64,7 +65,12 @@ module FatesPatchMod
     integer  :: ncl_p                        ! number of occupied canopy layers
     integer  :: land_use_label               ! patch label for land use classification (primaryland, secondaryland, etc)
     real(r8) :: age_since_anthro_disturbance ! average age for secondary forest since last anthropogenic disturbance [years]
+
+    !---------------------------------------------------------------------------
+
+    ! FOREST INFO
     logical  :: is_forest                    ! whether the patch is "forest"
+    real(r8), dimension(:), allocatable :: fraction_in_edge_forest_bins
 
     !---------------------------------------------------------------------------
 
@@ -262,6 +268,7 @@ module FatesPatchMod
       allocate(this%sabs_dir(num_swb))
       allocate(this%sabs_dif(num_swb))
       allocate(this%fragmentation_scaler(num_levsoil))
+      allocate(this%fraction_in_edge_forest_bins(num_edge_forest_bins))
 
       ! initialize all values to nan
       call this%NanValues()
@@ -304,7 +311,10 @@ module FatesPatchMod
       this%ncl_p                        = fates_unset_int
       this%land_use_label               = fates_unset_int
       this%age_since_anthro_disturbance = nan
-      this%is_forest                    = .false.
+
+      ! FOREST INFO
+      this%is_forest                       = .false.
+      this%fraction_in_edge_forest_bins(:) = nan
       
       ! LEAF ORGANIZATION
       this%pft_agb_profile(:,:)         = nan
@@ -673,6 +683,7 @@ module FatesPatchMod
                  this%sabs_dir,                 &
                  this%sabs_dif,                 &
                  this%fragmentation_scaler,     &
+                 this%fraction_in_edge_forest_bins, &
                  stat=istat, errmsg=smsg)
 
       if (istat/=0) then

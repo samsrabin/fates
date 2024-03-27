@@ -141,6 +141,10 @@ integer, parameter, public :: isemi_stress_decid = 2 ! If the PFT is stress (dro
   integer, parameter, public :: lmrmodel_ryan_1991         = 1
   integer, parameter, public :: lmrmodel_atkin_etal_2017   = 2
 
+  ! What are the boundaries of the edge forest bins? Include only boundary nearest 0.
+  real(fates_r8), parameter, dimension(4), public :: edge_forest_bins = (/ 0._fates_r8, 10._fates_r8, 50._fates_r8, 150._fates_r8 /)
+  integer, parameter, public :: num_edge_forest_bins = size(edge_forest_bins)
+
   ! Error Tolerances
 
   ! Allowable error in carbon allocations, should be applied to estimates
