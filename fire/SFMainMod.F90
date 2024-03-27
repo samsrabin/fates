@@ -354,6 +354,7 @@ contains
 
     use FatesConstantsMod, only : sec_per_min
     use FatesEcotypesMod , only : is_patch_forest
+    use FatesEdgeForestMod, only : calculate_edge_area
 
     type(ed_site_type) , intent(inout), target :: currentSite
     type(bc_in_type)   , intent(in)            :: bc_in
@@ -410,6 +411,7 @@ contains
        tree_fraction = tree_fraction + min(currentPatch%area,currentPatch%total_tree_area)/AREA
        grass_fraction = grass_fraction + min(currentPatch%area,total_grass_area)/AREA 
        currentPatch%is_forest = is_patch_forest(currentPatch)
+       call calculate_edge_area(currentSite)
        
        if(debug)then
          write(fates_log(),*) 'SF  currentPatch%area ',currentPatch%area

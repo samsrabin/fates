@@ -12,7 +12,7 @@ module FatesEdgeForestMod
   private  ! By default everything is private
 
   ! Make public necessary subroutines and functions
-  public :: rank_forest_edge_proximity
+  public :: calculate_edge_area
 
 contains
 
@@ -31,6 +31,7 @@ contains
     ! LOCAL VARIABLES:
     type(fates_patch_type), pointer :: currentPatch
 
+    n_forest_patches = 0
     currentPatch => site%youngest_patch
     do while(associated(currentPatch))
        if (currentPatch%is_forest) then
@@ -56,6 +57,7 @@ contains
     ! LOCAL VARIABLES:
     type(fates_patch_type), pointer :: currentPatch
 
+    n_patches = 0
     currentPatch => site%youngest_patch
     do while(associated(currentPatch))
        n_patches = n_patches + 1
@@ -71,13 +73,12 @@ contains
     !
     ! ARGUMENTS:
     type(ed_site_type), pointer, intent(in) :: site
-    integer, dimension(:), pointer, intent(out) :: ranks ! Ranks of forest patches (higher = closer to edge)
-    integer, dimension(:), pointer, intent(out) :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
+    integer, dimension(:), intent(inout) :: ranks ! Ranks of forest patches (higher = closer to edge)
+    integer, dimension(:), intent(inout) :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
     !
     ! LOCAL VARIABLES:
     real(r8), dimension(:), allocatable :: array ! Array to be index-sorted.
     integer :: n_forest_patches  ! Number of patches in above arrays
-    integer :: n_patches  ! Number of patches in site
     type(fates_patch_type), pointer  :: currentPatch
     integer :: f  ! index of current forest patch
     integer :: p  ! index of patch
@@ -90,9 +91,6 @@ contains
 
     ! Allocate arrays
     allocate(array(1:n_forest_patches))
-    allocate(ranks(1:n_forest_patches))
-    n_patches = get_number_of_patches(site)
-    allocate(index_forestpatches_to_allpatches(1:n_patches))
 
     ! Fill arrays
     f = 0
@@ -136,11 +134,38 @@ contains
 ! !   end subroutine insert_forest_patch
 
 
-!   subroutine calculate_edge_area()
-!     ! DESCRIPTION:
-!     ! Loops through forest patches in decreasing order of proximity, calculating the
-!     ! area of each patch that is in each edge bin.
-!   end subroutine calculate_edge_area
+  subroutine calculate_edge_area(site)
+    ! DESCRIPTION:
+    ! Loop through forest patches in decreasing order of proximity, calculating the
+    ! area of each patch that is in each edge bin.
+    !
+    ! ARGUMENTS:
+    type(ed_site_type), pointer, intent(in) :: site
+    !
+    ! LOCAL VARIABLES:
+    integer, dimension(:), allocatable :: ranks ! Ranks of forest patches (higher = closer to edge)
+    integer, dimension(:), allocatable :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
+    integer :: n_forest_patches  ! Number of forest patches
+    integer :: n_patches  ! Number of patches in site
+
+    ! Skip sites with no forest patches
+    n_forest_patches = get_number_of_forest_patches(site)
+    if (n_forest_patches == 0) then
+       return
+    end if
+
+    ! Allocate arrays
+    allocate(ranks(1:n_forest_patches))
+    n_patches = get_number_of_patches(site)
+    allocate(index_forestpatches_to_allpatches(1:n_patches))
+
+    ! Get ranks
+    call rank_forest_edge_proximity(site, ranks, index_forestpatches_to_allpatches)
+
+    ! Clean up
+    deallocate(ranks)
+    deallocate(index_forestpatches_to_allpatches)
+  end subroutine calculate_edge_area
 
 
 

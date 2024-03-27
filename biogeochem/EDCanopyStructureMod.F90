@@ -1307,6 +1307,7 @@ contains
     use EDtypesMod           , only : area
     use FatesConstantsMod    , only : itrue
     use FatesEcotypesMod     , only : is_patch_forest
+    use FatesEdgeForestMod   , only : calculate_edge_area
 
     ! !ARGUMENTS
     integer                 , intent(in)            :: nsites
@@ -1439,6 +1440,8 @@ contains
 
           currentPatch => currentPatch%younger
        end do !patch loop
+
+       call calculate_edge_area(sites(s))
 
        call leaf_area_profile(sites(s))
        
