@@ -50,4 +50,65 @@ module test_EdgeForest
 
       end subroutine indexx_alreadySorted
 
+      @Test
+      subroutine indexx_reverseSorted(this)
+        class(TestEdgeForest), intent(inout) :: this
+
+        this%array_to_sort = (/ 6.28_r8, 3.14_r8, 2.72_r8, 1.62_r8, 1._r8 /)
+
+        call indexx(this%array_to_sort, this%sorted_indices)
+
+        @assertEqual((/ 5, 4, 3, 2, 1 /), this%sorted_indices)
+
+      end subroutine indexx_reverseSorted
+
+      @Test
+      subroutine indexx_lowTie(this)
+        class(TestEdgeForest), intent(inout) :: this
+
+        this%array_to_sort = (/ 1._r8, 1._r8, 2.72_r8, 3.14_r8, 6.28_r8 /)
+
+        call indexx(this%array_to_sort, this%sorted_indices)
+
+        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+
+      end subroutine indexx_lowTie
+
+      @Test
+      subroutine indexx_highTie(this)
+        class(TestEdgeForest), intent(inout) :: this
+
+        this%array_to_sort = (/ 1._r8, 1.62_r8, 2.72_r8, 3.14_r8, 3.14_r8 /)
+
+        call indexx(this%array_to_sort, this%sorted_indices)
+
+        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+
+      end subroutine indexx_highTie
+
+      @Test
+      subroutine indexx_random(this)
+        class(TestEdgeForest), intent(inout) :: this
+
+        this%array_to_sort = (/ 3._r8, 8._r8, 10._r8, 2._r8, 7._r8 /)
+
+        call indexx(this%array_to_sort, this%sorted_indices)
+
+        @assertEqual((/ 4, 1, 5, 2, 3 /), this%sorted_indices)
+
+      end subroutine indexx_random
+
+
+      @Test
+      subroutine indexx_all_equal(this)
+        class(TestEdgeForest), intent(inout) :: this
+
+        this%array_to_sort = (/ 1._r8, 1._r8, 1._r8, 1._r8, 1._r8 /)
+
+        call indexx(this%array_to_sort, this%sorted_indices)
+
+        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+
+      end subroutine indexx_all_equal
+
     end module test_EdgeForest
