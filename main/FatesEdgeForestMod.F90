@@ -14,6 +14,7 @@ module FatesEdgeForestMod
 
   ! Make public necessary subroutines and functions
   public :: calculate_edge_area
+  public :: indexx  ! public for unit testing
 
 contains
 

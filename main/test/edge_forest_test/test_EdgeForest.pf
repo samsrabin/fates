@@ -1,0 +1,65 @@
+module test_EdgeForest
+    !
+    ! DESCRIPTION:
+    !  Test the FATES edge forest code
+    !
+    use FatesConstantsMod, only : r8 => fates_r8
+    use FatesEdgeForestMod, only : indexx
+    use funit
+
+    implicit none
+
+    @TestCase
+    type, extends(TestCase) :: TestEdgeForest
+
+      real(r8), dimension(:), allocatable :: array_to_sort
+
+      contains
+        procedure :: setUp
+        procedure :: tearDown
+    end type TestEdgeForest
+
+    real(r8), parameter :: tol = 1.e-13_r8
+
+    contains
+
+      subroutine setUp(this)
+        class(TestEdgeForest), intent(inout) :: this
+        allocate(this%array_to_sort(5))
+      end subroutine setUp
+
+      subroutine tearDown(this)
+        class(TestEdgeForest), intent(inout) :: this
+        if (allocated(this%array_to_sort)) deallocate(this%array_to_sort)
+      end subroutine tearDown
+
+    !   @Test
+    !   subroutine zero_NI_rain(this)
+    !     ! test that over 3 mm of rain is 0.0
+    !     class(TestEdgeForest), intent(inout) :: this ! fire weather object
+
+    !     call this%fireWeather%Update(25.0_r8, 3.1_r8, 10.0_r8, 0.0_r8)
+    !     @assertEqual(this%fireWeather%fire_weather_index, 0.0_r8, tolerance=tol)
+    !     this%fireWeather%fire_weather_index = 0.0_r8
+    !   end subroutine zero_NI_rain
+
+    !   @Test
+    !   subroutine NI_rain_min(this)
+    !     ! test that at 3 mm is over zero
+    !     class(TestEdgeForest), intent(inout) :: this ! fire weather object
+
+    !     call this%fireWeather%Update(25.0_r8, 3.0_r8, 10.0_r8, 0.0_r8)
+    !     @assertGreaterThan(this%fireWeather%fire_weather_index, 0.0_r8, tolerance=tol)
+    !     this%fireWeather%fire_weather_index = 0.0_r8
+    !   end subroutine NI_rain_min
+
+    !   @Test
+    !   subroutine NI_not_negative(this)
+    !     ! test that NI is not negative
+    !     class(TestEdgeForest), intent(inout) :: this ! fire weather object
+
+    !     call this%fireWeather%Update(-30.0_r8, 0.0_r8, 99.0_r8, 0.0_r8)
+    !     @assertEqual(this%fireWeather%fire_weather_index, 0.0_r8, tolerance=tol)
+    !   end subroutine NI_not_negative
+
+    end module test_EdgeForest
