@@ -174,6 +174,9 @@ contains
     if (size(array) /= size(index)) then
        write(fates_log(),*) 'ERROR: INDEXX size mismatch.'
        call endrun(msg=errMsg(__FILE__, __LINE__))
+    else if (size(array) == 0) then
+       write(fates_log(),*) 'ERROR: INDEXX array size 0.'
+       call endrun(msg=errMsg(__FILE__, __LINE__))
     endif
 
     do i=1,size(index)
