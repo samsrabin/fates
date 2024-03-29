@@ -142,8 +142,12 @@ integer, parameter, public :: isemi_stress_decid = 2 ! If the PFT is stress (dro
   integer, parameter, public :: lmrmodel_atkin_etal_2017   = 2
 
   ! What are the boundaries of the edge forest bins? Include only boundary nearest 0.
-  real(fates_r8), parameter, dimension(4), public :: edge_forest_bins = (/ 0._fates_r8, 10._fates_r8, 50._fates_r8, 150._fates_r8 /)
-  integer, parameter, public :: num_edge_forest_bins = size(edge_forest_bins)
+  integer, parameter, public :: num_edge_forest_bins = 5
+  real(fates_r8), parameter, dimension(num_edge_forest_bins), public :: edge_forest_bins = (/ 0._fates_r8, 1._fates_r8, 2._fates_r8, 3._fates_r8, 4._fates_r8 /)
+  real(fates_r8), parameter, dimension(num_edge_forest_bins), public :: efb_amplitudes = (/ 344.7312478651732, 7.551483117624031, 2.868792112939456, 1.6065148755153114, 0.957520323629746 /)
+  real(fates_r8), parameter, dimension(num_edge_forest_bins-1), public :: efb_sigmas = (/ 1.1991900082334475, 0.6330339577930695, 0.7048639265385499, 0.7947461148229709 /)
+  real(fates_r8), parameter, dimension(num_edge_forest_bins-1), public :: efb_centers = (/ 5.447901478373042, 2.7639593001183758, 2.293595462843879, 1.9740227169817046 /)
+  real(fates_r8), parameter, public :: efb_decay = 3.761928323976011
 
   ! Error Tolerances
 

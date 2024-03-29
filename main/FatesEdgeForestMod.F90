@@ -20,7 +20,7 @@ contains
 
   ! =====================================================================================
 
-  subroutine get_number_of_forest_patches(site, n_forest_patches, area_forest_patches)
+  subroutine get_number_of_forest_patches(site, n_forest_patches, area_forest_patches, area)
     ! DESCRIPTION
     ! Returns number and area of forest patches at site
     !
@@ -28,14 +28,17 @@ contains
     type(ed_site_type), pointer, intent(in) :: site
     integer, intent(out) :: n_forest_patches
     real(r8), intent(out) :: area_forest_patches
+    real(r8), intent(out) :: area
     !
     ! LOCAL VARIABLES:
     type(fates_patch_type), pointer :: currentPatch
 
     n_forest_patches = 0
     area_forest_patches = 0._r8
+    area = 0._r8
     currentPatch => site%youngest_patch
     do while(associated(currentPatch))
+       area = area + currentPatch%area
        if (currentPatch%is_forest) then
           n_forest_patches = n_forest_patches + 1
           area_forest_patches = area_forest_patches + currentPatch%area
@@ -138,21 +141,50 @@ contains
 ! !   end subroutine insert_forest_patch
 
 
-  subroutine get_fraction_of_forest_in_each_bin(fraction_forest_in_each_bin)
+  subroutine get_fraction_of_forest_in_each_bin(x, fraction_forest_in_bin)
     ! DESCRIPTION:
     ! Get the fraction of forest in each bin.
     ! PLACEHOLDER FOR NOW that just returns 1/num_edge_forest_bins for each.
     ! TODO: Replace this with real equations for each bin as a function of deforested area
     !
+    ! USES
+    use FatesConstantsMod, only : efb_amplitudes, efb_sigmas, efb_centers, efb_decay
+    use FatesConstantsMod, only : pi => pi_const
+    !
     ! ARGUMENTS
-    real(r8), dimension(:), pointer, intent(in) :: fraction_forest_in_each_bin
+    real(r8), intent(in)  :: x  ! Independent variable in the fit
+    real(r8), dimension(:), pointer, intent(in) :: fraction_forest_in_bin
     !
     ! LOCAL VARIABLES
     integer :: b  ! Bin index
+    real(r8) :: A      ! Amplitude
+    real(r8) :: mu     ! Center
+    real(r8) :: sigma  ! Sigma
+    ! Error checking
+    real(r8), parameter :: tol = 1.e-9_r8  ! fraction of total forest area
+    real(r8) :: err_chk
 
     binloop: do b = 1, num_edge_forest_bins
-       fraction_forest_in_each_bin(b) = 1._r8 / real(num_edge_forest_bins, r8)
+       A = efb_amplitudes(b)
+       if (b == num_edge_forest_bins) then
+          ! Exponential
+          fraction_forest_in_bin(b) = A * exp(-x*efb_decay)
+       else
+          ! Lognormal
+         mu = efb_centers(b)
+         sigma = efb_sigmas(b)
+         fraction_forest_in_bin(b) = A * exp(-(log(x) - mu)**2 / (2*sigma**2)) / (sigma * sqrt(2*pi) * x)
+       end if
     end do binloop
+
+    ! Account for fit errors by normalizing to 1
+    fraction_forest_in_bin(:) = fraction_forest_in_bin(:) / sum(fraction_forest_in_bin)
+
+    err_chk = sum(fraction_forest_in_bin) - 1._r8
+    if (abs(err_chk) > tol) then
+       write(fates_log(),*) "ERROR: bin fractions don't sum to 1; actual minus expected = ",err_chk
+       call endrun(msg=errMsg(__FILE__, __LINE__))
+    end if
   end subroutine get_fraction_of_forest_in_each_bin
 
 
@@ -286,10 +318,12 @@ contains
     integer :: n_forest_patches  ! Number of forest patches
     integer :: n_patches  ! Number of patches in site
     real(r8) :: area_forest_patches
+    real(r8) :: area
+    real(r8) :: fraction_nonforest
     real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
 
     ! Skip sites with no forest patches
-    call get_number_of_forest_patches(site, n_forest_patches, area_forest_patches)
+    call get_number_of_forest_patches(site, n_forest_patches, area_forest_patches, area)
     if (n_forest_patches == 0) then
        return
     end if
@@ -303,7 +337,8 @@ contains
     call rank_forest_edge_proximity(site, indices, index_forestpatches_to_allpatches)
 
     ! Get fraction of forest area in each bin
-    call get_fraction_of_forest_in_each_bin(fraction_forest_in_each_bin)
+    fraction_nonforest = (area - area_forest_patches) / area
+    call get_fraction_of_forest_in_each_bin(fraction_nonforest, fraction_forest_in_each_bin)
 
     ! Assign patches to bins
     call assign_patches_to_bins(site, indices, index_forestpatches_to_allpatches, fraction_forest_in_each_bin, n_forest_patches, n_patches, area_forest_patches)
