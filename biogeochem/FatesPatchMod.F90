@@ -70,7 +70,7 @@ module FatesPatchMod
 
     ! FOREST INFO
     logical  :: is_forest                    ! whether the patch is "forest"
-    real(r8), dimension(:), allocatable :: fraction_in_edge_forest_bins
+    real(r8), dimension(:), allocatable :: area_in_edge_forest_bins
 
     !---------------------------------------------------------------------------
 
@@ -268,7 +268,7 @@ module FatesPatchMod
       allocate(this%sabs_dir(num_swb))
       allocate(this%sabs_dif(num_swb))
       allocate(this%fragmentation_scaler(num_levsoil))
-      allocate(this%fraction_in_edge_forest_bins(num_edge_forest_bins))
+      allocate(this%area_in_edge_forest_bins(num_edge_forest_bins))
 
       ! initialize all values to nan
       call this%NanValues()
@@ -314,7 +314,7 @@ module FatesPatchMod
 
       ! FOREST INFO
       this%is_forest                       = .false.
-      this%fraction_in_edge_forest_bins(:) = nan
+      this%area_in_edge_forest_bins(:) = nan
       
       ! LEAF ORGANIZATION
       this%pft_agb_profile(:,:)         = nan
@@ -683,7 +683,7 @@ module FatesPatchMod
                  this%sabs_dir,                 &
                  this%sabs_dif,                 &
                  this%fragmentation_scaler,     &
-                 this%fraction_in_edge_forest_bins, &
+                 this%area_in_edge_forest_bins, &
                  stat=istat, errmsg=smsg)
 
       if (istat/=0) then

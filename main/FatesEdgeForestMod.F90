@@ -20,30 +20,31 @@ contains
 
   ! =====================================================================================
 
-  function get_number_of_forest_patches(site) result(n_forest_patches)
+  subroutine get_number_of_forest_patches(site, n_forest_patches, area_forest_patches)
     ! DESCRIPTION
-    ! Returns number of forest patches at site
+    ! Returns number and area of forest patches at site
     !
     ! ARGUMENTS:
     type(ed_site_type), pointer, intent(in) :: site
-    !
-    ! RETURN VALUE:
-    integer :: n_forest_patches
+    integer, intent(out) :: n_forest_patches
+    real(r8), intent(out) :: area_forest_patches
     !
     ! LOCAL VARIABLES:
     type(fates_patch_type), pointer :: currentPatch
 
     n_forest_patches = 0
+    area_forest_patches = 0._r8
     currentPatch => site%youngest_patch
     do while(associated(currentPatch))
        if (currentPatch%is_forest) then
           n_forest_patches = n_forest_patches + 1
+          area_forest_patches = area_forest_patches + currentPatch%area
        end if
 
        currentPatch => currentPatch%older
     enddo
 
-  end function get_number_of_forest_patches
+  end subroutine get_number_of_forest_patches
 
 
   function get_number_of_patches(site) result(n_patches)
@@ -69,13 +70,13 @@ contains
   end function get_number_of_patches
 
 
-  subroutine rank_forest_edge_proximity(site, ranks, index_forestpatches_to_allpatches)
+  subroutine rank_forest_edge_proximity(site, indices, index_forestpatches_to_allpatches)
     ! DESCRIPTION:
     ! Rank forest patches by their proximity to edge.
     !
     ! ARGUMENTS:
     type(ed_site_type), pointer, intent(in) :: site
-    integer, dimension(:), intent(inout) :: ranks ! Ranks of forest patches (higher = closer to edge)
+    integer, dimension(:), intent(inout) :: indices  ! Indices to use if you want to sort patches
     integer, dimension(:), intent(inout) :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
     !
     ! LOCAL VARIABLES:
@@ -86,7 +87,7 @@ contains
     integer :: p  ! index of patch
 
     ! Skip sites with no forest patches
-    n_forest_patches = get_number_of_forest_patches(site)
+    n_forest_patches = size(indices)
     if (n_forest_patches == 0) then
        return
     end if
@@ -117,7 +118,7 @@ contains
     end do patchloop
 
     ! Get indices of sorted forest patches
-    call indexx(array, ranks)
+    call indexx(array, indices)
 
     ! Clean up
     deallocate(array)
@@ -155,6 +156,122 @@ contains
   end subroutine get_fraction_of_forest_in_each_bin
 
 
+  subroutine assign_patches_to_bins(site, indices, index_forestpatches_to_allpatches, fraction_forest_in_each_bin, n_forest_patches, n_patches, area_forest_patches)
+    ! DESCRIPTION
+    ! Loops through forest patches from nearest to farthest from edge, assigning their
+    ! area to edge bin(s).
+    ! ARGUMENTS
+    type(ed_site_type), pointer, intent(in) :: site
+    integer, dimension(:), intent(in) :: indices  ! Indices to use if you want to sort patches
+    integer, dimension(:), intent(in) :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
+    real(r8), dimension(:), pointer, intent(in) :: fraction_forest_in_each_bin
+    integer, intent(in) :: n_forest_patches  ! Number of forest patches
+    integer, intent(in) :: n_patches  ! Number of patches in site
+    real(r8), intent(in) :: area_forest_patches
+    !
+    ! LOCAL VARIABLES
+    integer :: f, i, p, b
+    type(fates_patch_type), pointer  :: currentPatch
+    real(r8) :: sum_forest_bins_so_far_m2
+    real(r8) :: remaining_to_assign_from_patch_m2
+    real(r8) :: remaining_to_assign_to_bin_m2
+    ! For checks
+    real(r8), dimension(num_edge_forest_bins) :: bin_area_sums
+    real(r8), parameter :: tol = 1.e-9_r8  ! m2
+    real(r8) :: err_chk
+
+    sum_forest_bins_so_far_m2 = 0._r8
+    forestpatchloop: do f = 1, n_forest_patches
+
+       ! Get the i'th patch (which is the f'th forest patch)
+       i = indices(f)
+       currentPatch => site%oldest_patch
+       allpatchloop: do p = 1, n_patches
+          if (index_forestpatches_to_allpatches(p) == i) then
+             exit
+          end if
+          currentPatch => currentPatch%younger
+       end do allpatchloop
+       if ((.not. associated(currentPatch)) .and. (.not. p == n_patches)) then
+          write(fates_log(),*) "ERROR: i'th patch (f'th forest patch) not found."
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+       end if
+
+       ! Make sure this is a forest patch
+       if (.not. currentPatch%is_forest) then
+          write(fates_log(),*) "ERROR: unexpected non-forest patch in forestpatchloop"
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+       end if
+
+       ! Assign this patch's area
+       currentPatch%area_in_edge_forest_bins(:) = 0._r8
+       remaining_to_assign_from_patch_m2 = currentPatch%area
+       binloop: do b = 1, num_edge_forest_bins
+
+          ! How much area is left for this bin?
+          remaining_to_assign_to_bin_m2 = sum(fraction_forest_in_each_bin(1:b))*area_forest_patches - sum_forest_bins_so_far_m2
+          if (remaining_to_assign_to_bin_m2 <= 0) then
+             cycle
+          end if
+
+          ! Assign area
+          currentPatch%area_in_edge_forest_bins(b) = min(remaining_to_assign_from_patch_m2, remaining_to_assign_to_bin_m2)
+          remaining_to_assign_from_patch_m2 = remaining_to_assign_from_patch_m2 - currentPatch%area_in_edge_forest_bins(b)
+
+          ! Update accounting
+          sum_forest_bins_so_far_m2 = sum_forest_bins_so_far_m2 + currentPatch%area_in_edge_forest_bins(b)
+
+          if (remaining_to_assign_from_patch_m2 == 0._r8) then
+             exit
+          end if
+       end do binloop
+
+       ! Check that this patch's complete area was assigned (and no more)
+       err_chk = remaining_to_assign_from_patch_m2
+       if (abs(err_chk) > tol) then
+          write(fates_log(),*) "ERROR: not enough or too much patch area was assigned to bins (check 1); remainder = ",err_chk
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+       end if
+       err_chk = currentPatch%area - sum(currentPatch%area_in_edge_forest_bins)
+       if (abs(err_chk) > tol) then
+          write(fates_log(),*) "ERROR: not enough or too much patch area was assigned to bins (check 2); remainder = ",err_chk
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+       end if
+
+    end do forestpatchloop
+
+    ! More checks
+    bin_area_sums(:) = 0._r8
+    currentPatch => site%oldest_patch
+    allpatchloop_check: do while (associated(currentPatch))
+       if (currentPatch%is_forest) then
+
+          ! Check that all area of each forest patch is assigned
+          err_chk = sum(currentPatch%area_in_edge_forest_bins) - currentPatch%area
+          if (abs(err_chk) > tol) then
+             write(fates_log(),*) "ERROR: unexpected patch forest bin sum (check 3); actual minus expected = ",err_chk
+             call endrun(msg=errMsg(__FILE__, __LINE__))
+          end if
+
+          ! Accumulate site-wide area in each bin
+          binloop_check4a: do b = 1, num_edge_forest_bins
+             bin_area_sums(b) = bin_area_sums(b) + currentPatch%area_in_edge_forest_bins(b) / area_forest_patches
+          end do binloop_check4a
+
+       end if
+       currentPatch => currentPatch%younger
+    end do allpatchloop_check
+    ! Check that fraction in each bin is what was expected
+    binloop_check4b: do b = 1, num_edge_forest_bins
+       err_chk = bin_area_sums(b) - fraction_forest_in_each_bin(b)
+       if (abs(err_chk) > tol) then
+          write(fates_log(),*) "ERROR: unexpected bin sum (check 4); actual minus expected = ",err_chk
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+       end if
+    end do binloop_check4b
+  end subroutine assign_patches_to_bins
+
+
   subroutine calculate_edge_area(site)
     ! DESCRIPTION:
     ! Loop through forest patches in decreasing order of proximity, calculating the
@@ -164,31 +281,35 @@ contains
     type(ed_site_type), pointer, intent(in) :: site
     !
     ! LOCAL VARIABLES:
-    integer, dimension(:), allocatable :: ranks ! Ranks of forest patches (higher = closer to edge)
+    integer, dimension(:), allocatable :: indices ! Indices to use if you want to sort patches
     integer, dimension(:), allocatable :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
     integer :: n_forest_patches  ! Number of forest patches
     integer :: n_patches  ! Number of patches in site
+    real(r8) :: area_forest_patches
     real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
 
     ! Skip sites with no forest patches
-    n_forest_patches = get_number_of_forest_patches(site)
+    call get_number_of_forest_patches(site, n_forest_patches, area_forest_patches)
     if (n_forest_patches == 0) then
        return
     end if
 
     ! Allocate arrays
-    allocate(ranks(1:n_forest_patches))
+    allocate(indices(1:n_forest_patches))
     n_patches = get_number_of_patches(site)
     allocate(index_forestpatches_to_allpatches(1:n_patches))
 
     ! Get ranks
-    call rank_forest_edge_proximity(site, ranks, index_forestpatches_to_allpatches)
+    call rank_forest_edge_proximity(site, indices, index_forestpatches_to_allpatches)
 
     ! Get fraction of forest area in each bin
     call get_fraction_of_forest_in_each_bin(fraction_forest_in_each_bin)
 
+    ! Assign patches to bins
+    call assign_patches_to_bins(site, indices, index_forestpatches_to_allpatches, fraction_forest_in_each_bin, n_forest_patches, n_patches, area_forest_patches)
+
     ! Clean up
-    deallocate(ranks)
+    deallocate(indices)
     deallocate(index_forestpatches_to_allpatches)
   end subroutine calculate_edge_area
 
