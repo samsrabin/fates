@@ -41,6 +41,7 @@ module FatesInterfaceMod
    use FatesConstantsMod         , only : n_landuse_cats
    use FatesConstantsMod         , only : primaryland
    use FatesConstantsMod         , only : secondaryland
+   use FatesConstantsMod         , only : num_edge_forest_bins, edge_forest_bins
    use FatesGlobals              , only : fates_global_verbose
    use FatesGlobals              , only : fates_log
    use FatesGlobals              , only : endrun => fates_endrun
@@ -1152,6 +1153,7 @@ contains
        allocate( fates_hdim_levfuel(1:NFSC   ))
        allocate( fates_hdim_levcwdsc(1:NCWD   ))
        allocate( fates_hdim_levage(1:nlevage   ))
+       allocate( fates_hdim_levedgebin(1:num_edge_forest_bins   ))
        allocate( fates_hdim_levheight(1:nlevheight   ))
        allocate( fates_hdim_levcoage(1:nlevcoage ))
        allocate( fates_hdim_pfmap_levcapf(1:nlevcoage*numpft))
@@ -1192,6 +1194,7 @@ contains
        ! Fill the IO array of plant size classes
        fates_hdim_levsclass(:) = ED_val_history_sizeclass_bin_edges(:)
        fates_hdim_levage(:) = ED_val_history_ageclass_bin_edges(:)
+       fates_hdim_levedgebin(:) = edge_forest_bins(:)
        fates_hdim_levheight(:) = ED_val_history_height_bin_edges(:)
        fates_hdim_levcoage(:) = ED_val_history_coageclass_bin_edges(:)
        fates_hdim_levleaf(:) = dlower_vai(:)

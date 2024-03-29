@@ -246,6 +246,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_area_trees_si
   integer :: ih_is_forest_si
   integer :: ih_is_forest_si_age
+  integer :: ih_forest_edge_bin_area_si
   integer :: ih_litter_in_elem
   integer :: ih_litter_out_elem
   integer :: ih_seed_bank_elem
@@ -763,6 +764,7 @@ module FatesHistoryInterfaceMod
      !! THESE WERE EXPLICITLY PRIVATE WHEN TYPE WAS PUBLIC
      integer, private :: column_index_, levsoil_index_, levscpf_index_
      integer, private :: levscls_index_, levpft_index_, levage_index_
+     integer, private :: levedgebin_index_
      integer, private :: levfuel_index_, levcwdsc_index_, levscag_index_
      integer, private :: levcan_index_, levcnlf_index_, levcnlfpft_index_
      integer, private :: levcdpf_index_, levcdsc_index_, levcdam_index_ 
@@ -797,6 +799,7 @@ module FatesHistoryInterfaceMod
      procedure :: levcacls_index
      procedure :: levpft_index
      procedure :: levage_index
+     procedure :: levedgebin_index
      procedure :: levfuel_index
      procedure :: levcwdsc_index
      procedure :: levcan_index
@@ -832,6 +835,7 @@ module FatesHistoryInterfaceMod
      procedure, private :: set_levscls_index
      procedure, private :: set_levpft_index
      procedure, private :: set_levage_index
+     procedure, private :: set_levedgebin_index
      procedure, private :: set_levfuel_index
      procedure, private :: set_levcwdsc_index
      procedure, private :: set_levcan_index
@@ -878,6 +882,7 @@ contains
 
     use FatesIODimensionsMod, only : column, levsoil, levscpf
     use FatesIODimensionsMod, only : levscls, levpft, levage
+    use FatesIODimensionsMod, only : levedgebin
     use FatesIODimensionsMod, only : levcacls, levcapf
     use FatesIODimensionsMod, only : levfuel, levcwdsc, levscag
     use FatesIODimensionsMod, only : levscagpft, levagepft
@@ -936,6 +941,11 @@ contains
     call this%set_levage_index(dim_count)
     call this%dim_bounds(dim_count)%Init(levage, num_threads, &
          fates_bounds%age_class_begin, fates_bounds%age_class_end)
+
+    dim_count = dim_count + 1
+    call this%set_levedgebin_index(dim_count)
+    call this%dim_bounds(dim_count)%Init(levedgebin, num_threads, &
+         fates_bounds%edgebin_begin, fates_bounds%edgebin_end)
 
     dim_count = dim_count + 1
     call this%set_levfuel_index(dim_count)
@@ -1090,6 +1100,10 @@ contains
     call this%dim_bounds(index)%SetThreadBounds(thread_index, &
          thread_bounds%age_class_begin, thread_bounds%age_class_end)
 
+    index = this%levedgebin_index()
+    call this%dim_bounds(index)%SetThreadBounds(thread_index, &
+         thread_bounds%edgebin_begin, thread_bounds%edgebin_end)
+
     index = this%levfuel_index()
     call this%dim_bounds(index)%SetThreadBounds(thread_index, &
          thread_bounds%fuel_begin, thread_bounds%fuel_end)
@@ -1181,6 +1195,7 @@ contains
 
     use FatesIOVariableKindMod, only : site_r8, site_soil_r8, site_size_pft_r8
     use FatesIOVariableKindMod, only : site_size_r8, site_pft_r8, site_age_r8
+    use FatesIOVariableKindMod, only : site_edgebin_r8
     use FatesIOVariableKindMod, only : site_coage_r8, site_coage_pft_r8
     use FatesIOVariableKindMod, only : site_fuel_r8, site_cwdsc_r8, site_scag_r8
     use FatesIOVariableKindMod, only : site_scagpft_r8, site_agepft_r8
@@ -1219,6 +1234,9 @@ contains
 
     call this%set_dim_indices(site_age_r8, 1, this%column_index())
     call this%set_dim_indices(site_age_r8, 2, this%levage_index())
+
+    call this%set_dim_indices(site_edgebin_r8, 1, this%column_index())
+    call this%set_dim_indices(site_edgebin_r8, 2, this%levedgebin_index())
 
     call this%set_dim_indices(site_fuel_r8, 1, this%column_index())
     call this%set_dim_indices(site_fuel_r8, 2, this%levfuel_index())
@@ -1436,6 +1454,20 @@ end function levcapf_index
    class(fates_history_interface_type), intent(in) :: this
    levage_index = this%levage_index_
  end function levage_index
+
+ ! =======================================================================
+ subroutine set_levedgebin_index(this, index)
+   implicit none
+   class(fates_history_interface_type), intent(inout) :: this
+   integer, intent(in) :: index
+   this%levedgebin_index_ = index
+ end subroutine set_levedgebin_index
+
+ integer function levedgebin_index(this)
+   implicit none
+   class(fates_history_interface_type), intent(in) :: this
+   levedgebin_index = this%levedgebin_index_
+ end function levedgebin_index
 
  ! =======================================================================
  subroutine set_levfuel_index(this, index)
@@ -1879,6 +1911,7 @@ end subroutine flush_hvars
     ! ----------------------------------------------------------------------------------
     use FatesIOVariableKindMod, only : site_r8, site_soil_r8, site_size_pft_r8
     use FatesIOVariableKindMod, only : site_size_r8, site_pft_r8, site_age_r8
+    use FatesIOVariableKindMod, only : site_edgebin_r8
     use FatesIOVariableKindMod, only : site_coage_r8, site_coage_pft_r8
     use FatesIOVariableKindMod, only : site_fuel_r8, site_cwdsc_r8, site_scag_r8
     use FatesIOVariableKindMod, only : site_scagpft_r8, site_agepft_r8
@@ -1928,6 +1961,10 @@ end subroutine flush_hvars
     ! site x patch-age class
     index = index + 1
     call this%dim_kinds(index)%Init(site_age_r8, 2)
+
+    ! site x forest-edge-bin class
+    index = index + 1
+    call this%dim_kinds(index)%Init(site_edgebin_r8, 2)
 
     ! site x fuel size class
     index = index + 1
@@ -2222,6 +2259,7 @@ end subroutine flush_hvars
     use FatesConstantsMod   , only : ican_upper
     use FatesConstantsMod   , only : ican_ustory
     use FatesConstantsMod   , only : n_landuse_cats
+    use FatesConstantsMod, only : num_edge_forest_bins
     use FatesSizeAgeTypeIndicesMod, only : get_sizeage_class_index
     use FatesSizeAgeTypeIndicesMod, only : get_sizeagepft_class_index
     use FatesSizeAgeTypeIndicesMod, only : get_agepft_class_index
@@ -2251,6 +2289,7 @@ end subroutine flush_hvars
     type(site_massbal_type), pointer :: site_mass
 
     integer  :: s        ! The local site index
+    integer  :: b        ! Forest edge bin index
     integer  :: io_si     ! The site index of the IO array
     integer  :: ilyr      ! Soil index for nlevsoil
     integer  :: ipa, ipa2 ! The local "I"ndex of "PA"tches
@@ -2335,6 +2374,7 @@ end subroutine flush_hvars
                hio_area_trees_si  => this%hvars(ih_area_trees_si)%r81d, &
                hio_is_forest_si        => this%hvars(ih_is_forest_si)%r81d, &
                hio_is_forest_si_age    => this%hvars(ih_is_forest_si_age)%r82d, &
+               hio_forest_edge_bin_area_si => this%hvars(ih_forest_edge_bin_area_si)%r82d, &
                hio_fates_fraction_si   => this%hvars(ih_fates_fraction_si)%r81d, &
                hio_ba_weighted_height_si  => this%hvars(ih_ba_weighted_height_si)%r81d, &
                hio_ca_weighted_height_si  => this%hvars(ih_ca_weighted_height_si)%r81d, &
@@ -2892,6 +2932,14 @@ end subroutine flush_hvars
             merge(1._r8, 0._r8, cpatch%is_forest) * cpatch%area * AREA_INV
          hio_is_forest_si_age(io_si,cpatch%age_class) = hio_is_forest_si_age(io_si,cpatch%age_class) + &
             merge(1._r8, 0._r8, cpatch%is_forest) * cpatch%area * AREA_INV
+
+         ! area of forest in each edge bin
+         if (cpatch%is_forest) then
+            binloop: do b = 1, num_edge_forest_bins
+               hio_forest_edge_bin_area_si(io_si,b) = hio_forest_edge_bin_area_si(io_si,b) + &
+               cpatch%area_in_edge_forest_bins(b)
+            end do binloop
+         end if
 
          ! loop through cohorts on patch
          ccohort => cpatch%shortest
@@ -5371,6 +5419,7 @@ end subroutine update_history_hifrq
 
     use FatesIOVariableKindMod, only : site_r8, site_soil_r8, site_size_pft_r8
     use FatesIOVariableKindMod, only : site_size_r8, site_pft_r8, site_age_r8
+    use FatesIOVariableKindMod, only : site_edgebin_r8
     use FatesIOVariableKindMod, only : site_coage_pft_r8, site_coage_r8
     use FatesIOVariableKindMod, only : site_height_r8, site_agefuel_r8
     use FatesInterfaceTypesMod     , only : hlm_use_planthydro
@@ -5401,6 +5450,7 @@ end subroutine update_history_hifrq
     ! patch age                (site_age_r8)    : AP
     ! canopy layer             (site_can_r8)    : CL
     ! coarse woody debris size (site_cwdsc_r8)  : DC
+    ! forest edge bin          (site_edgebin_r8): EB
     ! element                  (site_elem_r8)   : EL
     ! leaf layer                                : LL
     ! fuel class               (site_fuel_r8)   : FC
@@ -5482,6 +5532,12 @@ end subroutine update_history_hifrq
          avgflag='A', vtype=site_age_r8, hlms='CLM:ALM',                       &
          upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
          index=ih_is_forest_si_age)
+
+     call this%set_history_var(vname='FATES_FOREST_AREA_EB', units='m2',       &
+         long='area of forest in each edge bin', use_default='inactive',       &
+         avgflag='A', vtype=site_edgebin_r8, hlms='CLM:ALM',                   &
+         upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+         index=ih_forest_edge_bin_area_si)
 
     call this%set_history_var(vname='FATES_FRACTION', units='m2 m-2',          &
          long='total gridcell fraction which FATES is running over', use_default='active', &
