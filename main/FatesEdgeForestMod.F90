@@ -14,7 +14,9 @@ module FatesEdgeForestMod
 
   ! Make public necessary subroutines and functions
   public :: calculate_edge_area
-  public :: indexx  ! public for unit testing
+  ! Public for unit testing
+  public :: indexx
+  public :: get_fraction_of_forest_in_each_bin
 
 contains
 
@@ -141,18 +143,22 @@ contains
 ! !   end subroutine insert_forest_patch
 
 
-  subroutine get_fraction_of_forest_in_each_bin(x, fraction_forest_in_bin)
+  subroutine get_fraction_of_forest_in_each_bin(x, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_bin)
     ! DESCRIPTION:
     ! Get the fraction of forest in each bin.
     ! PLACEHOLDER FOR NOW that just returns 1/num_edge_forest_bins for each.
     ! TODO: Replace this with real equations for each bin as a function of deforested area
     !
     ! USES
-    use FatesConstantsMod, only : efb_amplitudes, efb_sigmas, efb_centers, efb_decay
     use FatesConstantsMod, only : pi => pi_const
+    use FatesConstantsMod, only : num_edge_forest_bins
     !
     ! ARGUMENTS
     real(r8), intent(in)  :: x  ! Independent variable in the fit
+    real(r8), dimension(:), intent(in) :: efb_amplitudes
+    real(r8), dimension(:), intent(in) :: efb_sigmas
+    real(r8), dimension(:), intent(in) :: efb_centers
+    real(r8), intent(in) :: efb_decay
     real(r8), dimension(:), pointer, intent(in) :: fraction_forest_in_bin
     !
     ! LOCAL VARIABLES
@@ -171,6 +177,11 @@ contains
           fraction_forest_in_bin(b) = A * exp(-x*efb_decay)
        else
           ! Lognormal
+         if (x == 0._r8) then
+            ! Avoid divide-by-zero
+            fraction_forest_in_bin(b) = 0._r8
+            cycle
+         end if
          mu = efb_centers(b)
          sigma = efb_sigmas(b)
          fraction_forest_in_bin(b) = A * exp(-(log(x) - mu)**2 / (2*sigma**2)) / (sigma * sqrt(2*pi) * x)
@@ -309,6 +320,9 @@ contains
     ! Loop through forest patches in decreasing order of proximity, calculating the
     ! area of each patch that is in each edge bin.
     !
+    ! USES:
+    use FatesConstantsMod, only : efb_amplitudes, efb_sigmas, efb_centers, efb_decay
+    !
     ! ARGUMENTS:
     type(ed_site_type), pointer, intent(in) :: site
     !
@@ -338,7 +352,7 @@ contains
 
     ! Get fraction of forest area in each bin
     fraction_nonforest = (area - area_forest_patches) / area
-    call get_fraction_of_forest_in_each_bin(fraction_nonforest, fraction_forest_in_each_bin)
+    call get_fraction_of_forest_in_each_bin(fraction_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
 
     ! Assign patches to bins
     call assign_patches_to_bins(site, indices, index_forestpatches_to_allpatches, fraction_forest_in_each_bin, n_forest_patches, n_patches, area_forest_patches)
