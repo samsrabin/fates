@@ -190,7 +190,7 @@ contains
        A = efb_amplitudes(b)
        if (b == num_edge_forest_bins) then
           ! Exponential
-          fraction_forest_in_bin(b) = A * exp(-x*efb_decay)
+          fraction_forest_in_bin(b) = A * exp(-x/efb_decay)
        else
           ! Lognormal
          if (x == 0._r8) then
