@@ -353,7 +353,7 @@ contains
     integer :: n_patches  ! Number of patches in site
     real(r8) :: area_forest_patches
     real(r8) :: area
-    real(r8) :: fraction_nonforest
+    real(r8) :: pct_nonforest
     real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
 
     ! Skip sites with no forest patches
@@ -370,9 +370,9 @@ contains
     ! Get ranks
     call rank_forest_edge_proximity(site, indices, index_forestpatches_to_allpatches)
 
-    ! Get fraction of forest area in each bin
-    fraction_nonforest = (area - area_forest_patches) / area
-    call get_fraction_of_forest_in_each_bin(fraction_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+    ! Get percentage of nonforest area in each bin
+    pct_nonforest = 100._r8 * (area - area_forest_patches) / area
+    call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
 
     ! Assign patches to bins
     call assign_patches_to_bins(site, indices, index_forestpatches_to_allpatches, fraction_forest_in_each_bin, n_forest_patches, n_patches, area_forest_patches)
