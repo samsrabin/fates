@@ -17,6 +17,8 @@ module FatesEdgeForestMod
   ! Public for unit testing
   public :: indexx
   public :: get_fraction_of_forest_in_each_bin
+  public :: gffeb_lognorm_numerator
+  public :: gffeb_lognorm_denominator
 
 contains
 
@@ -130,18 +132,24 @@ contains
   end subroutine rank_forest_edge_proximity
 
 
-! !   subroutine sort_forest_edge_proximity()
-! !     ! DESCRIPTION:
-! !     ! Sorts a linked list of POINTERS to forest patches based on their proximity to edge.
-! !     ! Based on EDCohortDynamicsMod's sort_cohorts().
-! !   end subroutine sort_forest_edge_proximity
+  function gffeb_lognorm_numerator(x, A, mu, sigma)
+    real(r8), intent(in) :: x
+    real(r8), intent(in) :: A      ! Amplitude
+    real(r8), intent(in) :: mu     ! Center
+    real(r8), intent(in) :: sigma  ! Sigma
+    real(r8) :: gffeb_lognorm_numerator
 
+    gffeb_lognorm_numerator = A * exp(-(log(x) - mu)**2 / (2*sigma**2))
+  end function gffeb_lognorm_numerator
 
-! !   subroutine insert_forest_patch()
-! !     ! DESCRIPTION:
-! !     ! Insert forest patch into linked list. Based on EDCohortDynamicsMod's insert_cohort().
-! !   end subroutine insert_forest_patch
+  function gffeb_lognorm_denominator(x, sigma)
+    use FatesConstantsMod, only : pi => pi_const
+    real(r8), intent(in) :: x
+    real(r8), intent(in) :: sigma  ! Sigma
+    real(r8) :: gffeb_lognorm_denominator
 
+    gffeb_lognorm_denominator = sigma * sqrt(2*pi) * x
+  end function gffeb_lognorm_denominator
 
   subroutine get_fraction_of_forest_in_each_bin(x, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_bin)
     ! DESCRIPTION:
@@ -184,7 +192,7 @@ contains
          end if
          mu = efb_centers(b)
          sigma = efb_sigmas(b)
-         fraction_forest_in_bin(b) = A * exp(-(log(x) - mu)**2 / (2*sigma**2)) / (sigma * sqrt(2*pi) * x)
+         fraction_forest_in_bin(b) = gffeb_lognorm_numerator(x, A, mu, sigma) / gffeb_lognorm_denominator(x, sigma)
        end if
     end do binloop
 
