@@ -151,7 +151,7 @@ contains
     gffeb_lognorm_denominator = sigma * sqrt(2*pi) * x
   end function gffeb_lognorm_denominator
 
-  subroutine get_fraction_of_forest_in_each_bin(x, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_bin)
+  subroutine get_fraction_of_forest_in_each_bin(x, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_bin, norm)
     ! DESCRIPTION:
     ! Get the fraction of forest in each bin.
     ! PLACEHOLDER FOR NOW that just returns 1/num_edge_forest_bins for each.
@@ -168,6 +168,7 @@ contains
     real(r8), dimension(:), intent(in) :: efb_centers
     real(r8), intent(in) :: efb_decay
     real(r8), dimension(:), pointer, intent(in) :: fraction_forest_in_bin
+    logical, optional, intent(in) :: norm
     !
     ! LOCAL VARIABLES
     integer :: b  ! Bin index
@@ -177,6 +178,13 @@ contains
     ! Error checking
     real(r8), parameter :: tol = 1.e-9_r8  ! fraction of total forest area
     real(r8) :: err_chk
+    logical :: do_norm
+
+    if (present(norm)) then
+       do_norm = norm
+    else
+       do_norm = .true.
+    end if
 
     binloop: do b = 1, num_edge_forest_bins
        A = efb_amplitudes(b)
@@ -197,13 +205,17 @@ contains
     end do binloop
 
     ! Account for fit errors by normalizing to 1
-    fraction_forest_in_bin(:) = fraction_forest_in_bin(:) / sum(fraction_forest_in_bin)
+    if (do_norm) then
+       fraction_forest_in_bin(:) = fraction_forest_in_bin(:) / sum(fraction_forest_in_bin)
 
-    err_chk = sum(fraction_forest_in_bin) - 1._r8
-    if (abs(err_chk) > tol) then
-       write(fates_log(),*) "ERROR: bin fractions don't sum to 1; actual minus expected = ",err_chk
-       call endrun(msg=errMsg(__FILE__, __LINE__))
+       err_chk = sum(fraction_forest_in_bin) - 1._r8
+       if (abs(err_chk) > tol) then
+          write(fates_log(),*) "ERROR: bin fractions don't sum to 1;    actual minus expected = ",err_chk
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+       end if
     end if
+
+
   end subroutine get_fraction_of_forest_in_each_bin
 
 
