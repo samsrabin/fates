@@ -1,187 +1,315 @@
 module test_EdgeForest
-    !
-    ! DESCRIPTION:
-    !  Test the FATES edge forest code
-    !
-    use FatesConstantsMod, only : r8 => fates_r8
-    use FatesConstantsMod, only : num_edge_forest_bins
-    use FatesEdgeForestMod, only : indexx
-    use FatesEdgeForestMod, only : get_fraction_of_forest_in_each_bin
-    use funit
+  !
+  ! DESCRIPTION:
+  !  Test the FATES edge forest code
+  !
+  use FatesConstantsMod, only : r8 => fates_r8
+  use FatesConstantsMod, only : num_edge_forest_bins
+  use FatesEdgeForestMod, only : indexx
+  use FatesEdgeForestMod, only : get_fraction_of_forest_in_each_bin
+  use FatesEdgeForestMod, only : gffeb_lognorm_numerator, gffeb_lognorm_denominator
+  use funit
 
-    implicit none
+  implicit none
 
-    @TestCase
-    type, extends(TestCase) :: TestEdgeForest
+  @TestCase
+  type, extends(TestCase) :: TestEdgeForest
 
-      real(r8), dimension(:), allocatable :: array_to_sort
-      integer, dimension(:), allocatable  :: sorted_indices
-
-      contains
-        procedure :: setUp
-        procedure :: tearDown
-    end type TestEdgeForest
-
-    real(r8), parameter :: tol = 1.e-13_r8
-
-    integer, parameter :: n_to_sort = 5
-
-    real(r8), parameter, dimension(num_edge_forest_bins) :: efb_amplitudes = (/ 344.7312478651732, 7.551483117624031, 2.868792112939456, 1.6065148755153114, 0.957520323629746 /)
-    real(r8), parameter, dimension(num_edge_forest_bins-1) :: efb_sigmas = (/ 1.1991900082334475, 0.6330339577930695, 0.7048639265385499, 0.7947461148229709 /)
-    real(r8), parameter, dimension(num_edge_forest_bins-1) :: efb_centers = (/ 5.447901478373042, 2.7639593001183758, 2.293595462843879, 1.9740227169817046 /)
-    real(r8), parameter :: efb_decay = 3.761928323976011
+    real(r8), dimension(:), allocatable :: array_to_sort
+    integer, dimension(:), allocatable  :: sorted_indices
 
     contains
+      procedure :: setUp
+      procedure :: tearDown
+  end type TestEdgeForest
 
-      subroutine setUp(this)
-        class(TestEdgeForest), intent(inout) :: this
-        allocate(this%array_to_sort(n_to_sort))
-        allocate(this%sorted_indices(n_to_sort))
-      end subroutine setUp
+  real(r8), parameter :: tol = 1.e-13_r8
 
-      subroutine tearDown(this)
-        class(TestEdgeForest), intent(inout) :: this
-        if (allocated(this%array_to_sort)) deallocate(this%array_to_sort)
-        if (allocated(this%sorted_indices)) deallocate(this%sorted_indices)
-      end subroutine tearDown
+  integer, parameter :: n_to_sort = 5
 
-      @Test
-      subroutine indexx_alreadySorted(this)
-        class(TestEdgeForest), intent(inout) :: this
-
-        this%array_to_sort = (/ 1._r8, 1.62_r8, 2.72_r8, 3.14_r8, 6.28_r8 /)
-
-        call indexx(this%array_to_sort, this%sorted_indices)
-
-        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
-
-      end subroutine indexx_alreadySorted
-
-      @Test
-      subroutine indexx_reverseSorted(this)
-        class(TestEdgeForest), intent(inout) :: this
-
-        this%array_to_sort = (/ 6.28_r8, 3.14_r8, 2.72_r8, 1.62_r8, 1._r8 /)
-
-        call indexx(this%array_to_sort, this%sorted_indices)
-
-        @assertEqual((/ 5, 4, 3, 2, 1 /), this%sorted_indices)
-
-      end subroutine indexx_reverseSorted
-
-      @Test
-      subroutine indexx_lowTie(this)
-        class(TestEdgeForest), intent(inout) :: this
-
-        this%array_to_sort = (/ 1._r8, 1._r8, 2.72_r8, 3.14_r8, 6.28_r8 /)
-
-        call indexx(this%array_to_sort, this%sorted_indices)
-
-        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
-
-      end subroutine indexx_lowTie
-
-      @Test
-      subroutine indexx_highTie(this)
-        class(TestEdgeForest), intent(inout) :: this
-
-        this%array_to_sort = (/ 1._r8, 1.62_r8, 2.72_r8, 3.14_r8, 3.14_r8 /)
-
-        call indexx(this%array_to_sort, this%sorted_indices)
-
-        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
-
-      end subroutine indexx_highTie
-
-      @Test
-      subroutine indexx_random(this)
-        class(TestEdgeForest), intent(inout) :: this
-
-        this%array_to_sort = (/ 3._r8, 8._r8, 10._r8, 2._r8, 7._r8 /)
-
-        call indexx(this%array_to_sort, this%sorted_indices)
-
-        @assertEqual((/ 4, 1, 5, 2, 3 /), this%sorted_indices)
-
-      end subroutine indexx_random
+  real(r8), parameter, dimension(num_edge_forest_bins) :: efb_amplitudes = (/ 344.7312478651732, 7.551483117624031, 2.868792112939456, 1.6065148755153114, 0.957520323629746 /)
+  real(r8), parameter, dimension(num_edge_forest_bins-1) :: efb_sigmas = (/ 1.1991900082334475, 0.6330339577930695, 0.7048639265385499, 0.7947461148229709 /)
+  real(r8), parameter, dimension(num_edge_forest_bins-1) :: efb_centers = (/ 5.447901478373042, 2.7639593001183758, 2.293595462843879, 1.9740227169817046 /)
+  real(r8), parameter :: efb_decay = 3.761928323976011
+  
+  real(r8), parameter, dimension(num_edge_forest_bins) :: expected_90pctForest = (/ &
+  0.3604703360785574, &
+  0.3563516833665867, &
+  0.15133172878079243, &
+  0.06997908873353981, &
+  0.08298120925273385 /)
 
 
-      @Test
-      subroutine indexx_all_equal(this)
-        class(TestEdgeForest), intent(inout) :: this
+  contains
 
-        this%array_to_sort = (/ 1._r8, 1._r8, 1._r8, 1._r8, 1._r8 /)
+    subroutine setUp(this)
+      class(TestEdgeForest), intent(inout) :: this
+      allocate(this%array_to_sort(n_to_sort))
+      allocate(this%sorted_indices(n_to_sort))
+    end subroutine setUp
 
-        call indexx(this%array_to_sort, this%sorted_indices)
+    subroutine tearDown(this)
+      class(TestEdgeForest), intent(inout) :: this
+      if (allocated(this%array_to_sort)) deallocate(this%array_to_sort)
+      if (allocated(this%sorted_indices)) deallocate(this%sorted_indices)
+    end subroutine tearDown
 
-        @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+    @Test
+    subroutine indexx_alreadySorted(this)
+      class(TestEdgeForest), intent(inout) :: this
 
-      end subroutine indexx_all_equal
+      this%array_to_sort = (/ 1._r8, 1.62_r8, 2.72_r8, 3.14_r8, 6.28_r8 /)
+
+      call indexx(this%array_to_sort, this%sorted_indices)
+
+      @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+
+    end subroutine indexx_alreadySorted
+
+    @Test
+    subroutine indexx_reverseSorted(this)
+      class(TestEdgeForest), intent(inout) :: this
+
+      this%array_to_sort = (/ 6.28_r8, 3.14_r8, 2.72_r8, 1.62_r8, 1._r8 /)
+
+      call indexx(this%array_to_sort, this%sorted_indices)
+
+      @assertEqual((/ 5, 4, 3, 2, 1 /), this%sorted_indices)
+
+    end subroutine indexx_reverseSorted
+
+    @Test
+    subroutine indexx_lowTie(this)
+      class(TestEdgeForest), intent(inout) :: this
+
+      this%array_to_sort = (/ 1._r8, 1._r8, 2.72_r8, 3.14_r8, 6.28_r8 /)
+
+      call indexx(this%array_to_sort, this%sorted_indices)
+
+      @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+
+    end subroutine indexx_lowTie
+
+    @Test
+    subroutine indexx_highTie(this)
+      class(TestEdgeForest), intent(inout) :: this
+
+      this%array_to_sort = (/ 1._r8, 1.62_r8, 2.72_r8, 3.14_r8, 3.14_r8 /)
+
+      call indexx(this%array_to_sort, this%sorted_indices)
+
+      @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
+
+    end subroutine indexx_highTie
+
+    @Test
+    subroutine indexx_random(this)
+      class(TestEdgeForest), intent(inout) :: this
+
+      this%array_to_sort = (/ 3._r8, 8._r8, 10._r8, 2._r8, 7._r8 /)
+
+      call indexx(this%array_to_sort, this%sorted_indices)
+
+      @assertEqual((/ 4, 1, 5, 2, 3 /), this%sorted_indices)
+
+    end subroutine indexx_random
 
 
-      @Test
-      subroutine get_fraction_of_forest_in_each_bin_test100pctForest(this)
-        class(TestEdgeForest), intent(inout) :: this
-        real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
-        real(r8), dimension(num_edge_forest_bins) :: expected
-        real(r8) :: fraction_nonforest
+    @Test
+    subroutine indexx_all_equal(this)
+      class(TestEdgeForest), intent(inout) :: this
 
-        fraction_nonforest = 0._r8
-        expected = (/ &
-           0, &
-           0, &
-           0, &
-           0, &
-           1 /)
+      this%array_to_sort = (/ 1._r8, 1._r8, 1._r8, 1._r8, 1._r8 /)
 
-        call get_fraction_of_forest_in_each_bin(fraction_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+      call indexx(this%array_to_sort, this%sorted_indices)
 
-        @assertEqual(expected, fraction_forest_in_each_bin, tolerance=tol)
+      @assertEqual((/ 1, 2, 3, 4, 5 /), this%sorted_indices)
 
-      end subroutine get_fraction_of_forest_in_each_bin_test100pctForest
+    end subroutine indexx_all_equal
 
 
-      @Test
-      subroutine get_fraction_of_forest_in_each_bin_test90pctForest(this)
-        class(TestEdgeForest), intent(inout) :: this
-        real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
-        real(r8), dimension(num_edge_forest_bins) :: expected
-        real(r8) :: fraction_nonforest
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test100pctForest(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
 
-        fraction_nonforest = 0.1_r8
-        expected = (/ &
-           1.045422644962252e-06, &
-           6.280720449295594e-13, &
-           1.0185976796374034e-08, &
-           4.45856342804212e-06, &
-           0.9999944858273221 /)
+      pct_nonforest = 0._r8
+      expected = (/ &
+         0, &
+         0, &
+         0, &
+         0, &
+         1 /)
 
-        call get_fraction_of_forest_in_each_bin(fraction_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
 
-        @assertEqual(expected, fraction_forest_in_each_bin, tolerance=tol)
+      @assertEqual(expected, fraction_forest_in_each_bin, tolerance=tol)
 
-      end subroutine get_fraction_of_forest_in_each_bin_test90pctForest
+    end subroutine get_fraction_of_forest_in_each_bin_test100pctForest
 
 
-      @Test
-      subroutine get_fraction_of_forest_in_each_bin_test50pctForest(this)
-        class(TestEdgeForest), intent(inout) :: this
-        real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
-        real(r8), dimension(num_edge_forest_bins) :: expected
-        real(r8) :: fraction_nonforest
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin1(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
 
-        fraction_nonforest = 0.5
-        expected = (/ &
-           0.0005483656664050726, &
-           3.7618555157475816e-06, &
-           0.0004850630862283096, &
-           0.006840069686902661, &
-           0.9921227397049482 /)
+      pct_nonforest = 10._r8
 
-        call get_fraction_of_forest_in_each_bin(fraction_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
 
-        @assertEqual(expected, fraction_forest_in_each_bin, tolerance=tol)
+      @assertEqual(expected_90pctForest(1)/sum(expected_90pctForest), fraction_forest_in_each_bin(1), tolerance=tol)
 
-      end subroutine get_fraction_of_forest_in_each_bin_test50pctForest
+    end subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin1
 
-    end module test_EdgeForest
+
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin2(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
+
+      pct_nonforest = 10._r8
+
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+
+      @assertEqual(expected_90pctForest(2)/sum(expected_90pctForest), fraction_forest_in_each_bin(2), tolerance=tol)
+
+    end subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin2
+
+
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin3(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
+
+      pct_nonforest = 10._r8
+
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+
+      @assertEqual(expected_90pctForest(3)/sum(expected_90pctForest), fraction_forest_in_each_bin(3), tolerance=tol)
+
+    end subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin3
+
+
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin4(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
+
+      pct_nonforest = 10._r8
+
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+
+      @assertEqual(expected_90pctForest(4)/sum(expected_90pctForest), fraction_forest_in_each_bin(4), tolerance=tol)
+
+    end subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin4
+    
+    
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin4_noNorm(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
+
+      pct_nonforest = 10._r8
+
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin, norm=.false.)
+
+      @assertEqual(expected_90pctForest(4), fraction_forest_in_each_bin(4), tolerance=tol)
+
+    end subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin4_noNorm
+
+
+
+    @Test
+    subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin5(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+      real(r8), dimension(num_edge_forest_bins) :: expected
+      real(r8) :: pct_nonforest
+
+      pct_nonforest = 10._r8
+
+      call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+
+      @assertEqual(expected_90pctForest(5)/sum(expected_90pctForest), fraction_forest_in_each_bin(5), tolerance=tol)
+
+    end subroutine get_fraction_of_forest_in_each_bin_test90pctForest_bin5
+
+
+    ! @Test
+    ! subroutine get_fraction_of_forest_in_each_bin_test50pctForest(this)
+    !   class(TestEdgeForest), intent(inout) :: this
+    !   real(r8), dimension(num_edge_forest_bins), target :: fraction_forest_in_each_bin
+    !   real(r8), dimension(num_edge_forest_bins) :: expected
+    !   real(r8) :: pct_nonforest
+
+    !   pct_nonforest = 100._r8 * 0.5
+    !   expected = (/ &
+    !      0.0005483656664050726, &
+    !      3.7618555157475816e-06, &
+    !      0.0004850630862283096, &
+    !      0.006840069686902661, &
+    !      0.9921227397049482 /)
+
+    !   call get_fraction_of_forest_in_each_bin(pct_nonforest, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_each_bin)
+
+    !   @assertEqual(expected, fraction_forest_in_each_bin, tolerance=tol)
+
+    ! end subroutine get_fraction_of_forest_in_each_bin_test50pctForest
+    
+    @Test
+    subroutine test_gffeb_lognorm_numerator(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8) :: x
+      real(r8) :: A      ! Amplitude
+      real(r8) :: mu     ! Center
+      real(r8) :: sigma  ! Sigma
+      real(r8) :: expected
+      real(r8) :: actual
+      
+      x = 10._r8
+      ! Bin 4
+      A = 1.601064269911203
+      sigma = 0.8465094354405984
+      mu = 1.973996133523811
+      expected = 1.4848754270133655
+
+      actual = gffeb_lognorm_numerator(x, A, mu, sigma)
+
+      @assertEqual(expected, actual, tolerance=tol)
+
+    end subroutine test_gffeb_lognorm_numerator
+    
+    @Test
+    subroutine test_gffeb_lognorm_denominator(this)
+      class(TestEdgeForest), intent(inout) :: this
+      real(r8) :: x
+      real(r8) :: A      ! Amplitude
+      real(r8) :: mu     ! Center
+      real(r8) :: sigma  ! Sigma
+      real(r8) :: expected
+      real(r8) :: actual
+      
+      x = 10._r8
+      ! Bin 4
+      sigma = 0.8465094354405984
+      expected = 21.21884485617329
+
+      actual = gffeb_lognorm_denominator(x, sigma)
+
+      @assertEqual(expected, actual, tolerance=tol)
+
+    end subroutine test_gffeb_lognorm_denominator
+
+  end module test_EdgeForest
