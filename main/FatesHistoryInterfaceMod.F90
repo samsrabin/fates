@@ -2372,9 +2372,6 @@ end subroutine flush_hvars
                hio_trimming_si         => this%hvars(ih_trimming_si)%r81d, &
                hio_area_plant_si       => this%hvars(ih_area_plant_si)%r81d, &
                hio_area_trees_si  => this%hvars(ih_area_trees_si)%r81d, &
-               hio_is_forest_si        => this%hvars(ih_is_forest_si)%r81d, &
-               hio_is_forest_si_age    => this%hvars(ih_is_forest_si_age)%r82d, &
-               hio_forest_edge_bin_area_si => this%hvars(ih_forest_edge_bin_area_si)%r82d, &
                hio_fates_fraction_si   => this%hvars(ih_fates_fraction_si)%r81d, &
                hio_ba_weighted_height_si  => this%hvars(ih_ba_weighted_height_si)%r81d, &
                hio_ca_weighted_height_si  => this%hvars(ih_ca_weighted_height_si)%r81d, &
@@ -2385,7 +2382,6 @@ end subroutine flush_hvars
                hio_storebiomass_si_pft => this%hvars(ih_storebiomass_si_pft)%r82d, &
                hio_nindivs_si_pft      => this%hvars(ih_nindivs_si_pft)%r82d, &
                hio_nindivs_sec_si_pft  => this%hvars(ih_nindivs_sec_si_pft)%r82d, &
-               hio_area_si_pft         => this%hvars(ih_area_si_pft)%r82d, &
                hio_recruitment_si_pft  => this%hvars(ih_recruitment_si_pft)%r82d, &
                hio_seeds_out_gc_si_pft => this%hvars(ih_seeds_out_gc_si_pft)%r82d, &
                hio_seeds_in_gc_si_pft  => this%hvars(ih_seeds_in_gc_si_pft)%r82d, &
@@ -2592,7 +2588,6 @@ end subroutine flush_hvars
                hio_npp_si_agepft                    => this%hvars(ih_npp_si_agepft)%r82d, &
                hio_biomass_si_agepft                => this%hvars(ih_biomass_si_agepft)%r82d, &
                hio_scorch_height_si_agepft          => this%hvars(ih_scorch_height_si_agepft)%r82d, &
-               hio_area_si_agepft                   => this%hvars(ih_area_si_agepft)%r82d, &
                hio_yesterdaycanopylevel_canopy_si_scls     => this%hvars(ih_yesterdaycanopylevel_canopy_si_scls)%r82d, &
                hio_yesterdaycanopylevel_understory_si_scls => this%hvars(ih_yesterdaycanopylevel_understory_si_scls)%r82d, &
                hio_area_si_age         => this%hvars(ih_area_si_age)%r82d, &
@@ -2653,7 +2648,12 @@ end subroutine flush_hvars
                hio_nplant_si_scag                   => this%hvars(ih_nplant_si_scag)%r82d, &
                hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
                hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d, &
-               hio_lai_si                           => this%hvars(ih_lai_si)%r81d )
+               hio_lai_si                           => this%hvars(ih_lai_si)%r81d, &
+               hio_is_forest_si                     => this%hvars(ih_is_forest_si)%r81d, &
+               hio_is_forest_si_age                 => this%hvars(ih_is_forest_si_age)%r82d, &
+               hio_forest_edge_bin_area_si          => this%hvars(ih_forest_edge_bin_area_si)%r82d, &
+               hio_area_si_pft                      => this%hvars(ih_area_si_pft)%r82d, &
+               hio_area_si_agepft                   => this%hvars(ih_area_si_agepft)%r82d )
 
    ! If we don't have dynamics turned on, we just abort these diagnostics
    if (hlm_use_ed_st3.eq.itrue) return
