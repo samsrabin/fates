@@ -2259,7 +2259,6 @@ end subroutine flush_hvars
     use FatesConstantsMod   , only : ican_upper
     use FatesConstantsMod   , only : ican_ustory
     use FatesConstantsMod   , only : n_landuse_cats
-    use FatesConstantsMod, only : num_edge_forest_bins
     use FatesSizeAgeTypeIndicesMod, only : get_sizeage_class_index
     use FatesSizeAgeTypeIndicesMod, only : get_sizeagepft_class_index
     use FatesSizeAgeTypeIndicesMod, only : get_agepft_class_index
@@ -2274,6 +2273,7 @@ end subroutine flush_hvars
     use EDParamsMod               , only : nlevleaf
     use EDParamsMod               , only : ED_val_history_height_bin_edges
     use FatesInterfaceTypesMod    , only : nlevdamage
+    use FatesInterfaceTypesMod, only : num_edge_forest_bins
     
     ! Arguments
     class(fates_history_interface_type)             :: this
