@@ -154,8 +154,6 @@ contains
   subroutine get_fraction_of_forest_in_each_bin(x, efb_amplitudes, efb_sigmas, efb_centers, efb_decay, fraction_forest_in_bin, norm)
     ! DESCRIPTION:
     ! Get the fraction of forest in each bin.
-    ! PLACEHOLDER FOR NOW that just returns 1/num_edge_forest_bins for each.
-    ! TODO: Replace this with real equations for each bin as a function of deforested area
     !
     ! USES
     use FatesConstantsMod, only : pi => pi_const
