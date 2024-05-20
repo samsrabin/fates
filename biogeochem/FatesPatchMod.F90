@@ -64,7 +64,12 @@ module FatesPatchMod
     integer  :: ncl_p                        ! number of occupied canopy layers
     integer  :: land_use_label               ! patch label for land use classification (primaryland, secondaryland, etc)
     real(r8) :: age_since_anthro_disturbance ! average age for secondary forest since last anthropogenic disturbance [years]
-    logical  :: is_forest                    ! whether the patch is "forest"
+    logical  :: is_forest                    ! whether the patch is "forest" according to FATES param file % tree threshold
+    logical  :: is_forest_pct10              ! whether the patch is "forest" (tree cover >10%)
+    logical  :: is_forest_pct25              ! whether the patch is "forest" (tree cover >25%)
+    logical  :: is_forest_pct50              ! whether the patch is "forest" (tree cover >50%)
+    logical  :: is_forest_pct75              ! whether the patch is "forest" (tree cover >75%)
+    logical  :: is_forest_pct90              ! whether the patch is "forest" (tree cover >90%)
 
     !---------------------------------------------------------------------------
 
@@ -305,6 +310,11 @@ module FatesPatchMod
       this%land_use_label               = fates_unset_int
       this%age_since_anthro_disturbance = nan
       this%is_forest                    = .false.
+      this%is_forest_pct10              = .false.
+      this%is_forest_pct25              = .false.
+      this%is_forest_pct50              = .false.
+      this%is_forest_pct75              = .false.
+      this%is_forest_pct90              = .false.
       
       ! LEAF ORGANIZATION
       this%pft_agb_profile(:,:)         = nan

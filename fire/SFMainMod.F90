@@ -411,6 +411,11 @@ contains
        tree_fraction = tree_fraction + min(currentPatch%area,currentPatch%total_tree_area)/AREA
        grass_fraction = grass_fraction + min(currentPatch%area,total_grass_area)/AREA 
        currentPatch%is_forest = is_patch_forest(currentPatch, forest_tree_fraction_threshold)
+       currentPatch%is_forest_pct10 = is_patch_forest(currentPatch, 0.1_r8)
+       currentPatch%is_forest_pct25 = is_patch_forest(currentPatch, 0.25_r8)
+       currentPatch%is_forest_pct50 = is_patch_forest(currentPatch, 0.5_r8)
+       currentPatch%is_forest_pct75 = is_patch_forest(currentPatch, 0.75_r8)
+       currentPatch%is_forest_pct90 = is_patch_forest(currentPatch, 0.9_r8)
        
        if(debug)then
          write(fates_log(),*) 'SF  currentPatch%area ',currentPatch%area
