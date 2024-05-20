@@ -7,13 +7,13 @@ module FatesEcotypesMod
   private  ! By default everything is private
 
   ! Make public necessary subroutines and functions
-  public :: is_patch_forest
+  public :: is_patch_forest_tcthresh
 
 contains
 
   ! =====================================================================================
 
-  function is_patch_forest(patchptr, forest_tree_fraction_threshold)
+  function is_patch_forest_tcthresh(patchptr, forest_tree_fraction_threshold)
   ! DESCRIPTION:
   ! Return boolean: Is this patch "forest"?
   !
@@ -22,7 +22,7 @@ contains
   real(r8), intent(in) :: forest_tree_fraction_threshold ! Tree fraction above which a patch is "forest"
   !
   ! RETURN VALUE
-  logical :: is_patch_forest
+  logical :: is_patch_forest_tcthresh
   !
   ! LOCAL VARIABLES
   real(r8) :: tree_fraction = 0._r8
@@ -31,9 +31,9 @@ contains
       tree_fraction = patchptr%total_tree_area / patchptr%area
   end if
 
-  is_patch_forest = tree_fraction > forest_tree_fraction_threshold
+  is_patch_forest_tcthresh = tree_fraction > forest_tree_fraction_threshold
 
-  end function is_patch_forest
+  end function is_patch_forest_tcthresh
 
 
 end module FatesEcotypesMod

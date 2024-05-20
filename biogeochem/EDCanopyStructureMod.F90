@@ -1308,7 +1308,7 @@ contains
     use FatesSizeAgeTypeIndicesMod, only : coagetype_class_index
     use EDtypesMod           , only : area
     use FatesConstantsMod    , only : itrue
-    use FatesEcotypesMod     , only : is_patch_forest
+    use FatesEcotypesMod     , only : is_patch_forest_tcthresh
     use EDParamsMod          , only : forest_tree_fraction_threshold
 
     ! !ARGUMENTS
@@ -1438,12 +1438,12 @@ contains
              currentPatch%total_canopy_area = currentPatch%area
           endif
 
-          currentPatch%is_forest = is_patch_forest(currentPatch, forest_tree_fraction_threshold)
-          currentPatch%is_forest_pct10 = is_patch_forest(currentPatch, 0.1_r8)
-          currentPatch%is_forest_pct25 = is_patch_forest(currentPatch, 0.25_r8)
-          currentPatch%is_forest_pct50 = is_patch_forest(currentPatch, 0.5_r8)
-          currentPatch%is_forest_pct75 = is_patch_forest(currentPatch, 0.75_r8)
-          currentPatch%is_forest_pct90 = is_patch_forest(currentPatch, 0.9_r8)
+          currentPatch%is_forest = is_patch_forest_tcthresh(currentPatch, forest_tree_fraction_threshold)
+          currentPatch%is_forest_pct10 = is_patch_forest_tcthresh(currentPatch, 0.1_r8)
+          currentPatch%is_forest_pct25 = is_patch_forest_tcthresh(currentPatch, 0.25_r8)
+          currentPatch%is_forest_pct50 = is_patch_forest_tcthresh(currentPatch, 0.5_r8)
+          currentPatch%is_forest_pct75 = is_patch_forest_tcthresh(currentPatch, 0.75_r8)
+          currentPatch%is_forest_pct90 = is_patch_forest_tcthresh(currentPatch, 0.9_r8)
 
           currentPatch => currentPatch%younger
        end do !patch loop
