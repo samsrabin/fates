@@ -349,6 +349,7 @@ contains
 
     use FatesConstantsMod, only : sec_per_min
     use FatesEcotypesMod , only : is_patch_forest
+    use EDParamsMod      , only : forest_tree_fraction_threshold
 
     type(ed_site_type) , intent(inout), target :: currentSite
     type(bc_in_type)   , intent(in)            :: bc_in
@@ -404,7 +405,7 @@ contains
        enddo
        tree_fraction = tree_fraction + min(currentPatch%area,currentPatch%total_tree_area)/AREA
        grass_fraction = grass_fraction + min(currentPatch%area,total_grass_area)/AREA 
-       currentPatch%is_forest = is_patch_forest(currentPatch)
+       currentPatch%is_forest = is_patch_forest(currentPatch, forest_tree_fraction_threshold)
        
        if(debug)then
          write(fates_log(),*) 'SF  currentPatch%area ',currentPatch%area

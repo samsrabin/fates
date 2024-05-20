@@ -2,7 +2,6 @@ module FatesEcotypesMod
 
   use FatesConstantsMod, only : r8 => fates_r8
   use FatesPatchMod, only : fates_patch_type
-  use EDParamsMod, only : forest_tree_fraction_threshold
 
   implicit none
   private  ! By default everything is private
@@ -14,12 +13,13 @@ contains
 
   ! =====================================================================================
 
-  function is_patch_forest(patchptr)
+  function is_patch_forest(patchptr, forest_tree_fraction_threshold)
   ! DESCRIPTION:
   ! Return boolean: Is this patch "forest"?
   !
   ! ARGUMENTS:
   type(fates_patch_type), intent(in), pointer :: patchptr  ! pointer to patch object
+  real(r8), intent(in) :: forest_tree_fraction_threshold ! Tree fraction above which a patch is "forest"
   !
   ! RETURN VALUE
   logical :: is_patch_forest
