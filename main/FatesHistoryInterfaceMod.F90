@@ -243,7 +243,9 @@ module FatesHistoryInterfaceMod
   
   integer :: ih_trimming_si
   integer :: ih_area_plant_si
+  integer :: ih_area_plant_si_age
   integer :: ih_area_trees_si
+  integer :: ih_area_trees_si_age
   integer :: ih_is_forest_si
   integer :: ih_is_forest_si_age
   integer :: ih_is_forest_pct10_si
@@ -2342,7 +2344,9 @@ end subroutine flush_hvars
                hio_ncohorts_sec_si     => this%hvars(ih_ncohorts_sec_si)%r81d, &
                hio_trimming_si         => this%hvars(ih_trimming_si)%r81d, &
                hio_area_plant_si       => this%hvars(ih_area_plant_si)%r81d, &
+               hio_area_plant_si_age   => this%hvars(ih_area_plant_si_age)%r82d, &
                hio_area_trees_si  => this%hvars(ih_area_trees_si)%r81d, &
+               hio_area_trees_si_age   => this%hvars(ih_area_trees_si_age)%r82d, &
                hio_is_forest_si        => this%hvars(ih_is_forest_si)%r81d, &
                hio_is_forest_si_age    => this%hvars(ih_is_forest_si_age)%r82d, &
                hio_is_forest_pct10_si  => this%hvars(ih_is_forest_pct10_si)%r81d, &
@@ -2906,6 +2910,8 @@ end subroutine flush_hvars
          ! area occupied by plants and trees [m2/m2]
          hio_area_plant_si(io_si) = hio_area_plant_si(io_si) + min(cpatch%total_canopy_area,cpatch%area) * AREA_INV
          hio_area_trees_si(io_si) = hio_area_trees_si(io_si) + min(cpatch%total_tree_area,cpatch%area) * AREA_INV
+         hio_area_plant_si_age(io_si,cpatch%age_class) = hio_area_plant_si_age(io_si,cpatch%age_class) + min(cpatch%total_canopy_area,cpatch%area)
+         hio_area_trees_si_age(io_si,cpatch%age_class) = hio_area_trees_si_age(io_si,cpatch%age_class) + min(cpatch%total_canopy_area,cpatch%area)
 
          ! whether patch is forest according to FATES parameter file threshold
          hio_is_forest_si(io_si) = hio_is_forest_si(io_si) + &
@@ -3913,6 +3919,8 @@ end subroutine flush_hvars
          if (hio_area_si_age(io_si, ipa2) .gt. nearzero) then
                hio_lai_si_age(io_si, ipa2) = hio_lai_si_age(io_si, ipa2) / (hio_area_si_age(io_si, ipa2)*AREA)
                hio_ncl_si_age(io_si, ipa2) = hio_ncl_si_age(io_si, ipa2) / (hio_area_si_age(io_si, ipa2)*AREA)
+               hio_area_plant_si_age(io_si, ipa2) = hio_area_plant_si_age(io_si, ipa2) / (hio_area_si_age(io_si, ipa2)*AREA)
+               hio_area_trees_si_age(io_si, ipa2) = hio_area_trees_si_age(io_si, ipa2) / (hio_area_si_age(io_si, ipa2)*AREA)
             do i_pft = 1, numpft
                iagepft = ipa2 + (i_pft-1) * nlevage
                hio_scorch_height_si_agepft(io_si, iagepft) = &
@@ -3921,6 +3929,8 @@ end subroutine flush_hvars
          else
             hio_lai_si_age(io_si, ipa2) = 0._r8
             hio_ncl_si_age(io_si, ipa2) = 0._r8
+            hio_area_plant_si_age(io_si, ipa2) = 0._r8
+            hio_area_trees_si_age(io_si, ipa2) = 0._r8
          endif
       end do
 
@@ -5506,11 +5516,22 @@ end subroutine update_history_hifrq
          avgflag='A', vtype=site_r8, hlms='CLM:ALM', upfreq=1, ivar=ivar,      &
          initialize=initialize_variables, index=ih_area_plant_si)
 
+     call this%set_history_var(vname='FATES_AREA_PLANTS_AP', units='m2 m-2',   &
+         long='area occupied by all plants per m2 land area (by patch age)', use_default='active', &
+         avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=1, ivar=ivar,  &
+         initialize=initialize_variables, index=ih_area_plant_si_age)
+
     call this%set_history_var(vname='FATES_AREA_TREES', units='m2 m-2',        &
          long='area occupied by woody plants per m2 land area', use_default='active', &
          avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
          upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
          index=ih_area_trees_si)
+
+     call this%set_history_var(vname='FATES_AREA_TREES_AP', units='m2 m-2',    &
+         long='area occupied by woody plants per m2 land area (by patch age)', use_default='active', &
+         avgflag='A', vtype=site_age_r8, hlms='CLM:ALM',                       &
+         upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+         index=ih_area_trees_si_age)
 
      call this%set_history_var(vname='FATES_IS_FOREST', units='',              &
          long='whether patch is forest', use_default='inactive',               &
