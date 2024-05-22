@@ -2911,7 +2911,7 @@ end subroutine flush_hvars
          hio_area_plant_si(io_si) = hio_area_plant_si(io_si) + min(cpatch%total_canopy_area,cpatch%area) * AREA_INV
          hio_area_trees_si(io_si) = hio_area_trees_si(io_si) + min(cpatch%total_tree_area,cpatch%area) * AREA_INV
          hio_area_plant_si_age(io_si,cpatch%age_class) = hio_area_plant_si_age(io_si,cpatch%age_class) + min(cpatch%total_canopy_area,cpatch%area)
-         hio_area_trees_si_age(io_si,cpatch%age_class) = hio_area_trees_si_age(io_si,cpatch%age_class) + min(cpatch%total_canopy_area,cpatch%area)
+         hio_area_trees_si_age(io_si,cpatch%age_class) = hio_area_trees_si_age(io_si,cpatch%age_class) + min(cpatch%total_tree_area,cpatch%area)
 
          ! whether patch is forest according to FATES parameter file threshold
          hio_is_forest_si(io_si) = hio_is_forest_si(io_si) + &
