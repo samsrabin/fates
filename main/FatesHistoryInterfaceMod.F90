@@ -6967,7 +6967,7 @@ contains
           ! patch age class variables
           call this%set_history_var(vname='FATES_PATCHAREA_AP', units='m2 m-2',      &
                long='patch area by age bin per m2 land area', use_default='active',  &
-               avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,  &
+               avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=1, ivar=ivar,  &
                initialize=initialize_variables, index=ih_area_si_age)
 
           call this%set_history_var(vname='FATES_LAI_AP', units='m2 m-2',            &
