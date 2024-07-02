@@ -386,6 +386,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_biomass_si_agepft
   integer :: ih_npp_si_agepft
   integer :: ih_scorch_height_si_agepft
+  integer :: ih_area_si_agepft
 
   ! Indices to (site) variables
   integer :: ih_tveg24_si
@@ -620,6 +621,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_storebiomass_si_pft
   integer :: ih_nindivs_si_pft
   integer :: ih_nindivs_sec_si_pft
+  integer :: ih_area_si_pft
   integer :: ih_recruitment_si_pft
   integer :: ih_recruitment_cflux_si_pft
   integer :: ih_mortality_si_pft
@@ -3105,6 +3107,7 @@ contains
          hio_storebiomass_si_pft => this%hvars(ih_storebiomass_si_pft)%r82d, &
          hio_nindivs_si_pft      => this%hvars(ih_nindivs_si_pft)%r82d, &
          hio_nindivs_sec_si_pft  => this%hvars(ih_nindivs_sec_si_pft)%r82d, &
+         hio_area_si_pft         => this%hvars(ih_area_si_pft)%r82d, &
          hio_recruitment_si_pft  => this%hvars(ih_recruitment_si_pft)%r82d, &
          hio_recruitment_cflux_si_pft  => this%hvars(ih_recruitment_cflux_si_pft)%r82d, &
          hio_seeds_out_gc_si_pft => this%hvars(ih_seeds_out_gc_si_pft)%r82d, &
@@ -3261,6 +3264,7 @@ contains
            hio_npp_si_agepft                    => this%hvars(ih_npp_si_agepft)%r82d, &
            hio_biomass_si_agepft                => this%hvars(ih_biomass_si_agepft)%r82d, &
            hio_scorch_height_si_agepft          => this%hvars(ih_scorch_height_si_agepft)%r82d, &
+           hio_area_si_agepft                   => this%hvars(ih_area_si_agepft)%r82d, &
            hio_yesterdaycanopylevel_canopy_si_scls     => this%hvars(ih_yesterdaycanopylevel_canopy_si_scls)%r82d, &
            hio_yesterdaycanopylevel_understory_si_scls => this%hvars(ih_yesterdaycanopylevel_understory_si_scls)%r82d, &
            hio_area_si_age         => this%hvars(ih_area_si_age)%r82d, &
@@ -3574,6 +3578,9 @@ contains
                             hio_biomass_sec_si_pft(io_si, ft) = hio_biomass_sec_si_pft(io_si, ft) + &
                                  (ccohort%n * AREA_INV) * total_m
                          end if
+
+                         hio_area_si_pft(io_si,ft) = hio_area_si_pft(io_si,ft) + &
+                            ccohort%c_area * AREA_INV
 
                          if(ccohort%isnew) then
                             hio_recruitment_cflux_si_pft(io_si, ft) = hio_recruitment_cflux_si_pft(io_si, ft) + &
@@ -3939,6 +3946,9 @@ contains
 
                         hio_biomass_si_agepft(io_si,iagepft) = hio_biomass_si_agepft(io_si,iagepft) + &
                              total_m * ccohort%n * AREA_INV
+
+                        hio_area_si_agepft(io_si,iagepft) = hio_area_si_agepft(io_si,iagepft) + &
+                             ccohort%c_area * AREA_INV
 
                         ! update SCPF/SCLS- and canopy/subcanopy- partitioned quantities
                         canlayer: if (ccohort%canopy_layer .eq. 1) then
@@ -6875,6 +6885,12 @@ contains
                upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
                index=ih_nindivs_sec_si_pft)
 
+          call this%set_history_var(vname='FATES_PATCHAREA_PF', units='m2 m-2',        &
+               long='total PFT-level area per m2 land area',                           &
+               use_default='inactive', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
+               upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                   &
+               index=ih_area_si_pft)
+
           call this%set_history_var(vname='FATES_RECRUITMENT_PF',                    &
                units='m-2 yr-1',                                                     &
                long='PFT-level recruitment rate in number of individuals per m2 land area per year',  &
@@ -7460,6 +7476,11 @@ contains
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_scorch_height_si_agepft)
 
+          call this%set_history_var(vname='FATES_PATCHAREA_APPF',units = 'm2 m-2',    &
+               long='total PFT-level area, in each patch age bin, per m2 land area', &
+               use_default='inactive', avgflag='A', vtype=site_agepft_r8,           &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_area_si_agepft)
 
           ! Carbon Flux (grid dimension x scpf) (THESE ARE DEFAULT INACTIVE!!!
           !                                     (BECAUSE THEY TAKE UP SPACE!!!
