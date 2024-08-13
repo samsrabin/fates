@@ -289,7 +289,9 @@ module FatesHistoryInterfaceMod
 
   integer :: ih_trimming_si
   integer :: ih_area_plant_si
+  integer :: ih_area_plant_si_age
   integer :: ih_area_trees_si
+  integer :: ih_area_trees_si_age
   integer :: ih_is_forest_si
   integer :: ih_is_forest_si_age
   integer :: ih_is_forest_pct10_si
@@ -5379,7 +5381,9 @@ contains
          hio_parsun_si_can                   => this%hvars(ih_parsun_si_can)%r82d, &
          hio_parsha_si_can                   => this%hvars(ih_parsha_si_can)%r82d, &
          hio_laisun_si_can                    => this%hvars(ih_laisun_si_can)%r82d, &
-         hio_laisha_si_can                    => this%hvars(ih_laisha_si_can)%r82d )
+         hio_laisha_si_can                    => this%hvars(ih_laisha_si_can)%r82d, &
+         hio_area_plant_si_age               => this%hvars(ih_area_plant_si_age)%r82d, &
+         hio_area_trees_si_age               => this%hvars(ih_area_trees_si_age)%r82d )
 
 
       ! THIS CAN BE REMOVED WHEN BOTH CTSM AND E3SM CALL FLUSH_ALL_HVARS
@@ -5418,7 +5422,6 @@ contains
             ageclass_area = sites(s)%area_by_age(cpatch%age_class)
             ageclass_canopy_area = canopy_area_by_age(cpatch%age_class)
 
-            ! Canopy resistance terms
             if (ageclass_canopy_area .gt. nearzero) then
                hio_c_stomata_si_age(io_si,cpatch%age_class) = &
                     hio_c_stomata_si_age(io_si,cpatch%age_class) + &
@@ -5429,9 +5432,21 @@ contains
                     hio_c_lblayer_si_age(io_si,cpatch%age_class) + &
                     cpatch%c_lblayer * cpatch%total_canopy_area * mol_per_umol / &
                     ageclass_canopy_area
+
+               hio_area_plant_si_age(io_si,cpatch%age_class) = &
+                    hio_area_plant_si_age(io_si,cpatch%age_class) + &
+                    min(cpatch%total_canopy_area,cpatch%area) / &
+                    ageclass_canopy_area
+
+               hio_area_trees_si_age(io_si,cpatch%age_class) = &
+                    hio_area_trees_si_age(io_si,cpatch%age_class) + &
+                    min(cpatch%total_tree_area,cpatch%area) / &
+                    ageclass_canopy_area
             else
                hio_c_stomata_si_age(io_si,cpatch%age_class) = 0._r8
                hio_c_lblayer_si_age(io_si,cpatch%age_class) = 0._r8
+               hio_area_plant_si_age(io_si,cpatch%age_class) = 0._r8
+               hio_area_trees_si_age(io_si,cpatch%age_class) = 0._r8
             end if
 
             ccohort => cpatch%shortest
@@ -6257,11 +6272,22 @@ contains
             avgflag='A', vtype=site_r8, hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar,      &
             initialize=initialize_variables, index=ih_area_plant_si)
 
+       call this%set_history_var(vname='FATES_AREA_PLANTS_AP', units='m2 m-2',   &
+            long='area occupied by all plants per m2 land area (by patch age)', use_default='active', &
+            avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=1, ivar=ivar,  &
+            initialize=initialize_variables, index=ih_area_plant_si_age)
+
        call this%set_history_var(vname='FATES_AREA_TREES', units='m2 m-2',        &
             long='area occupied by woody plants per m2 land area', use_default='active', &
             avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,                 &
             index=ih_area_trees_si)
+
+       call this%set_history_var(vname='FATES_AREA_TREES_AP', units='m2 m-2',    &
+            long='area occupied by woody plants per m2 land area (by patch age)', use_default='active', &
+            avgflag='A', vtype=site_age_r8, hlms='CLM:ALM',                       &
+            upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+            index=ih_area_trees_si_age)
 
        call this%set_history_var(vname='FATES_IS_FOREST', units='',               &
             long='whether patch is forest', use_default='inactive',               &
