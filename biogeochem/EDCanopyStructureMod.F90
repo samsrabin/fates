@@ -1309,6 +1309,7 @@ contains
     use EDtypesMod           , only : area
     use FatesConstantsMod    , only : itrue
     use FatesEcotypesMod     , only : is_patch_forest_tcthresh
+    use FatesEcotypesMod     , only : is_patch_forest_tcthresh_grassbmthresh
     use EDParamsMod          , only : forest_tree_fraction_threshold
 
     ! !ARGUMENTS
@@ -1444,6 +1445,11 @@ contains
           currentPatch%is_forest_pct50 = is_patch_forest_tcthresh(currentPatch, 0.5_r8)
           currentPatch%is_forest_pct75 = is_patch_forest_tcthresh(currentPatch, 0.75_r8)
           currentPatch%is_forest_pct90 = is_patch_forest_tcthresh(currentPatch, 0.9_r8)
+          currentPatch%is_forest_pct10_0grass = is_patch_forest_tcthresh_grassbmthresh(currentPatch, 0.1_r8, 0._r8)
+          currentPatch%is_forest_pct25_0grass = is_patch_forest_tcthresh_grassbmthresh(currentPatch, 0.25_r8, 0._r8)
+          currentPatch%is_forest_pct50_0grass = is_patch_forest_tcthresh_grassbmthresh(currentPatch, 0.5_r8, 0._r8)
+          currentPatch%is_forest_pct75_0grass = is_patch_forest_tcthresh_grassbmthresh(currentPatch, 0.75_r8, 0._r8)
+          currentPatch%is_forest_pct90_0grass = is_patch_forest_tcthresh_grassbmthresh(currentPatch, 0.9_r8, 0._r8)
 
           currentPatch => currentPatch%younger
        end do !patch loop
