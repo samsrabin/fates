@@ -292,6 +292,11 @@ module FatesHistoryInterfaceMod
   integer :: ih_area_trees_si
   integer :: ih_is_forest_si
   integer :: ih_is_forest_si_age
+  integer :: ih_is_forest_pct10_si
+  integer :: ih_is_forest_pct25_si
+  integer :: ih_is_forest_pct50_si
+  integer :: ih_is_forest_pct75_si
+  integer :: ih_is_forest_pct90_si
   integer :: ih_litter_in_elem
   integer :: ih_litter_out_elem
   integer :: ih_seed_bank_elem
@@ -2405,6 +2410,11 @@ contains
          hio_area_trees_si  => this%hvars(ih_area_trees_si)%r81d, &
          hio_is_forest_si        => this%hvars(ih_is_forest_si)%r81d, &
          hio_is_forest_si_age    => this%hvars(ih_is_forest_si_age)%r82d, &
+         hio_is_forest_pct10_si  => this%hvars(ih_is_forest_pct10_si)%r81d, &
+         hio_is_forest_pct25_si  => this%hvars(ih_is_forest_pct25_si)%r81d, &
+         hio_is_forest_pct50_si  => this%hvars(ih_is_forest_pct50_si)%r81d, &
+         hio_is_forest_pct75_si  => this%hvars(ih_is_forest_pct75_si)%r81d, &
+         hio_is_forest_pct90_si  => this%hvars(ih_is_forest_pct90_si)%r81d, &
          hio_fates_fraction_si   => this%hvars(ih_fates_fraction_si)%r81d, &
          hio_ba_weighted_height_si  => this%hvars(ih_ba_weighted_height_si)%r81d, &
          hio_ca_weighted_height_si  => this%hvars(ih_ca_weighted_height_si)%r81d, &
@@ -2671,11 +2681,22 @@ contains
             hio_area_plant_si(io_si) = hio_area_plant_si(io_si) + min(cpatch%total_canopy_area,cpatch%area) * AREA_INV
             hio_area_trees_si(io_si) = hio_area_trees_si(io_si) + min(cpatch%total_tree_area,cpatch%area) * AREA_INV
 
-            ! whether patch is forest
+            ! whether patch is forest according to FATES parameter file threshold
             hio_is_forest_si(io_si) = hio_is_forest_si(io_si) + &
                merge(1._r8, 0._r8, cpatch%is_forest) * cpatch%area * AREA_INV
             hio_is_forest_si_age(io_si,cpatch%age_class) = hio_is_forest_si_age(io_si,cpatch%age_class) + &
                merge(1._r8, 0._r8, cpatch%is_forest) * cpatch%area * AREA_INV
+            ! according to experimental definitions
+            hio_is_forest_pct10_si(io_si) = hio_is_forest_pct10_si(io_si) + &
+               merge(1._r8, 0._r8, cpatch%is_forest_pct10) * cpatch%area * AREA_INV
+            hio_is_forest_pct25_si(io_si) = hio_is_forest_pct25_si(io_si) + &
+               merge(1._r8, 0._r8, cpatch%is_forest_pct25) * cpatch%area * AREA_INV
+            hio_is_forest_pct50_si(io_si) = hio_is_forest_pct50_si(io_si) + &
+               merge(1._r8, 0._r8, cpatch%is_forest_pct50) * cpatch%area * AREA_INV
+            hio_is_forest_pct75_si(io_si) = hio_is_forest_pct75_si(io_si) + &
+               merge(1._r8, 0._r8, cpatch%is_forest_pct75) * cpatch%area * AREA_INV
+            hio_is_forest_pct90_si(io_si) = hio_is_forest_pct90_si(io_si) + &
+               merge(1._r8, 0._r8, cpatch%is_forest_pct90) * cpatch%area * AREA_INV
 
             ! Patch specific variables that are already calculated
             ! These things are all duplicated. Should they all be converted to LL or array structures RF?
@@ -6233,6 +6254,36 @@ contains
             avgflag='A', vtype=site_age_r8, hlms='CLM:ALM',                       &
             upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
             index=ih_is_forest_si_age)
+
+       call this%set_history_var(vname='FATES_IS_FOREST_PCT10', units='',        &
+            long='whether patch is forest (10% threshold)', use_default='inactive',&
+            avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
+            upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+            index=ih_is_forest_pct10_si)
+
+       call this%set_history_var(vname='FATES_IS_FOREST_PCT25', units='',        &
+            long='whether patch is forest (25% threshold)', use_default='inactive',&
+            avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
+            upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+            index=ih_is_forest_pct25_si)
+
+       call this%set_history_var(vname='FATES_IS_FOREST_PCT50', units='',        &
+            long='whether patch is forest (50% threshold)', use_default='inactive',&
+            avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
+            upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+            index=ih_is_forest_pct50_si)
+
+       call this%set_history_var(vname='FATES_IS_FOREST_PCT75', units='',        &
+            long='whether patch is forest (75% threshold)', use_default='inactive',&
+            avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
+            upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+            index=ih_is_forest_pct75_si)
+
+       call this%set_history_var(vname='FATES_IS_FOREST_PCT90', units='',        &
+            long='whether patch is forest (90% threshold)', use_default='inactive',&
+            avgflag='A', vtype=site_r8, hlms='CLM:ALM',                           &
+            upfreq=1, ivar=ivar, initialize=initialize_variables,                 &
+            index=ih_is_forest_pct90_si)
 
        call this%set_history_var(vname='FATES_FRACTION', units='m2 m-2',          &
             long='total gridcell fraction which FATES is running over', use_default='active', &
