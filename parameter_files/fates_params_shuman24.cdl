@@ -957,7 +957,7 @@ data:
   "dead leaves                                      ",
   "live grass                                       " ;
 
- fates_fire_FBD = 15.4, 16.8, 19.6, 999, 4, 4 ;
+ fates_fire_FBD = 15.4, 16.8, 19.6, 999, 4, 0.95 ;
 
  fates_fire_SAV = 13, 3.58, 0.98, 0.2, 66, 66 ;
 
@@ -1111,9 +1111,9 @@ data:
  fates_hydro_htftype_node = 1, 1, 1, 1 ;
 
  fates_pftname =
-  "broadleaf_evergreen_tropical_tree          ",
-  "broadleaf_hydrodecid_tropical_tree         ",
-  "c4_grass                                   " ;
+  "moist_trop_tree                            ",
+  "dry_trop_tree                              ",
+  "C4_Grass                                   " ;
 
  fates_alloc_storage_cushion = 1.2, 2.4, 1.2 ;
 
@@ -1507,7 +1507,7 @@ data:
 
  fates_cohort_size_fusion_tol = 0.08 ;
 
- fates_comp_excln = 3 ;
+ fates_comp_excln = -1 ;
 
  fates_damage_canopy_layer_code = 1 ;
 
@@ -1597,9 +1597,9 @@ data:
 
  fates_mort_cstarvation_model = 1 ;
 
- fates_mort_disturb_frac = 1 ;
+ fates_mort_disturb_frac = 0.5 ;
 
- fates_mort_understorey_death = 0.55983 ;
+ fates_mort_understorey_death = 1 ;
 
  fates_patch_fusion_tol = 0.05 ;
 
