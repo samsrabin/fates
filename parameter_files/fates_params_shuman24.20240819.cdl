@@ -957,7 +957,7 @@ data:
   "dead leaves                                      ",
   "live grass                                       " ;
 
- fates_fire_FBD = 15.4, 16.8, 19.6, 999, 4, 4 ;
+ fates_fire_FBD = 15.4, 16.8, 19.6, 999, 4, 0.95 ;
 
  fates_fire_SAV = 13, 3.58, 0.98, 0.2, 66, 66 ;
 
@@ -1009,16 +1009,16 @@ data:
   4, 4, 4 ;
 
  fates_cnp_turnover_nitr_retrans =
-  0.25, 0.25, 0.25,
-  0.25, 0.25, 0.25,
-  0, 0, 0,
-  0, 0, 0 ;
+  _, _, _,
+  _, _, _,
+  _, _, _,
+  _, _, _ ;
 
  fates_cnp_turnover_phos_retrans =
-  0.25, 0.25, 0.25,
-  0.25, 0.25, 0.25,
-  0, 0, 0,
-  0, 0, 0 ;
+  _, _, _,
+  _, _, _,
+  _, _, _,
+  _, _, _ ;
 
  fates_hydro_avuln_node =
   2, 2, 2,
@@ -1092,15 +1092,17 @@ data:
   2, 2, 2,
   2, 2, 2 ;
 
+// SSR: Version in Jackie's codebase had 2 additional rows. She didn't change either of those.
  fates_stoich_nitr =
-  0.033, 0.04, 0.04,
-  0.024, 0.024, 0.024,
+  0.02675, 0.02675, 0.16,  // SSR: Rounded first 2 to values given in Shuman et al. (2024) Table 2.
+  0.024, 0.024, 0.024,  // SSR: Why was 3rd value multiplied by 1e4 in fates_stoich_phos but not here?
   1e-08, 1e-08, 1e-08,
   0.0047, 0.0047, 0.0047 ;
 
+// SSR: Version in Jackie's codebase had 2 additional rows. She didn't change either of those.
  fates_stoich_phos =
-  0.0033, 0.004, 0.004,
-  0.0024, 0.0024, 0.0024,
+  0.0033, 0.0033, 0.004,
+  0.0024, 0.0024, 24,  // SSR: Why was 3rd value multiplied by 1e4 here but not fates_soich_nitr?
   1e-09, 1e-09, 1e-09,
   0.00047, 0.00047, 0.00047 ;
 
@@ -1115,19 +1117,19 @@ data:
   "broadleaf_hydrodecid_tropical_tree         ",
   "c4_grass                                   " ;
 
- fates_alloc_storage_cushion = 1.2, 2.4, 1.2 ;
+ fates_alloc_storage_cushion = 1.2, 2.4, 1.2 ;  // SSR: Default changed for 2nd but Jackie didn't change that. Not changed here.
 
  fates_alloc_store_priority_frac = 0.8, 0.8, 0.8 ;
 
- fates_allom_agb1 = 0.0673, 0.0673, 0.01 ;
+ fates_allom_agb1 = 0.0673, 0.0673, 0.000964 ;  // SSR: Jackie had to change the first 2, but the now-default values already match hers.
 
- fates_allom_agb2 = 0.976, 0.976, 0.572 ;
+ fates_allom_agb2 = 0.976, 0.976, 1.9462 ;  // SSR: Jackie had to change the first 2, but the now-default values already match hers.
 
- fates_allom_agb3 = 1.94, 1.94, 1.94 ;
+ fates_allom_agb3 = _, _, 0 ;
 
- fates_allom_agb4 = 0.931, 0.931, 0.931 ;
+ fates_allom_agb4 = _, _, 0 ;
 
- fates_allom_agb_frac = 0.6, 0.6, 0.6 ;
+ fates_allom_agb_frac = 0.6, 0.6, 1 ;
 
  fates_allom_amode = 3, 3, 1 ;
 
@@ -1135,51 +1137,51 @@ data:
 
  fates_allom_cmode = 1, 1, 1 ;
 
- fates_allom_d2bl1 = 0.04, 0.04, 0.07 ;
+ fates_allom_d2bl1 = 0.12668, 0.12668, 0.000964 ;  // SSR: Default changed for first 2, but Jackie changed all. Rounded first 2 to values given in her Table 2.
 
- fates_allom_d2bl2 = 1.6019679, 1.6019679, 1.3 ;
+ fates_allom_d2bl2 = 1.2813, 1.2813, 1.9492 ;  // SSR: Default changed for first 2, but Jackie changed all. Rounded first 2 to values given in her Table 2.
 
- fates_allom_d2bl3 = 0.55, 0.55, 0.55 ;
+ fates_allom_d2bl3 = _, _, 0 ;  // SSR: Jackie changed from all 0.55. Why?
 
- fates_allom_d2ca_coefficient_max = 0.2715891, 0.2715891, 0.6568464 ;
+ fates_allom_d2ca_coefficient_max = 0.76865, 0.76865, 0.03 ;  // SSR: Default changed for all. Using Jackie's values for all. Rounded first 2 to values given in her Table 2.
 
- fates_allom_d2ca_coefficient_min = 0.2715891, 0.2715891, 0.6568464 ;
+ fates_allom_d2ca_coefficient_min = 0.76865, 0.76865, 0.01 ;  // SSR: Default changed for all. Using Jackie's values for all. Rounded first 2 to values given in her Table 2.
 
- fates_allom_d2h1 = 78.4087704, 78.4087704, 0.64 ;
+ fates_allom_d2h1 = 57.6, 57.6, 1 ;  // SSR: Default changed for all. Using Jackie's values for all.
 
- fates_allom_d2h2 = 0.8124383, 0.8124383, 0.37 ;
+ fates_allom_d2h2 = 0.74, 0.74, 1 ;  // SSR: Default changed for first 2. Using Jackie's values for all.
 
- fates_allom_d2h3 = 47.6666164, 47.6666164, -999.9 ;
+ fates_allom_d2h3 = 21.6, 21.6, -999.9 ;  // SSR: Default changed for first 2 (from -999.9 to ~47.7), which are the only ones Jackie changed.
 
- fates_allom_dbh_maxheight = 1000, 1000, 0.35 ;
+ fates_allom_dbh_maxheight = 200, 200, 1 ;  // SSR: Default changed for all. Using Jackie's values for all.
 
  fates_allom_dmode = 1, 1, 1 ;
 
- fates_allom_fmode = 1, 1, 1 ;
+ fates_allom_fmode = 2, 2, 2 ;
 
- fates_allom_fnrt_prof_a = 7, 6, 11 ;
+ fates_allom_fnrt_prof_a = 7, 7, 7 ;
 
- fates_allom_fnrt_prof_b = 1, 2, 2 ;
+ fates_allom_fnrt_prof_b = 1, 1, 1 ;
 
  fates_allom_fnrt_prof_mode = 3, 3, 3 ;
 
  fates_allom_frbstor_repro = 0, 0, 0 ;
 
- fates_allom_h2cd1 = 0.5, 0.5, 1 ;
+ fates_allom_h2cd1 = 0.33, 0.1, 1 ;
 
  fates_allom_h2cd2 = 1, 1, 1 ;
 
- fates_allom_hmode = 5, 5, 1 ;
+ fates_allom_hmode = 5, 5, 3 ;  // SSR: Default changed for all. First 2 defaults now match Jackie's
 
- fates_allom_l2fr = 1, 1, 1 ;
+ fates_allom_l2fr =  0.4863,  0.4863, 1 ;  // SSR: Rounded first 2 to values given in Jackie's Table 2.
 
- fates_allom_la_per_sa_int = 0.8, 0.8, 0.8 ;
+ fates_allom_la_per_sa_int = 0.8, 0.8, 1000 ;
 
  fates_allom_la_per_sa_slp = 0, 0, 0 ;
 
- fates_allom_lmode = 2, 2, 1 ;
+ fates_allom_lmode = 3, 3, 1 ;  // SSR: Default changed for first 2, but not to match Jackie's.
 
- fates_allom_sai_scaler = 0.1, 0.1, 0.1 ;
+ fates_allom_sai_scaler = 0.1, 0.1, 0.0012 ;
 
  fates_allom_smode = 1, 1, 1 ;
 
@@ -1247,11 +1249,11 @@ data:
 
  fates_dev_arbitrary_pft = _, _, _ ;
 
- fates_fire_alpha_SH = 0.2, 0.2, 0.2 ;
+ fates_fire_alpha_SH = 0.1487, 0.06, 1 ;
 
- fates_fire_bark_scaler = 0.07, 0.07, 0.07 ;
+ fates_fire_bark_scaler = 0.0301, 0.1085, 0.07 ;
 
- fates_fire_crown_kill = 0.775, 0.775, 0.775 ;
+ fates_fire_crown_kill = 1, 0.05, 1 ;
 
  fates_frag_fnrt_fcel = 0.5, 0.5, 0.5 ;
 
@@ -1267,7 +1269,7 @@ data:
 
  fates_frag_seed_decay_rate = 0.51, 0.51, 0.51 ;
 
- fates_grperc = 0.11, 0.11, 0.11 ;
+ fates_grperc = 0.3, 0.3, 0.11 ;
 
  fates_hydro_avuln_gs = 2.5, 2.5, 2.5 ;
 
@@ -1299,15 +1301,15 @@ data:
 
  fates_leaf_jmaxse = 495, 495, 495 ;
 
- fates_leaf_slamax = 0.0954, 0.0954, 0.03 ;
+ fates_leaf_slamax = 0.03992, 0.03992, 0.0135 ;  // SSR: Rounded first 2 to values given in Jackie's Table 2.
 
- fates_leaf_slatop = 0.012, 0.03, 0.03 ;
+ fates_leaf_slatop = 0.01996, 0.01996, 0.0135 ;  // SSR: Rounded first 2 to values given in Jackie's Table 2.
 
- fates_leaf_stomatal_intercept = 10000, 10000, 40000 ;
+ fates_leaf_stomatal_intercept = 10000, 10000, 10000 ;
 
- fates_leaf_stomatal_slope_ballberry = 8, 8, 8 ;
+ fates_leaf_stomatal_slope_ballberry = 8, 8, 4 ;
 
- fates_leaf_stomatal_slope_medlyn = 4.1, 4.4, 1.6 ;
+ fates_leaf_stomatal_slope_medlyn = 4.1, 4.1, 4.1 ;
 
  fates_leaf_vcmaxha = 65330, 65330, 65330 ;
 
@@ -1333,13 +1335,13 @@ data:
 
  fates_maintresp_reduction_upthresh = 1, 1, 1 ;
 
- fates_mort_bmort = 0.014, 0.014, 0.014 ;
+ fates_mort_bmort = 0.01303514, 0.01303514, 0.01303514 ;
 
  fates_mort_freezetol = 2.5, 2.5, 2.5 ;
 
  fates_mort_hf_flc_threshold = 0.5, 0.5, 0.5 ;
 
- fates_mort_hf_sm_threshold = 1e-06, 1e-06, 1e-06 ;
+ fates_mort_hf_sm_threshold = 0.025, 0.025, 1e-06 ;
 
  fates_mort_ip_age_senescence = _, _, _ ;
 
@@ -1355,7 +1357,7 @@ data:
 
  fates_mort_scalar_coldstress = 3, 3, 3 ;
 
- fates_mort_scalar_cstarvation = 0.6, 0.6, 0.6 ;
+ fates_mort_scalar_cstarvation = 0.02956, 0.02956, 0.2 ;  // SSR: Rounded first 2 to values given in Jackie's Table 2.
 
  fates_mort_scalar_hydrfailure = 0.6, 0.6, 0.6 ;
 
@@ -1369,9 +1371,9 @@ data:
 
  fates_phen_drought_threshold = -152957.4, -152957.4, -152957.4 ;
 
- fates_phen_evergreen = 1, 0, 0 ;
+ fates_phen_evergreen = 1, 1, 1 ;  // SSR: Why were grass and (especially) fire-tolerant tree set to evergreen?
 
- fates_phen_flush_fraction = _, 0.5, 0.5 ;
+ fates_phen_flush_fraction = _, _, _ ;  // SSR: Why were grass and (especially) fire-tolerant tree set to evergreen?
 
  fates_phen_fnrt_drop_fraction = 0, 0, 0 ;
 
@@ -1383,43 +1385,43 @@ data:
 
  fates_phen_stem_drop_fraction = 0, 0, 0 ;
 
- fates_phen_stress_decid = 0, 1, 1 ;
+ fates_phen_stress_decid = 0, 0, 0 ;  // SSR: Why were grass and (especially) fire-tolerant tree set to evergreen?
 
  fates_prescribed_npp_canopy = 0.4, 0.4, 0.4 ;
 
  fates_prescribed_npp_understory = 0.03125, 0.03125, 0.03125 ;
 
- fates_rad_leaf_clumping_index = 0.85, 0.85, 0.75 ;
+ fates_rad_leaf_clumping_index = 0.85, 0.85, 0.85 ;
 
- fates_rad_leaf_rhonir = 0.46, 0.41, 0.28 ;
+ fates_rad_leaf_rhonir = 0.46, 0.41, 0.28 ;  // SSR: Default changed for all, to Jackie's values.
 
- fates_rad_leaf_rhovis = 0.11, 0.08, 0.05 ;
+ fates_rad_leaf_rhovis = 0.11, 0.11, 0.05 ;  // SSR: Default changed for all, to Jackie's values except for 2nd.
 
- fates_rad_leaf_taunir = 0.33, 0.43, 0.4 ;
+ fates_rad_leaf_taunir = 0.33, 0.33, 0.4 ;  // SSR: Default changed for all, to Jackie's values except for 2nd.
 
- fates_rad_leaf_tauvis = 0.06, 0.06, 0.05 ;
+ fates_rad_leaf_tauvis = 0.06, 0.06, 0.05 ;  // SSR: Default changed for all, to Jackie's values.
 
- fates_rad_leaf_xl = 0.32, 0.2, -0.23 ;
+ fates_rad_leaf_xl = 0.1, 0.1, -0.3 ;  // SSR: Default changed for all. Using Jackie's values for all.
 
- fates_rad_stem_rhonir = 0.49, 0.49, 0.53 ;
+ fates_rad_stem_rhonir = 0.49, 0.49, 0.39 ;  // SSR: Default changed for all, to Jackie's values except for 3rd.
 
- fates_rad_stem_rhovis = 0.21, 0.21, 0.31 ;
+ fates_rad_stem_rhovis = 0.21, 0.21, 0.16 ;  // SSR: Default changed for all, to Jackie's values except for 3rd.
 
- fates_rad_stem_taunir = 0.001, 0.001, 0.25 ;
+ fates_rad_stem_taunir = 0.001, 0.001, 0.001 ;
 
- fates_rad_stem_tauvis = 0.001, 0.001, 0.12 ;
+ fates_rad_stem_tauvis = 0.001, 0.001, 0.001 ;
 
- fates_recruit_height_min = 1.3, 1.3, 0.125 ;
+ fates_recruit_height_min = 1.3, 1.3, 0.5 ;
 
- fates_recruit_init_density = 0.2, 0.2, 0.2 ;
+ fates_recruit_init_density = 0.2, 0.2, 20 ;
 
  fates_recruit_prescribed_rate = 0.02, 0.02, 0.02 ;
 
- fates_recruit_seed_alloc = 0.1, 0.1, 0.1 ;
+ fates_recruit_seed_alloc = 0.046801, 0.046801, 0.1 ;  // SSR: Rounded first 2 to values given in Jackie's Table 2.
 
  fates_recruit_seed_alloc_mature = 0, 0, 0.9 ;
 
- fates_recruit_seed_dbh_repro_threshold = 90, 90, 0.35 ;
+ fates_recruit_seed_dbh_repro_threshold = 90, 150, 0.5 ;  // SSR: Default changed for 1st, but Jackie didn't change it, so leaving as 90.
 
  fates_recruit_seed_germination_rate = 0.5, 0.5, 0.5 ;
 
@@ -1479,13 +1481,13 @@ data:
 
  fates_turb_z0mr = 0.055, 0.055, 0.055 ;
 
- fates_turnover_branch = 150, 150, 0 ;
+ fates_turnover_branch = 75, 75, 0.3208 ;  // 3rd shouldn't matter since grass doesn't have branches.
 
  fates_turnover_fnrt = 1, 1, 1 ;
 
  fates_turnover_senleaf_fdrought = 1, 1, 1 ;
 
- fates_wood_density = 0.548327, 0.548327, 0.7 ;
+ fates_wood_density = 0.6305, 0.695, 0.01 ;  // SSR: Default values changed for 1st and 2nd. Using Jackie's values for all, since she changed all. 3rd shouldn't matter since grass doesn't have wood.
 
  fates_woody = 1, 1, 0 ;
 
@@ -1494,10 +1496,10 @@ data:
  fates_history_damage_bin_edges = 0, 80 ;
 
  fates_leaf_vcmax25top =
-  50, 58, 78 ;
+  41, 58, 40 ; // SSR: Default value changed for 2nd. Using Jackie's values for 1st and 3rd, which are the only ones she changed.
 
  fates_turnover_leaf =
-  1.5, 1, 1 ;
+  1.4025, 1.4025, 0.3208 ;
 
  fates_canopy_closure_thresh = 0.8 ;
 
@@ -1507,7 +1509,7 @@ data:
 
  fates_cohort_size_fusion_tol = 0.08 ;
 
- fates_comp_excln = 3 ;
+ fates_comp_excln = -1 ;
 
  fates_damage_canopy_layer_code = 1 ;
 
@@ -1519,7 +1521,7 @@ data:
 
  fates_fire_active_crown_fire = 0 ;
 
- fates_fire_cg_strikes = 0.2 ;
+ fates_fire_cg_strikes = 0.1 ;
 
  fates_fire_drying_ratio = 66000 ;
 
@@ -1539,7 +1541,7 @@ data:
 
  fates_fire_part_dens = 513 ;
 
- fates_fire_threshold = 50 ;
+ fates_fire_threshold = 25 ;
 
  fates_forest_tree_fraction_threshold = 0.5 ;
 
@@ -1597,9 +1599,9 @@ data:
 
  fates_mort_cstarvation_model = 1 ;
 
- fates_mort_disturb_frac = 1 ;
+ fates_mort_disturb_frac = 0.5 ;
 
- fates_mort_understorey_death = 0.55983 ;
+ fates_mort_understorey_death = 1 ;
 
  fates_patch_fusion_tol = 0.05 ;
 
