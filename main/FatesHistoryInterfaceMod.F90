@@ -4883,6 +4883,20 @@ contains
                   ccohort%npp_acc_hold / days_per_year / sec_per_day &  ! [kgC/indiv/yr] -> [kgC/s]
                   * weight
 
+               ! Biomass
+               sapw_m   = ccohort%prt%GetState(sapw_organ, carbon12_element)
+               struct_m = ccohort%prt%GetState(struct_organ, carbon12_element)
+               leaf_m   = ccohort%prt%GetState(leaf_organ, carbon12_element)
+               fnrt_m   = ccohort%prt%GetState(fnrt_organ, carbon12_element)
+               store_m  = ccohort%prt%GetState(store_organ, carbon12_element)
+               repro_m  = ccohort%prt%GetState(repro_organ, carbon12_element)  ! TODO: Unused?
+               alive_m  = leaf_m + fnrt_m + sapw_m
+               total_m  = alive_m + store_m + struct_m
+               hio_biomass_si_age(io_si,cpatch%age_class) = hio_biomass_si_age(io_si,cpatch%age_class) &
+                    + total_m * weight
+               hio_biomass_si_agepft(io_si,iagepft) = hio_biomass_si_agepft(io_si,iagepft) + &
+                    total_m * weight
+
                 ! Canopy vs. understory variables
                 mort = ccohort%bmort + ccohort%hmort + ccohort%cmort + ccohort%frmort + ccohort%smort + &
                      ccohort%asmort + ccohort%dgmort
@@ -4900,20 +4914,6 @@ contains
                         * weight
                 end if  ! canopy layer?
              end if  ! cohort is new?
-
-             ! Biomass
-             sapw_m   = ccohort%prt%GetState(sapw_organ, carbon12_element)
-             struct_m = ccohort%prt%GetState(struct_organ, carbon12_element)
-             leaf_m   = ccohort%prt%GetState(leaf_organ, carbon12_element)
-             fnrt_m   = ccohort%prt%GetState(fnrt_organ, carbon12_element)
-             store_m  = ccohort%prt%GetState(store_organ, carbon12_element)
-             repro_m  = ccohort%prt%GetState(repro_organ, carbon12_element)  ! TODO: Unused?
-             alive_m  = leaf_m + fnrt_m + sapw_m
-             total_m  = alive_m + store_m + struct_m
-             hio_biomass_si_age(io_si,cpatch%age_class) = hio_biomass_si_age(io_si,cpatch%age_class) &
-                  + total_m * weight
-             hio_biomass_si_agepft(io_si,iagepft) = hio_biomass_si_agepft(io_si,iagepft) + &
-                  total_m * weight
 
              ccohort => ccohort%taller
           end do cohortloop
