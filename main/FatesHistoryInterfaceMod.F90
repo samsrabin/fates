@@ -4879,6 +4879,11 @@ contains
              iagepft = get_agepft_class_index(cpatch%age,ccohort%pft)
    
              if (.not. (ccohort%isnew)) then
+               hio_npp_si_agepft(io_si,iagepft) = hio_npp_si_agepft(io_si,iagepft) + &
+                  ccohort%npp_acc_hold / days_per_year / sec_per_day &  ! [kgC/indiv/yr] -> [kgC/s]
+                  * weight
+
+                ! Canopy vs. understory variables
                 mort = ccohort%bmort + ccohort%hmort + ccohort%cmort + ccohort%frmort + ccohort%smort + &
                      ccohort%asmort + ccohort%dgmort
                 if (ccohort%canopy_layer .eq. 1) then
@@ -4895,10 +4900,6 @@ contains
                         * weight
                 end if  ! canopy layer?
              end if  ! cohort is new?
-
-             hio_npp_si_agepft(io_si,iagepft) = hio_npp_si_agepft(io_si,iagepft) + &
-                  ccohort%npp_acc_hold / days_per_year / sec_per_day &  ! [kgC/indiv/yr] -> [kgC/s]
-                  * weight
 
              ! Biomass
              sapw_m   = ccohort%prt%GetState(sapw_organ, carbon12_element)
