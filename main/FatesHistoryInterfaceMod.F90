@@ -4777,7 +4777,7 @@ contains
 
     type(fates_cohort_type), pointer :: ccohort
     type(fates_patch_type),  pointer :: cpatch
-    integer :: s, ipa, ft, iagepft, i_agefuel, iscag, i_fuel, i_scls, i_scpf, io_si
+    integer :: s, ipa, ft, iagepft, i_agefuel, iscag, i_fuel, i_scls, io_si
     real(r8) :: weight
     real(r8) :: age_class_area
     real(r8) :: mort
@@ -4924,7 +4924,6 @@ contains
 
        do ft = 1, numpft
           do i_scls = 1,nlevsclass
-             i_scpf = (ft-1)*nlevsclass + i_scls
 
              ! since imort and fmort by definition something only happens in newly disturbed patches,
              ! treat as such
