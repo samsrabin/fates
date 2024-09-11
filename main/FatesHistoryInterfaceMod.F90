@@ -4938,7 +4938,7 @@ contains
              ! treat as such
              iscag = i_scls
 
-             ! TODO: Why not also *cpatch%area like other mortality terms?
+             ! TODO: Why not also *ccohort%n like other mortality terms?
              weight = AREA_INV
 
              ! add imort to other mortality terms. consider imort as understory mortality even if it happens in
