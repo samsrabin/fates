@@ -4872,6 +4872,7 @@ contains
           ! Loop through cohorts on patch
           ccohort => cpatch%shortest
           cohortloop: do while(associated(ccohort))
+             ! TODO: Unnecessary?
              ! get indices for size class x pft and cohort age x pft
              ! size class is the fastest changing dimension
              call sizetype_class_index(ccohort%dbh, ccohort%pft,                &
