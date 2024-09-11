@@ -5694,26 +5694,26 @@ contains
        cpatch => sites(s)%oldest_patch
        do while(associated(cpatch))
           ipa = ipa + 1
-            ageclass_area = sites(s)%area_by_age(cpatch%age_class)
-            ageclass_canopy_area = canopy_area_by_age(cpatch%age_class)
+          ageclass_area = sites(s)%area_by_age(cpatch%age_class)
+          ageclass_canopy_area = canopy_area_by_age(cpatch%age_class)
 
-            ! Canopy resistance terms
-            if (ageclass_canopy_area .gt. nearzero) then
-               weight = cpatch%total_canopy_area / ageclass_canopy_area
+          ! Canopy resistance terms
+          if (ageclass_canopy_area .gt. nearzero) then
+             weight = cpatch%total_canopy_area / ageclass_canopy_area
 
-               hio_c_stomata_si_age(io_si,cpatch%age_class) = &
-                    hio_c_stomata_si_age(io_si,cpatch%age_class) + &
-                    cpatch%c_stomata * mol_per_umol &
-                    * weight
+             hio_c_stomata_si_age(io_si,cpatch%age_class) = &
+                  hio_c_stomata_si_age(io_si,cpatch%age_class) + &
+                  cpatch%c_stomata * mol_per_umol &
+                  * weight
 
-               hio_c_lblayer_si_age(io_si,cpatch%age_class) = &
-                    hio_c_lblayer_si_age(io_si,cpatch%age_class) + &
-                    cpatch%c_lblayer * mol_per_umol &
-                    * weight
-            else
-               hio_c_stomata_si_age(io_si,cpatch%age_class) = 0._r8
-               hio_c_lblayer_si_age(io_si,cpatch%age_class) = 0._r8
-            end if
+             hio_c_lblayer_si_age(io_si,cpatch%age_class) = &
+                  hio_c_lblayer_si_age(io_si,cpatch%age_class) + &
+                  cpatch%c_lblayer * mol_per_umol &
+                  * weight
+          else
+             hio_c_stomata_si_age(io_si,cpatch%age_class) = 0._r8
+             hio_c_lblayer_si_age(io_si,cpatch%age_class) = 0._r8
+          end if
 
           ccohort => cpatch%shortest
           do while(associated(ccohort))
