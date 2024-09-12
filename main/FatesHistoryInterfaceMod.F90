@@ -4912,13 +4912,13 @@ contains
                      ccohort%asmort + ccohort%dgmort
                 if (ccohort%canopy_layer .eq. 1) then
                    hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
-                        mort * ccohort%n / m2_per_ha  ! TODO: REPLACE WITH weight
+                        mort * weight
                    hio_ddbh_canopy_si_scag(io_si,iscag) = hio_ddbh_canopy_si_scag(io_si,iscag) + &
                         ccohort%ddbhdt * m_per_cm &  ! [m] -> [cm]
                         * weight
                 else
                    hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,   iscag) + &
-                        mort * ccohort%n / m2_per_ha  ! TODO: REPLACE WITH weight
+                        mort * weight
                    hio_ddbh_understory_si_scag(io_si,iscag) = hio_ddbh_understory_si_scag(io_si,iscag) + &
                         ccohort%ddbhdt * m_per_cm &  ! [m] -> [cm]
                         * weight
@@ -4946,13 +4946,13 @@ contains
              ! cohorts that may have been promoted as part of the patch creation, and use the pre-calculated site-level
              ! values to avoid biasing the results by the dramatically-reduced number densities in cohorts that are subject to imort
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
-                  sites(s)%imort_rate(i_scls, ft) / m2_per_ha  ! TODO: REPLACE WITH weight
+                  sites(s)%imort_rate(i_scls, ft) * weight
 
              ! add fire mortality to other mortality terms
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
-                  sites(s)%fmort_rate_canopy(i_scls, ft) / m2_per_ha  ! TODO: REPLACE WITH weight
+                  sites(s)%fmort_rate_canopy(i_scls, ft) * weight
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
-                  sites(s)%fmort_rate_ustory(i_scls, ft) / m2_per_ha  ! TODO: REPLACE WITH weight
+                  sites(s)%fmort_rate_ustory(i_scls, ft) * weight
           end do  ! size class loop
        end do  ! pft loop
     end do siteloop
