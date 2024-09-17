@@ -392,6 +392,7 @@ module FatesHistoryInterfaceMod
   ! Indices to site by patch age by pft variables
   integer :: ih_biomass_si_agepft
   integer :: ih_npp_si_agepft
+  integer :: ih_scorch_height_si_pft
   integer :: ih_scorch_height_si_agepft
 
   ! Indices to (site) variables
@@ -661,6 +662,11 @@ module FatesHistoryInterfaceMod
   integer :: ih_seeds_out_gc_si_pft
   integer :: ih_seeds_in_gc_si_pft
 
+  ! Non-per-ageclass equivalents of per-ageclass variables
+  integer :: ih_canopy_area_si
+  integer :: ih_ncl_si
+  integer :: ih_fracarea_si
+
   ! indices to (site x patch-age) variables
   integer :: ih_fracarea_si_age
   integer :: ih_lai_si_age
@@ -669,11 +675,14 @@ module FatesHistoryInterfaceMod
   integer :: ih_npp_si_age
   integer :: ih_ncl_si_age
   integer :: ih_npatches_si_age
+  integer :: ih_zstar_si
   integer :: ih_zstar_si_age
   integer :: ih_biomass_si_age
   integer :: ih_c_stomata_si_age
   integer :: ih_c_lblayer_si_age
+  integer :: ih_agesince_anthrodist_si
   integer :: ih_agesince_anthrodist_si_age
+  integer :: ih_secondarylands_fracarea_si
   integer :: ih_secondarylands_fracarea_si_age
   integer :: ih_area_burnt_si_age
   ! integer :: ih_fire_rate_of_spread_front_si_age
@@ -3280,10 +3289,14 @@ contains
            hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
            hio_yesterdaycanopylevel_canopy_si_scls     => this%hvars(ih_yesterdaycanopylevel_canopy_si_scls)%r82d, &
            hio_yesterdaycanopylevel_understory_si_scls => this%hvars(ih_yesterdaycanopylevel_understory_si_scls)%r82d, &
+           hio_fracarea_si         => this%hvars(ih_fracarea_si)%r81d, &
            hio_fracarea_si_age         => this%hvars(ih_fracarea_si_age)%r82d, &
+           hio_canopy_area_si  => this%hvars(ih_canopy_area_si)%r81d, &
            hio_canopy_area_si_age  => this%hvars(ih_canopy_area_si_age)%r82d, &
            hio_npatches_si_age     => this%hvars(ih_npatches_si_age)%r82d, &
+           hio_agesince_anthrodist_si     => this%hvars(ih_agesince_anthrodist_si)%r81d, &
            hio_agesince_anthrodist_si_age     => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
+           hio_secondarylands_fracarea_si    => this%hvars(ih_secondarylands_fracarea_si)%r81d, &
            hio_secondarylands_fracarea_si_age    => this%hvars(ih_secondarylands_fracarea_si_age)%r82d, &
            hio_fracarea_si_landuse     => this%hvars(ih_fracarea_si_landuse)%r82d, &
                                 ! hio_fire_rate_of_spread_front_si_age  => this%hvars(ih_fire_rate_of_spread_front_si_age)%r82d, &
@@ -3404,6 +3417,8 @@ contains
 
                 cpatch%age_class  = get_age_class_index(cpatch%age)
                 age_class_area = sites(s)%area_by_age(cpatch%age_class)
+                hio_fracarea_si(io_si) = hio_fracarea_si(io_si) &
+                     + cpatch%area * AREA_INV
 
                 ! Increment the fractional area in each age class bin
                 hio_fracarea_si_age(io_si,cpatch%age_class) = hio_fracarea_si_age(io_si,cpatch%age_class) &
@@ -3427,11 +3442,17 @@ contains
                    hio_agesince_anthrodist_si_age(io_si,ageclass_since_anthrodist) = &
                         hio_agesince_anthrodist_si_age(io_si,ageclass_since_anthrodist)  &
                         + ageclass_fracarea
+                   hio_agesince_anthrodist_si(io_si) = &
+                        hio_agesince_anthrodist_si(io_si)  &
+                        + ageclass_fracarea
 
                    ageclass_fracarea = cpatch%area * AREA_INV  ! WRONG; should be: cpatch%area / age_class_area
                    hio_secondarylands_fracarea_si_age(io_si,cpatch%age_class) = &
                         hio_secondarylands_fracarea_si_age(io_si,cpatch%age_class) &
                         + ageclass_fracarea
+                    hio_secondarylands_fracarea_si(io_si) = &
+                         hio_secondarylands_fracarea_si(io_si) &
+                         + ageclass_fracarea
                 endif
 
 
@@ -3473,6 +3494,8 @@ contains
                         ccohort%coage_class, ccohort%coage_by_pft_class)
 
                    n_perm2 = ccohort%n * AREA_INV
+
+                   hio_canopy_area_si(io_si) = hio_canopy_area_si(io_si) + ageclass_canopy_fracarea
 
                    ageclass_canopy_fracarea = ccohort%c_area * AREA_INV  ! WRONG; *AREA_INV should be /age_class_area
                    hio_canopy_area_si_age(io_si,cpatch%age_class) = hio_canopy_area_si_age(io_si,cpatch%age_class) &
@@ -4833,8 +4856,11 @@ contains
 
     associate( &
          hio_lai_si_age => this%hvars(ih_lai_si_age)%r82d, &
+         hio_ncl_si => this%hvars(ih_ncl_si)%r81d, &
          hio_ncl_si_age => this%hvars(ih_ncl_si_age)%r82d, &
+         hio_scorch_height_si_pft => this%hvars(ih_scorch_height_si_pft)%r82d, &
          hio_scorch_height_si_agepft => this%hvars(ih_scorch_height_si_agepft)%r82d, &
+         hio_zstar_si        => this%hvars(ih_zstar_si)%r81d, &
          hio_zstar_si_age        => this%hvars(ih_zstar_si_age)%r82d, &
          hio_area_burnt_si_age              => this%hvars(ih_area_burnt_si_age)%r82d, &
          hio_fire_sum_fuel_si_age           => this%hvars(ih_fire_sum_fuel_si_age)%r82d, &
@@ -4862,6 +4888,13 @@ contains
        patchloop: do while(associated(cpatch))
           cpatch%age_class  = get_age_class_index(cpatch%age)
           age_class_area = sites(s)%area_by_age(cpatch%age_class)
+
+          hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p
+
+          do ft = 1,numpft
+             hio_scorch_height_si_pft(io_si,ft) = hio_scorch_height_si_pft(io_si,ft) + &
+                  cpatch%Scorch_ht(ft)
+          end do
 
           ! Within each age class, ...
           if (age_class_area .gt. nearzero) then
@@ -4912,6 +4945,8 @@ contains
           ! only valid when "strict ppa" enabled
           if ( ED_val_comp_excln .lt. 0._r8 ) then
              hio_zstar_si_age(io_si,cpatch%age_class) = hio_zstar_si_age(io_si,cpatch%age_class) &
+                  + cpatch%zstar * weight
+             hio_zstar_si(io_si) = hio_zstar_si(io_si) &
                   + cpatch%zstar * weight
           end if
 
@@ -7172,6 +7207,22 @@ contains
                   index=ih_nocomp_pftburnedarea_si_pft)
           endif nocomp_if
 
+          call this%set_history_var(vname='FATES_CANOPYAREA', units='m2 m-2',     &
+               long='canopy area per m2 land area', use_default='inactive', &
+               avgflag='A', vtype=site_r8, hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar,  &
+               initialize=initialize_variables, index=ih_canopy_area_si)
+
+          call this%set_history_var(vname='FATES_NCL', units='',                  &
+               long='number of canopy levels',                            &
+               use_default='inactive', avgflag='A', vtype=site_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
+               index=ih_ncl_si)
+
+          call this%set_history_var(vname='FATES_PATCHAREA', units='m2 m-2',      &
+               long='patch area per m2 land area', use_default='inactive',  &
+               avgflag='A', vtype=site_r8, hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar,  &
+               initialize=initialize_variables, index=ih_fracarea_si)
+
           ! patch age class variables
           call this%set_history_var(vname='FATES_PATCHAREA_AP', units='m2 m-2',      &
                long='patch area by age bin per m2 land area', use_default='active',  &
@@ -7183,8 +7234,6 @@ contains
                use_default='active', avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', &
                upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
                index=ih_lai_si_age)
-
-
 
           call this%set_history_var(vname='FATES_CANOPYAREA_AP', units='m2 m-2',     &
                long='canopy area by age bin per m2 land area', use_default='active', &
@@ -7215,6 +7264,12 @@ contains
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
                index=ih_zstar_si_age)
 
+          call this%set_history_var(vname='FATES_ZSTAR', units='m',               &
+               long='product of zstar and patch area', &
+               use_default='inactive', avgflag='A', vtype=site_r8,         &
+               hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
+               index=ih_zstar_si)
+
           call this%set_history_var(vname='FATES_CANOPYAREA_HT', units='m2 m-2',     &
                long='canopy area height distribution',                               &
                use_default='active', avgflag='A', vtype=site_height_r8,              &
@@ -7239,6 +7294,20 @@ contains
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
                index=ih_agesince_anthrodist_si_age)
+
+          call this%set_history_var(vname='FATES_SECONDAREA_ANTHRODIST',          &
+               units='m2 m-2',                                                       &
+               long='secondary forest patch area since anthropgenic disturbance', &
+               use_default='inactive', avgflag='A', vtype=site_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
+               index=ih_agesince_anthrodist_si)
+
+          call this%set_history_var(vname='FATES_SECONDAREA_DIST',                &
+               units='m2 m-2',                                                       &
+               long='secondary forest patch area since any kind of disturbance', &
+               use_default='inactive', avgflag='A', vtype=site_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
+               index=ih_secondarylands_fracarea_si)
 
           call this%set_history_var(vname='FATES_SECONDAREA_DIST_AP',                &
                units='m2 m-2',                                                       &
@@ -7716,6 +7785,12 @@ contains
                use_default='inactive', avgflag='A', vtype=site_agepft_r8,           &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_scorch_height_si_agepft)
+
+          call this%set_history_var(vname='FATES_SCORCH_HEIGHT_PF',units = 'm',    &
+               long='SPITFIRE flame Scorch Height (calculated per PFT)', &
+               use_default='inactive', avgflag='A', vtype=site_pft_r8,           &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_scorch_height_si_pft)
 
 
           ! Carbon Flux (grid dimension x scpf) (THESE ARE DEFAULT INACTIVE!!!
