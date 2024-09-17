@@ -378,6 +378,13 @@ module FatesHistoryInterfaceMod
   integer :: ih_ddbh_understory_si_scag
   integer :: ih_mortality_canopy_si_scag
   integer :: ih_mortality_understory_si_scag
+  integer :: ih_mortality_a_canopy_si_scag
+  integer :: ih_mortality_a_understory_si_scag
+  integer :: ih_mortality_b_understory_si_scag
+  integer :: ih_mortality_c_canopy_si_scag
+  integer :: ih_mortality_c_understory_si_scag
+  integer :: ih_mortality_d_canopy_si_scag
+  integer :: ih_mortality_d_understory_si_scag
 
   ! Indices to site by size-class by age by pft variables
   integer :: ih_nplant_si_scagpft
@@ -531,6 +538,13 @@ module FatesHistoryInterfaceMod
   integer :: ih_sai_understory_si_scls
   integer :: ih_mortality_canopy_si_scls
   integer :: ih_mortality_understory_si_scls
+  integer :: ih_mortality_a_canopy_si_scls
+  integer :: ih_mortality_a_understory_si_scls
+  integer :: ih_mortality_b_understory_si_scls
+  integer :: ih_mortality_c_canopy_si_scls
+  integer :: ih_mortality_c_understory_si_scls
+  integer :: ih_mortality_d_canopy_si_scls
+  integer :: ih_mortality_d_understory_si_scls
   integer :: ih_m3_mortality_canopy_si_scls
   integer :: ih_m3_mortality_understory_si_scls
 
@@ -3220,6 +3234,13 @@ contains
            hio_sai_understory_si_scls     => this%hvars(ih_sai_understory_si_scls)%r82d, &
            hio_mortality_canopy_si_scls      => this%hvars(ih_mortality_canopy_si_scls)%r82d, &
            hio_mortality_understory_si_scls  => this%hvars(ih_mortality_understory_si_scls)%r82d, &
+           hio_mortality_a_canopy_si_scls      => this%hvars(ih_mortality_a_canopy_si_scls)%r82d, &
+           hio_mortality_a_understory_si_scls  => this%hvars(ih_mortality_a_understory_si_scls)%r82d, &
+           hio_mortality_b_understory_si_scls  => this%hvars(ih_mortality_b_understory_si_scls)%r82d, &
+           hio_mortality_c_canopy_si_scls      => this%hvars(ih_mortality_c_canopy_si_scls)%r82d, &
+           hio_mortality_c_understory_si_scls  => this%hvars(ih_mortality_c_understory_si_scls)%r82d, &
+           hio_mortality_d_canopy_si_scls      => this%hvars(ih_mortality_d_canopy_si_scls)%r82d, &
+           hio_mortality_d_understory_si_scls  => this%hvars(ih_mortality_d_understory_si_scls)%r82d, &
            hio_demotion_rate_si_scls         => this%hvars(ih_demotion_rate_si_scls)%r82d, &
            hio_promotion_rate_si_scls        => this%hvars(ih_promotion_rate_si_scls)%r82d, &
            hio_trimming_canopy_si_scls         => this%hvars(ih_trimming_canopy_si_scls)%r82d, &
@@ -3292,7 +3313,14 @@ contains
            hio_ddbh_canopy_si_scag              => this%hvars(ih_ddbh_canopy_si_scag)%r82d, &
            hio_ddbh_understory_si_scag          => this%hvars(ih_ddbh_understory_si_scag)%r82d, &
            hio_mortality_canopy_si_scag         => this%hvars(ih_mortality_canopy_si_scag)%r82d, &
-           hio_mortality_understory_si_scag     => this%hvars(ih_mortality_understory_si_scag)%r82d )
+           hio_mortality_understory_si_scag     => this%hvars(ih_mortality_understory_si_scag)%r82d, &
+           hio_mortality_a_canopy_si_scag         => this%hvars(ih_mortality_a_canopy_si_scag)%r82d, &
+           hio_mortality_a_understory_si_scag     => this%hvars(ih_mortality_a_understory_si_scag)%r82d, &
+           hio_mortality_b_understory_si_scag     => this%hvars(ih_mortality_b_understory_si_scag)%r82d, &
+           hio_mortality_c_canopy_si_scag         => this%hvars(ih_mortality_c_canopy_si_scag)%r82d, &
+           hio_mortality_c_understory_si_scag     => this%hvars(ih_mortality_c_understory_si_scag)%r82d, &
+           hio_mortality_d_canopy_si_scag         => this%hvars(ih_mortality_d_canopy_si_scag)%r82d, &
+           hio_mortality_d_understory_si_scag     => this%hvars(ih_mortality_d_understory_si_scag)%r82d )
 
         ! Break up associates for NAG compilers
         associate( hio_site_dstatus_si_pft              => this%hvars(ih_site_dstatus_si_pft)%r82d, &
@@ -3950,6 +3978,9 @@ contains
                            hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
                                 (ccohort%bmort + ccohort%hmort + ccohort%cmort + &
                                 ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha
+                           hio_mortality_a_canopy_si_scag(io_si,iscag) = hio_mortality_a_canopy_si_scag(io_si,iscag) + &
+                                (ccohort%bmort + ccohort%hmort + ccohort%cmort + &
+                                ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha
                            hio_ddbh_canopy_si_scag(io_si,iscag) = hio_ddbh_canopy_si_scag(io_si,iscag) + &
                                 ccohort%ddbhdt*ccohort%n * m_per_cm / m2_per_ha
                            hio_bstor_canopy_si_scpf(io_si,scpf) = hio_bstor_canopy_si_scpf(io_si,scpf) + &
@@ -3996,6 +4027,11 @@ contains
 
                            ! sum of all mortality
                            hio_mortality_canopy_si_scls(io_si,scls) = hio_mortality_canopy_si_scls(io_si,scls) + &
+                                (ccohort%bmort + ccohort%hmort + ccohort%cmort +   &
+                                ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha + &
+                                (ccohort%lmort_direct + ccohort%lmort_collateral + ccohort%lmort_infra) * &
+                                ccohort%n * sec_per_day * days_per_year / m2_per_ha
+                           hio_mortality_a_canopy_si_scls(io_si,scls) = hio_mortality_a_canopy_si_scls(io_si,scls) + &
                                 (ccohort%bmort + ccohort%hmort + ccohort%cmort +   &
                                 ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha + &
                                 (ccohort%lmort_direct + ccohort%lmort_collateral + ccohort%lmort_infra) * &
@@ -4076,6 +4112,9 @@ contains
                            hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
                                 (ccohort%bmort + ccohort%hmort + ccohort%cmort + &
                                 ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha
+                           hio_mortality_a_understory_si_scag(io_si,iscag) = hio_mortality_a_understory_si_scag(io_si,iscag) + &
+                                (ccohort%bmort + ccohort%hmort + ccohort%cmort + &
+                                ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha
                            hio_ddbh_understory_si_scag(io_si,iscag) = hio_ddbh_understory_si_scag(io_si,iscag) + &
                                 ccohort%ddbhdt*ccohort%n * m_per_cm / m2_per_ha
                            hio_bstor_understory_si_scpf(io_si,scpf) = hio_bstor_understory_si_scpf(io_si,scpf) + &
@@ -4132,6 +4171,11 @@ contains
 
                            ! sum of all mortality
                            hio_mortality_understory_si_scls(io_si,scls) = hio_mortality_understory_si_scls(io_si,scls) + &
+                                (ccohort%bmort + ccohort%hmort + ccohort%cmort +   &
+                                ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha + &
+                                (ccohort%lmort_direct + ccohort%lmort_collateral + ccohort%lmort_infra) * &
+                                ccohort%n * sec_per_day * days_per_year / m2_per_ha
+                           hio_mortality_a_understory_si_scls(io_si,scls) = hio_mortality_a_understory_si_scls(io_si,scls) + &
                                 (ccohort%bmort + ccohort%hmort + ccohort%cmort +   &
                                 ccohort%frmort + ccohort%smort + ccohort%asmort + ccohort%dgmort) * ccohort%n / m2_per_ha + &
                                 (ccohort%lmort_direct + ccohort%lmort_collateral + ccohort%lmort_infra) * &
@@ -4384,8 +4428,12 @@ contains
                    ! add termination mortality to canopy and understory mortality
                    hio_mortality_canopy_si_scls(io_si,i_scls) = hio_mortality_canopy_si_scls(io_si,i_scls) + &
                         sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * days_per_year / m2_per_ha
+                   hio_mortality_d_canopy_si_scls(io_si,i_scls) = hio_mortality_d_canopy_si_scls(io_si,i_scls) + &
+                        sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * days_per_year / m2_per_ha
                    
                    hio_mortality_understory_si_scls(io_si,i_scls) = hio_mortality_understory_si_scls(io_si,i_scls) + &
+                        sum(sites(s)%term_nindivs_ustory(:,i_scls,ft)) * days_per_year / m2_per_ha
+                   hio_mortality_d_understory_si_scls(io_si,i_scls) = hio_mortality_d_understory_si_scls(io_si,i_scls) + &
                         sum(sites(s)%term_nindivs_ustory(:,i_scls,ft)) * days_per_year / m2_per_ha
 
                    hio_mortality_canopy_si_scpf(io_si,i_scpf) = hio_mortality_canopy_si_scpf(io_si,i_scpf) + &
@@ -4407,9 +4455,13 @@ contains
                         sites(s)%imort_rate(i_scls, ft) / m2_per_ha
                    hio_mortality_understory_si_scls(io_si,i_scls) = hio_mortality_understory_si_scls(io_si,i_scls) + &
                         sites(s)%imort_rate(i_scls, ft) / m2_per_ha
+                   hio_mortality_b_understory_si_scls(io_si,i_scls) = hio_mortality_b_understory_si_scls(io_si,i_scls) + &
+                        sites(s)%imort_rate(i_scls, ft) / m2_per_ha
                    !
                    iscag = i_scls ! since imort is by definition something that only happens in newly disturbed patches, treat as such
                    hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
+                        sites(s)%imort_rate(i_scls, ft) / m2_per_ha
+                   hio_mortality_b_understory_si_scag(io_si,iscag) = hio_mortality_b_understory_si_scag(io_si,iscag) + &
                         sites(s)%imort_rate(i_scls, ft) / m2_per_ha
 
                    ! fire mortality from the site-level diagnostic rates
@@ -4427,6 +4479,8 @@ contains
                         sites(s)%fmort_rate_canopy(i_scls, ft) / m2_per_ha
                    hio_mortality_canopy_si_scls(io_si,i_scls) = hio_mortality_canopy_si_scls(io_si,i_scls) + &
                         sites(s)%fmort_rate_canopy(i_scls, ft) / m2_per_ha
+                   hio_mortality_c_canopy_si_scls(io_si,i_scls) = hio_mortality_c_canopy_si_scls(io_si,i_scls) + &
+                        sites(s)%fmort_rate_canopy(i_scls, ft) / m2_per_ha
 
                    ! Shijie: Think about how to add later?
                    !if ( cpatch%land_use_label .eq. secondaryland ) then
@@ -4441,6 +4495,8 @@ contains
 
                    hio_mortality_understory_si_scls(io_si,i_scls) = hio_mortality_understory_si_scls(io_si,i_scls) + &
                         sites(s)%fmort_rate_ustory(i_scls, ft) / m2_per_ha
+                   hio_mortality_c_understory_si_scls(io_si,i_scls) = hio_mortality_c_understory_si_scls(io_si,i_scls) + &
+                        sites(s)%fmort_rate_ustory(i_scls, ft) / m2_per_ha
 
                    !
                    ! for scag variables, also treat as happening in the newly-disurbed patch
@@ -4448,6 +4504,10 @@ contains
                    hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
                         sites(s)%fmort_rate_canopy(i_scls, ft) / m2_per_ha
                    hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
+                        sites(s)%fmort_rate_ustory(i_scls, ft) / m2_per_ha
+                   hio_mortality_c_canopy_si_scag(io_si,iscag) = hio_mortality_c_canopy_si_scag(io_si,iscag) + &
+                        sites(s)%fmort_rate_canopy(i_scls, ft) / m2_per_ha
+                   hio_mortality_c_understory_si_scag(io_si,iscag) = hio_mortality_c_understory_si_scag(io_si,iscag) + &
                         sites(s)%fmort_rate_ustory(i_scls, ft) / m2_per_ha
 
                    ! while in this loop, pass the fusion-induced growth rate flux to history
@@ -7442,6 +7502,55 @@ contains
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_mortality_understory_si_scag)
 
+          call this%set_history_var(vname='FATES_MORTALITY_A_CANOPY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of canopy plants (other than from impact/fire) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_a_canopy_si_scag)
+
+          call this%set_history_var(vname='FATES_MORTALITY_A_USTORY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of understory plants (other than from impact/fire/termination) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_a_understory_si_scag)
+
+          call this%set_history_var(vname='FATES_MORTALITY_B_USTORY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of understory plants (from impact) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_b_understory_si_scag)
+
+          call this%set_history_var(vname='FATES_MORTALITY_C_CANOPY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of canopy plants (from fire) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_c_canopy_si_scag)
+
+          call this%set_history_var(vname='FATES_MORTALITY_C_USTORY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of understory plants (from fire) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_c_understory_si_scag)
+
+          call this%set_history_var(vname='FATES_MORTALITY_D_CANOPY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of canopy plants (from termination) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_d_canopy_si_scag)
+
+          call this%set_history_var(vname='FATES_MORTALITY_D_USTORY_SZAP',             &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality rate of understory plants (from termination) in number of plants per m2 per year in each size x age class', &
+               use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_d_understory_si_scag)
+
           ! size x age x pft dimensioned
 
           call this%set_history_var(vname='FATES_NPLANT_SZAPPF',units = 'm-2',       &
@@ -7951,6 +8060,27 @@ contains
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_mortality_canopy_si_scls)
 
+          call this%set_history_var(vname='FATES_MORTALITY_A_CANOPY_SZ',               &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of canopy trees (other than from impact/fire/termination) by size class in number of plants per m2', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_a_canopy_si_scls)
+
+          call this%set_history_var(vname='FATES_MORTALITY_C_CANOPY_SZ',               &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of canopy trees (from fire) by size class in number of plants per m2', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_c_canopy_si_scls)
+
+          call this%set_history_var(vname='FATES_MORTALITY_D_CANOPY_SZ',               &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of canopy trees (from termination) by size class in number of plants per m2', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables, index = ih_mortality_d_canopy_si_scls)
+
           call this%set_history_var(vname='FATES_MORTALITY_CANOPY_SE_SZ',               &
                units = 'm-2 yr-1',                                                  &
                long='total mortality of canopy trees by size class in number of plants per m2, secondary patches', &
@@ -8151,6 +8281,38 @@ contains
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables,                                     &
                index = ih_mortality_understory_si_scls)
+
+          call this%set_history_var(vname='FATES_MORTALITY_A_USTORY_SZ',           &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of understory trees (other than from impact/fire/termination) by size class in individuals per m2 per year', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables,                                     &
+               index = ih_mortality_a_understory_si_scls)
+
+          call this%set_history_var(vname='FATES_MORTALITY_B_USTORY_SZ',           &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of understory trees (from impact) by size class in individuals per m2 per year', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables,                                     &
+               index = ih_mortality_b_understory_si_scls)
+
+          call this%set_history_var(vname='FATES_MORTALITY_C_USTORY_SZ',           &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of understory trees (from fire) by size class in individuals per m2 per year', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables,                                     &
+               index = ih_mortality_c_understory_si_scls)
+
+          call this%set_history_var(vname='FATES_MORTALITY_D_USTORY_SZ',           &
+               units = 'm-2 yr-1',                                                  &
+               long='mortality of understory trees (from termination) by size class in individuals per m2 per year', &
+               use_default='active', avgflag='A', vtype=site_size_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
+               initialize=initialize_variables,                                     &
+               index = ih_mortality_d_understory_si_scls)
 
           call this%set_history_var(vname='FATES_TRIMMING_CANOPY_SZ', units = 'm-2', &
                long='trimming term of canopy plants weighted by plant density, by size class', &
