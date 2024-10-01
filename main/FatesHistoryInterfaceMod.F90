@@ -4888,11 +4888,11 @@ contains
           cpatch%age_class  = get_age_class_index(cpatch%age)
           age_class_area = sites(s)%area_by_age(cpatch%age_class)
 
-          hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p * cpatch%area
+          hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p * cpatch%area * AREA_INV
 
           do ft = 1,numpft
              hio_scorch_height_si_pft(io_si,ft) = hio_scorch_height_si_pft(io_si,ft) + &
-                  cpatch%Scorch_ht(ft) * cpatch%area
+                  cpatch%Scorch_ht(ft) * cpatch%area * AREA_INV
           end do
 
           ! Within each age class, ...
