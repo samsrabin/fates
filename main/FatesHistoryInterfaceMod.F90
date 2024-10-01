@@ -3494,10 +3494,9 @@ contains
                         ccohort%coage_class, ccohort%coage_by_pft_class)
 
                    n_perm2 = ccohort%n * AREA_INV
+                   ageclass_canopy_fracarea = ccohort%c_area * AREA_INV
 
                    hio_canopy_area_si(io_si) = hio_canopy_area_si(io_si) + ageclass_canopy_fracarea
-
-                   ageclass_canopy_fracarea = ccohort%c_area * AREA_INV  ! WRONG; *AREA_INV should be /age_class_area
                    hio_canopy_area_si_age(io_si,cpatch%age_class) = hio_canopy_area_si_age(io_si,cpatch%age_class) &
                         + ageclass_canopy_fracarea
 
@@ -4889,11 +4888,11 @@ contains
           cpatch%age_class  = get_age_class_index(cpatch%age)
           age_class_area = sites(s)%area_by_age(cpatch%age_class)
 
-          hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p
+          hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p * cpatch%area
 
           do ft = 1,numpft
              hio_scorch_height_si_pft(io_si,ft) = hio_scorch_height_si_pft(io_si,ft) + &
-                  cpatch%Scorch_ht(ft)
+                  cpatch%Scorch_ht(ft) * cpatch%area
           end do
 
           ! Within each age class, ...
