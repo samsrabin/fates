@@ -3457,7 +3457,7 @@ contains
                 
                 hio_ncl_si_age(io_si,cpatch%age_class) = hio_ncl_si_age(io_si,cpatch%age_class) &
                      + cpatch%ncl_p * cpatch%area
-                hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p * cpatch%area
+                hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p * cpatch%area * AREA_INV
                 
                 hio_npatches_si_age(io_si,cpatch%age_class) = hio_npatches_si_age(io_si,cpatch%age_class) + 1._r8
 
@@ -3501,7 +3501,7 @@ contains
                    hio_scorch_height_si_agepft(io_si,iagepft) = hio_scorch_height_si_agepft(io_si,iagepft) + &
                         cpatch%Scorch_ht(ft) * cpatch%area
                    hio_scorch_height_si_pft(io_si,ft) = hio_scorch_height_si_pft(io_si,ft) + &
-                        cpatch%Scorch_ht(ft) * cpatch%area
+                        cpatch%Scorch_ht(ft) * cpatch%area * AREA_INV
 
                    ! and also pft-labeled patch areas in the event that we are in nocomp mode
                    if ( hlm_use_nocomp .eq. itrue .and. cpatch%nocomp_pft_label .eq. ft) then 
