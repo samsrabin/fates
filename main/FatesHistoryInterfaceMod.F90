@@ -2364,6 +2364,7 @@ contains
        if(hlm_hist_level_dynam>1) then
           call update_history_dyn2(this,nc,nsites,sites,bc_in)
           call update_history_dyn2_ageclass(this,nc,nsites,sites,bc_in)
+          call reset_history_dyn2(this, nsites, sites)
        end if
     end if
     return
@@ -4480,8 +4481,6 @@ contains
                    end do
                 end do
              end if
-
-             call reset_history_dyn2(this, nsites, sites)
 
              ! pass the recruitment rate as a flux to the history, and then reset the recruitment buffer
              do ft = 1, numpft
