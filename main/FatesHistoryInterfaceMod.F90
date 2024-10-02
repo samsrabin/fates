@@ -4899,13 +4899,13 @@ contains
              total_m  = alive_m + store_m + struct_m
              hio_biomass_si_age(io_si,cpatch%age_class) = hio_biomass_si_age(io_si,cpatch%age_class) &
                   + total_m * weight
+             hio_biomass_si_agepft(io_si,iagepft) = hio_biomass_si_agepft(io_si,iagepft) + &
+                  total_m * weight
 
              if (.not. (ccohort%isnew)) then
                 hio_npp_si_agepft(io_si,iagepft) = hio_npp_si_agepft(io_si,iagepft) + &
                      ccohort%npp_acc_hold / days_per_year / sec_per_day &  ! [kgC/indiv/yr] -> [kgC/s]
                      * weight
-                hio_biomass_si_agepft(io_si,iagepft) = hio_biomass_si_agepft(io_si,iagepft) + &
-                     total_m * weight
 
                 ! Canopy vs. understory variables
                 mort = ccohort%bmort + ccohort%hmort + ccohort%cmort + ccohort%frmort + ccohort%smort + &
