@@ -850,6 +850,7 @@ module FatesHistoryInterfaceMod
      procedure :: update_history_dyn1
      procedure :: update_history_dyn2
      procedure :: update_history_dyn2_ageclass
+     procedure :: reset_history_dyn2
      procedure :: update_history_hifrq
      procedure :: update_history_hifrq1
      procedure :: update_history_hifrq2
@@ -4479,31 +4480,8 @@ contains
                    end do
                 end do
              end if
-             sites(s)%term_nindivs_canopy(:,:,:) = 0._r8
-             sites(s)%term_nindivs_ustory(:,:,:) = 0._r8
-             sites(s)%imort_carbonflux(:) = 0._r8
-             sites(s)%imort_rate(:,:) = 0._r8
-             sites(s)%fmort_rate_canopy(:,:) = 0._r8
-             sites(s)%fmort_rate_ustory(:,:) = 0._r8
-             sites(s)%fmort_carbonflux_canopy(:) = 0._r8
-             sites(s)%fmort_carbonflux_ustory(:) = 0._r8
-             sites(s)%fmort_rate_cambial(:,:) = 0._r8
-             sites(s)%fmort_rate_crown(:,:) = 0._r8
-             sites(s)%growthflux_fusion(:,:) = 0._r8
-             sites(s)%fmort_abg_flux(:,:) = 0._r8
-             sites(s)%imort_abg_flux(:,:) = 0._r8
-             sites(s)%term_abg_flux(:,:) = 0._r8
 
-             sites(s)%imort_rate_damage(:,:,:) = 0.0_r8
-             sites(s)%term_nindivs_canopy_damage(:,:,:) = 0.0_r8
-             sites(s)%term_nindivs_ustory_damage(:,:,:) = 0.0_r8
-             sites(s)%imort_cflux_damage(:,:) = 0._r8
-             sites(s)%term_cflux_canopy_damage(:,:) = 0._r8
-             sites(s)%term_cflux_ustory_damage(:,:) = 0._r8
-             sites(s)%fmort_rate_canopy_damage(:,:,:) = 0._r8
-             sites(s)%fmort_rate_ustory_damage(:,:,:) = 0._r8
-             sites(s)%fmort_cflux_canopy_damage(:,:) = 0._r8
-             sites(s)%fmort_cflux_ustory_damage(:,:) = 0._r8
+             call reset_history_dyn2(this, nsites, sites)
 
              ! pass the recruitment rate as a flux to the history, and then reset the recruitment buffer
              do ft = 1, numpft
@@ -5049,6 +5027,52 @@ contains
 
     end associate
   end subroutine update_history_dyn2_ageclass
+
+  ! ===============================================================================================
+
+  subroutine reset_history_dyn2(this, nsites, sites)
+
+    ! ------------------------------------------------------------------------------------
+    ! This resets some variables that need to be zeroed out after dyn2 history subroutines
+    ! ------------------------------------------------------------------------------------
+    !
+    ! Arguments
+    class(fates_history_interface_type)       :: this
+    integer           , intent(in)            :: nsites
+    type(ed_site_type), intent(inout), target :: sites(nsites)
+    !
+    ! Local variables
+    integer :: s
+
+    siteloop: do s = 1,nsites
+
+       sites(s)%term_nindivs_canopy(:,:,:) = 0._r8
+       sites(s)%term_nindivs_ustory(:,:,:) = 0._r8
+       sites(s)%imort_carbonflux(:) = 0._r8
+       sites(s)%imort_rate(:,:) = 0._r8
+       sites(s)%fmort_rate_canopy(:,:) = 0._r8
+       sites(s)%fmort_rate_ustory(:,:) = 0._r8
+       sites(s)%fmort_carbonflux_canopy(:) = 0._r8
+       sites(s)%fmort_carbonflux_ustory(:) = 0._r8
+       sites(s)%fmort_rate_cambial(:,:) = 0._r8
+       sites(s)%fmort_rate_crown(:,:) = 0._r8
+       sites(s)%growthflux_fusion(:,:) = 0._r8
+       sites(s)%fmort_abg_flux(:,:) = 0._r8
+       sites(s)%imort_abg_flux(:,:) = 0._r8
+       sites(s)%term_abg_flux(:,:) = 0._r8
+
+       sites(s)%imort_rate_damage(:,:,:) = 0.0_r8
+       sites(s)%term_nindivs_canopy_damage(:,:,:) = 0.0_r8
+       sites(s)%term_nindivs_ustory_damage(:,:,:) = 0.0_r8
+       sites(s)%imort_cflux_damage(:,:) = 0._r8
+       sites(s)%term_cflux_canopy_damage(:,:) = 0._r8
+       sites(s)%term_cflux_ustory_damage(:,:) = 0._r8
+       sites(s)%fmort_rate_canopy_damage(:,:,:) = 0._r8
+       sites(s)%fmort_rate_ustory_damage(:,:,:) = 0._r8
+       sites(s)%fmort_cflux_canopy_damage(:,:) = 0._r8
+       sites(s)%fmort_cflux_ustory_damage(:,:) = 0._r8
+    end do siteloop
+  end subroutine reset_history_dyn2
 
   ! ===============================================================================================
 
