@@ -4801,6 +4801,8 @@ contains
          hio_mortality_b_understory_si_scag     => this%hvars(ih_mortality_b_understory_si_scag)%r82d, &
          hio_mortality_c_canopy_si_scag         => this%hvars(ih_mortality_c_canopy_si_scag)%r82d, &
          hio_mortality_c_understory_si_scag     => this%hvars(ih_mortality_c_understory_si_scag)%r82d, &
+         hio_mortality_d_canopy_si_scag         => this%hvars(ih_mortality_d_canopy_si_scag)%r82d, &
+         hio_mortality_d_understory_si_scag     => this%hvars(ih_mortality_d_understory_si_scag)%r82d, &
          hio_biomass_si_age        => this%hvars(ih_biomass_si_age)%r82d, &
          hio_biomass_si_agepft                => this%hvars(ih_biomass_si_agepft)%r82d, &
          hio_npp_si_agepft  => this%hvars(ih_npp_si_agepft)%r82d, &  ! TODO: Move to update_history_hifrq2_ageclass? Maybe not, because it comes from npp_acc_hold
@@ -4967,6 +4969,10 @@ contains
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
                   sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * weight
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
+                  sum(sites(s)%term_nindivs_ustory(:,i_scls,ft)) * weight
+             hio_mortality_d_canopy_si_scag(io_si,iscag) = hio_mortality_d_canopy_si_scag(io_si,iscag) + &
+                  sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * weight
+             hio_mortality_d_understory_si_scag(io_si,iscag) = hio_mortality_d_understory_si_scag(io_si,iscag) + &
                   sum(sites(s)%term_nindivs_ustory(:,i_scls,ft)) * weight
 
           end do  ! size class loop
