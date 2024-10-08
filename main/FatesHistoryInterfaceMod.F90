@@ -4965,7 +4965,7 @@ contains
                   sites(s)%fmort_rate_ustory(i_scls, ft) * weight
 
              ! add termination mortality to other mortality terms
-             weight = AREA_INV
+             weight = AREA_INV * days_per_year
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
                   sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * weight
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
