@@ -4944,17 +4944,17 @@ contains
              ! treat as such
              iscag = i_scls
 
-             weight = AREA_INV
-
              ! add imort to other mortality terms. consider imort as understory mortality even if it happens in
              ! cohorts that may have been promoted as part of the patch creation, and use the pre-calculated site-level
              ! values to avoid biasing the results by the dramatically-reduced number densities in cohorts that are subject to imort
+             weight = AREA_INV
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
                   sites(s)%imort_rate(i_scls, ft) * weight
              hio_mortality_b_understory_si_scag(io_si,iscag) = hio_mortality_b_understory_si_scag(io_si,iscag) + &
                   sites(s)%imort_rate(i_scls, ft) * weight
 
              ! add fire mortality to other mortality terms
+             weight = AREA_INV
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
                   sites(s)%fmort_rate_canopy(i_scls, ft) * weight
              hio_mortality_c_canopy_si_scag(io_si,iscag) = hio_mortality_c_canopy_si_scag(io_si,iscag) + &
@@ -4965,6 +4965,7 @@ contains
                   sites(s)%fmort_rate_ustory(i_scls, ft) * weight
 
              ! add termination mortality to other mortality terms
+             weight = AREA_INV
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
                   sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * weight
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
