@@ -5674,7 +5674,6 @@ contains
     type(fates_patch_type),  pointer :: cpatch
     integer :: s, io_si, ipa
     real(r8) :: site_canopy_area
-    real(r8) :: weight
     real(r8) :: dt_tstep_inv          ! Time step in frequency units (/s)
     real(r8) :: patch_canarea_div_site_canarea  ! Weighting based on patch canopy area relative to site canopy area
     real(r8) :: cohort_n_div_site_area          ! Weighting based on cohort density relative to site area
