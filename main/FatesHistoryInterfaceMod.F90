@@ -4739,7 +4739,6 @@ contains
     type(fates_cohort_type), pointer :: ccohort
     type(fates_patch_type),  pointer :: cpatch
     integer :: s, ipa, ft, iagepft, i_agefuel, iscag, i_fuel, i_scls, io_si
-    real(r8) :: weight
     real(r8) :: mort
     real(r8) :: sapw_m             ! Sapwood mass (elemental, c,n or p) [kg/plant]
     real(r8) :: struct_m           ! Structural mass ""
@@ -4807,10 +4806,9 @@ contains
                * patch_canarea_div_site_area
 
           ! Supposedly weighted by burned fraction, but never actually divided by total burned fraction!
-          weight = cpatch%area * AREA_INV * cpatch%frac_burnt
           hio_fire_intensity_si_age(io_si, cpatch%age_class) = hio_fire_intensity_si_age(io_si,    cpatch%age_class) + &
               cpatch%FI * J_per_kJ &  ! [kJ/m/s] -> [J/m/s]
-              * weight
+              * cpatch%frac_burnt * patch_area_div_site_area
 
           hio_area_burnt_si_age(io_si,cpatch%age_class) = hio_area_burnt_si_age(io_si,cpatch%age_class) + &
                cpatch%frac_burnt / sec_per_day &  ! [frac/day] -> [frac/sec]
@@ -4905,23 +4903,20 @@ contains
              ! add imort to other mortality terms. consider imort as understory mortality even if it happens in
              ! cohorts that may have been promoted as part of the patch creation, and use the pre-calculated site-level
              ! values to avoid biasing the results by the dramatically-reduced number densities in cohorts that are subject to imort
-             weight = AREA_INV
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
-                  sites(s)%imort_rate(i_scls, ft) * weight
+                  sites(s)%imort_rate(i_scls, ft) * AREA_INV
 
              ! add fire mortality to other mortality terms
-             weight = AREA_INV
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
-                  sites(s)%fmort_rate_canopy(i_scls, ft) * weight
+                  sites(s)%fmort_rate_canopy(i_scls, ft) * AREA_INV
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
-                  sites(s)%fmort_rate_ustory(i_scls, ft) * weight
+                  sites(s)%fmort_rate_ustory(i_scls, ft) * AREA_INV
 
              ! add termination mortality to other mortality terms
-             weight = AREA_INV * days_per_year
              hio_mortality_canopy_si_scag(io_si,iscag) = hio_mortality_canopy_si_scag(io_si,iscag) + &
-                  sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * weight
+                  sum(sites(s)%term_nindivs_canopy(:,i_scls,ft)) * days_per_year * AREA_INV
              hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,iscag) + &
-                  sum(sites(s)%term_nindivs_ustory(:,i_scls,ft)) * weight
+                  sum(sites(s)%term_nindivs_ustory(:,i_scls,ft)) * days_per_year * AREA_INV
 
           end do  ! size class loop
        end do  ! pft loop
