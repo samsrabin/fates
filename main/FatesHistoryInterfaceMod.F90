@@ -1881,7 +1881,7 @@ contains
   ! =====================================================================================
 
   subroutine set_history_var(this, vname, units, long, use_default, avgflag, vtype, &
-       hlms, upfreq, ivar, initialize, index, flush_to_zero, comment)
+       hlms, upfreq, ivar, initialize, index, flush_to_zero)
 
     use FatesUtilsMod, only     : check_hlm_list
     use FatesInterfaceTypesMod, only : hlm_name
@@ -1906,14 +1906,12 @@ contains
     ! A zero is passed back when the variable is
     ! not used
     logical, intent(in), optional :: flush_to_zero
-    character(len=*), intent(in), optional  :: comment
 
     ! locals
     integer   :: ub1, lb1, ub2, lb2    ! Bounds for allocating the var
     integer   :: ityp
     real(r8)  :: flushval
     logical   :: write_var
-    character(len=128) :: comment_local
 
 
     ! Flushing to the ignore val coerces all FATES diagnostics to be
@@ -1929,19 +1927,13 @@ contains
        endif
     endif
 
-    if (present(comment)) then
-       comment_local = comment
-    else
-       comment_local = ""
-    end if
-
     write_var = check_hlm_list(trim(hlms), trim(hlm_name))
     if( write_var ) then
        ivar  = ivar+1
        index = ivar
 
        if (initialize) then
-          call this%hvars(ivar)%Init(vname, units, long, comment, use_default, &
+          call this%hvars(ivar)%Init(vname, units, long, use_default,          &
                vtype, avgflag, flushval, upfreq, fates_history_num_dim_kinds,  &
                this%dim_kinds, this%dim_bounds)
        end if
@@ -6198,9 +6190,9 @@ contains
     character(len=*), optional :: norm_var  ! The variable that this one should be divided by to get actual values
     !
     ! Result
-    character(len=128) :: per_ageclass_norm_info
+    character(len=512) :: per_ageclass_norm_info
 
-    per_ageclass_norm_info = "Should sum across age-class dimension to match " // &
+    per_ageclass_norm_info = "Should sum across age-class dimension to match" // &
          non_perage_var // " within roundoff error."
 
     if (present(norm_var)) then
@@ -7187,30 +7179,31 @@ contains
 
           ! patch age class variables
           call this%set_history_var(vname='FATES_PATCHAREA_AP', units='m2 m-2',      &
-               long='patch area by age bin per m2 land area', use_default='active',  &
+               long='Patch area by age bin per m2 land area. '//                     &
+               trim(this%per_ageclass_norm_info('FATES_PATCHAREA')),                 &
+               use_default='active',                                                 &
                avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,  &
-               initialize=initialize_variables, index=ih_fracarea_si_age,            &
-               comment=trim(this%per_ageclass_norm_info('FATES_PATCHAREA')))
+               initialize=initialize_variables, index=ih_fracarea_si_age)
 
           call this%set_history_var(vname='FATES_LAI_AP', units='m2 m-2',            &
-               long='total leaf area index by age bin per m2 land area',             &
+               long='Total leaf area index by age bin per m2 land area. '//          &
+               trim(this%per_ageclass_norm_info('FATES_LAI', 'FATES_CANOPYAREA/FATES_CANOPYAREA_AP')), &
                use_default='active', avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', &
                upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
-               index=ih_lai_si_age, &
-               comment=trim(this%per_ageclass_norm_info('FATES_LAI', 'FATES_CANOPYAREA/FATES_CANOPYAREA_AP')))
+               index=ih_lai_si_age)
 
           call this%set_history_var(vname='FATES_CANOPYAREA_AP', units='m2 m-2',     &
-               long='canopy area by age bin per m2 land area', use_default='active', &
+               long='Canopy area by age bin per m2 land area. '//                    &
+               trim(this%per_ageclass_norm_info('FATES_CANOPYAREA')), use_default='active', &
                avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,  &
-               initialize=initialize_variables, index=ih_canopy_area_si_age,         &
-               comment=trim(this%per_ageclass_norm_info('FATES_CANOPYAREA')))
+               initialize=initialize_variables, index=ih_canopy_area_si_age)
 
           call this%set_history_var(vname='FATES_NCL_AP', units='',                  &
-               long='number of canopy levels by age bin',                            &
+               long='Number of canopy levels by age bin. '//                         &
+               trim(this%per_ageclass_norm_info('FATES_NCL', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')), &
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
-               index=ih_ncl_si_age, &
-               comment=trim(this%per_ageclass_norm_info('FATES_NCL', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')))
+               index=ih_ncl_si_age)
 
           call this%set_history_var(vname='FATES_NPATCH_AP', units='',               &
                long='number of patches by age bin', use_default='inactive',          &
@@ -7698,11 +7691,11 @@ contains
                initialize=initialize_variables, index = ih_biomass_si_agepft)
 
           call this%set_history_var(vname='FATES_SCORCH_HEIGHT_APPF',units = 'm',    &
-               long='SPITFIRE flame Scorch Height (calculated per PFT in each patch age bin)', &
+               long='SPITFIRE flame Scorch Height (calculated per PFT in each patch age bin). '// &
+               trim(this%per_ageclass_norm_info('FATES_SCORCH_HEIGHT_PF', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')), &
                use_default='inactive', avgflag='A', vtype=site_agepft_r8,           &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
-               initialize=initialize_variables, index = ih_scorch_height_si_agepft, &
-               comment=trim(this%per_ageclass_norm_info('FATES_SCORCH_HEIGHT_PF', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')))
+               initialize=initialize_variables, index = ih_scorch_height_si_agepft)
 
           call this%set_history_var(vname='FATES_SCORCH_HEIGHT_PF',units = 'm',    &
                long='SPITFIRE flame Scorch Height (calculated per PFT)', &
@@ -8985,18 +8978,18 @@ contains
           ! to save time (and some space)
 
           call this%set_history_var(vname='FATES_NPP_AP', units='kg m-2 s-1',        &
-               long='net primary productivity by age bin in kg carbon per m2 per second', &
+               long='Net primary productivity by age bin in kg carbon per m2 per second. '// &
+               trim(this%per_ageclass_norm_info('FATES_NPP', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')), &
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM', upfreq=group_hifr_complx, ivar=ivar, initialize=initialize_variables, &
-               index = ih_npp_si_age, &
-               comment=trim(this%per_ageclass_norm_info('FATES_NPP', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')))
+               index = ih_npp_si_age)
 
           call this%set_history_var(vname='FATES_GPP_AP', units='kg m-2 s-1',        &
-               long='gross primary productivity by age bin in kg carbon per m2 per second', &
+               long='Gross primary productivity by age bin in kg carbon per m2 per second. '// &
+               trim(this%per_ageclass_norm_info('FATES_GPP', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')), &
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM', upfreq=group_hifr_complx, ivar=ivar, initialize=initialize_variables, &
-               index = ih_gpp_si_age, &
-               comment=trim(this%per_ageclass_norm_info('FATES_GPP', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')))
+               index = ih_gpp_si_age)
 
           call this%set_history_var(vname='FATES_RDARK_USTORY_SZ',               &
                units = 'kg m-2 s-1',                                                &
@@ -9250,19 +9243,19 @@ contains
 
           call this%set_history_var(vname='FATES_LBLAYER_COND_AP',                   &
                units='mol m-2 s-1',                                                  &
-               long='Mean leaf boundary layer conductance - by patch age. '        , &
+               long='Mean leaf boundary layer conductance - by patch age. '//        &
+               trim(this%per_ageclass_norm_info('FATES_LBLAYER_COND', 'FATES_CANOPYAREA/FATES_CANOPYAREA_AP')), &
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM',  upfreq=group_hifr_complx, ivar=ivar,                                 &
-               initialize=initialize_variables, index = ih_c_lblayer_si_age, &
-               comment=trim(this%per_ageclass_norm_info('FATES_LBLAYER_COND', 'FATES_CANOPYAREA/FATES_CANOPYAREA_AP')))
+               initialize=initialize_variables, index = ih_c_lblayer_si_age)
 
           ! Canopy resistance
           call this%set_history_var(vname='FATES_STOMATAL_COND_AP',                  &
-               units='mol m-2 s-1', long='mean stomatal conductance - by patch age', &
+               units='mol m-2 s-1', long='Mean stomatal conductance - by patch age. '// &
+               trim(this%per_ageclass_norm_info('FATES_STOMATAL_COND', 'FATES_CANOPYAREA/FATES_CANOPYAREA_AP')), &
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM', upfreq=group_hifr_complx, ivar=ivar, initialize=initialize_variables, &
-               index = ih_c_stomata_si_age, &
-               comment=trim(this%per_ageclass_norm_info('FATES_STOMATAL_COND', 'FATES_CANOPYAREA/FATES_CANOPYAREA_AP')))
+               index = ih_c_stomata_si_age)
 
           ! PLANT HYDRAULICS
 
