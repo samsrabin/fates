@@ -6186,18 +6186,23 @@ contains
     !
     ! Arguments
     class(fates_history_interface_type) :: this  ! Not used, but needed for a function in this type
-    character(len=*) :: non_perage_var      ! The version of this variable without age-class axis
-    character(len=*), optional :: norm_var  ! The variable that this one should be divided by to get actual values
+    character(len=*), intent(in) :: non_perage_var      ! The version of this variable without age-class axis
+    character(len=*), intent(in), optional :: norm_var  ! The variable that this one should be multiplied by to get actual values
+    !
+    ! Locals
+    character(len=fates_long_string_length) :: tmp
     !
     ! Result
-    character(len=512) :: per_ageclass_norm_info
+    character(len=fates_long_string_length) :: per_ageclass_norm_info
 
-    per_ageclass_norm_info = "Should sum across age-class dimension to match" // &
+    tmp = "Should sum across age-class dimension to match " // &
          non_perage_var // " within roundoff error."
 
     if (present(norm_var)) then
-       per_ageclass_norm_info = per_ageclass_norm_info // &
+       per_ageclass_norm_info = trim(tmp) // &
             "To get real per-ageclass values, multiply by " // norm_var
+    else
+       per_ageclass_norm_info = trim(tmp)
     end if
   end function per_ageclass_norm_info
 
@@ -7200,7 +7205,7 @@ contains
 
           call this%set_history_var(vname='FATES_NCL_AP', units='',                  &
                long='Number of canopy levels by age bin. '//                         &
-               trim(this%per_ageclass_norm_info('FATES_NCL', 'FATES_PATCHAREA/FATES_PATCHAREA_AP')), &
+               this%per_ageclass_norm_info('FATES_NCL', 'FATES_PATCHAREA/FATES_PATCHAREA_AP'), &
                use_default='inactive', avgflag='A', vtype=site_age_r8,               &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
                index=ih_ncl_si_age)
