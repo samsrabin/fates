@@ -35,6 +35,7 @@ module FatesHistoryVariableType
      character(len=40)    :: vname
      character(len=24)    :: units
      character(len=128)   :: long
+     character(len=128)   :: comment
      character(len=24)    :: use_default ! States whether a variable should be turned
                                          ! on the output files by default (active/inactive)
                                          ! It is a good idea to set inactive for very large
@@ -68,7 +69,7 @@ module FatesHistoryVariableType
 
 contains
 
-  subroutine Init(this, vname, units, long, use_default, &
+  subroutine Init(this, vname, units, long, comment, use_default, &
        vtype, avgflag, flushval, upfreq, num_dim_kinds, dim_kinds, dim_bounds)
 
 
@@ -78,6 +79,7 @@ contains
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: long
+    character(len=*), intent(in) :: comment
     character(len=*), intent(in) :: use_default
     character(len=*), intent(in) :: vtype
     character(len=*), intent(in) :: avgflag
@@ -93,6 +95,7 @@ contains
     this%vname = vname
     this%units = units
     this%long  = long
+    this%comment = comment
     this%use_default = use_default
     this%vtype = vtype
     this%avgflag = avgflag
