@@ -3058,7 +3058,6 @@ contains
     integer  :: iscag_anthrodist  ! what is the equivalent age class for
                                   ! time-since-anthropogenic-disturbance of secondary forest
     real(r8) :: patch_fracarea  ! Fraction of area for this patch
-    real(r8) :: ageclass_fracarea  ! Fraction of area for this age class
     real(r8) :: frac_canopy_in_bin  ! fraction of a leaf's canopy that is within a given height bin
     real(r8) :: binbottom,bintop    ! edges of height bins
     integer  :: height_bin_max, height_bin_min   ! which height bin a given cohort's canopy is in
@@ -3384,15 +3383,14 @@ contains
                 if ( cpatch%land_use_label .eq. secondaryland ) then
 
                    iscag_anthrodist = get_age_class_index(cpatch%age_since_anthro_disturbance)
-                   ageclass_fracarea = cpatch%area * AREA_INV
 
                    hio_agesince_anthrodist_si(io_si) = &
                         hio_agesince_anthrodist_si(io_si)  &
-                        + ageclass_fracarea
+                        + cpatch%area * AREA_INV
 
                     hio_secondarylands_fracarea_si(io_si) = &
                          hio_secondarylands_fracarea_si(io_si) &
-                         + ageclass_fracarea
+                         + cpatch%area * AREA_INV
                 endif
 
                 ! patch-age-resolved fire variables
