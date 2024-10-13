@@ -3059,7 +3059,6 @@ contains
                                            ! time-since-anthropogenic-disturbance of secondary forest
     real(r8) :: patch_fracarea  ! Fraction of area for this patch
     real(r8) :: ageclass_fracarea  ! Fraction of area for this age class
-    real(r8) :: ageclass_canopy_fracarea  ! Fraction of canopy area for this age class
     real(r8) :: frac_canopy_in_bin  ! fraction of a leaf's canopy that is within a given height bin
     real(r8) :: binbottom,bintop    ! edges of height bins
     integer  :: height_bin_max, height_bin_min   ! which height bin a given cohort's canopy is in
@@ -3255,7 +3254,6 @@ contains
            hio_fracarea_si         => this%hvars(ih_fracarea_si)%r81d, &
            hio_fracarea_si_age         => this%hvars(ih_fracarea_si_age)%r82d, &
            hio_canopy_area_si  => this%hvars(ih_canopy_area_si)%r81d, &
-           hio_canopy_area_si_age  => this%hvars(ih_canopy_area_si_age)%r82d, &
            hio_agesince_anthrodist_si     => this%hvars(ih_agesince_anthrodist_si)%r81d, &
            hio_agesince_anthrodist_si_age     => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
            hio_secondarylands_fracarea_si    => this%hvars(ih_secondarylands_fracarea_si)%r81d, &
@@ -3450,11 +3448,8 @@ contains
                         ccohort%coage_class, ccohort%coage_by_pft_class)
 
                    n_perm2 = ccohort%n * AREA_INV
-                   ageclass_canopy_fracarea = ccohort%c_area * AREA_INV
 
-                   hio_canopy_area_si(io_si) = hio_canopy_area_si(io_si) + ageclass_canopy_fracarea
-                   hio_canopy_area_si_age(io_si,cpatch%age_class) = hio_canopy_area_si_age(io_si,cpatch%age_class) &
-                        + ageclass_canopy_fracarea
+                   hio_canopy_area_si(io_si) = hio_canopy_area_si(io_si) + ccohort%c_area * AREA_INV
 
                    ! calculate leaf height distribution, assuming leaf area is evenly distributed thru crown depth
                    call CrownDepth(ccohort%height,ft,crown_depth)
@@ -4748,6 +4743,7 @@ contains
          hio_ddbh_canopy_si_scag              => this%hvars(ih_ddbh_canopy_si_scag)%r82d, &
          hio_fire_intensity_si_age          => this%hvars(ih_fire_intensity_si_age)%r82d, &
          hio_npatches_si_age                  => this%hvars(ih_npatches_si_age)%r82d, &
+         hio_canopy_area_si_age               => this%hvars(ih_canopy_area_si_age)%r82d, &
          hio_nplant_si_scag                   => this%hvars(ih_nplant_si_scag)%r82d, &
          hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
          hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
@@ -4817,15 +4813,23 @@ contains
               cpatch%FI * J_per_kJ &  ! [kJ/m/s] -> [J/m/s]
               * cpatch%frac_burnt * patch_area_div_site_area
 
+          ! Weighted by cohort canopy area relative to site area
+          ccohort => cpatch%shortest
+          cohortloop: do while(associated(ccohort))
+             hio_canopy_area_si_age(io_si,cpatch%age_class) = hio_canopy_area_si_age(io_si,cpatch%age_class) &
+                  + ccohort%c_area * AREA_INV
+             ccohort => ccohort%taller
+          end do cohortloop
+
           ! Not weighted
           hio_npatches_si_age(io_si,cpatch%age_class) = hio_npatches_si_age(io_si,cpatch%age_class) + 1._r8
 
           cpatch => cpatch%younger
        end do patchloop
 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      !!! Weighting by cohort density relative to total site area !!!
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !!! Weighting by cohort stem density relative to total site area !!!
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! Loop through patches to sum up diagnostics
        cpatch => sites(s)%oldest_patch
@@ -7179,7 +7183,9 @@ contains
                index=ih_lai_si_age)
 
           call this%set_history_var(vname='FATES_CANOPYAREA_AP', units='m2 m-2',     &
-               long='canopy area by age bin per m2 land area', use_default='active', &
+               long='canopy area by age bin per m2 land area'// &
+               this%per_ageclass_norm_info('FATES_PATCHAREA/FATES_PATCHAREA_AP'),    &
+               use_default='active', &
                avgflag='A', vtype=site_age_r8, hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,  &
                initialize=initialize_variables, index=ih_canopy_area_si_age)
 
