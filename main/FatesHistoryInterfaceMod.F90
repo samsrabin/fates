@@ -3070,8 +3070,6 @@ contains
     integer  :: i_fuel            ! iterators for fuel dims
     integer  :: i_heightbin  ! iterator for height bins
     integer  :: ilyr      ! Soil index for nlevsoil
-    integer  :: iscag        ! size-class x age index
-    integer  :: iscagpft     ! size-class x age x pft index
     integer  :: icdpf, icdsc, icdam ! iterators for the crown damage level
     real(r8) :: gpp_cached    ! gpp from previous timestep, for c13 discrimination
     real(r8) :: crown_depth   ! Depth of the crown [m]
@@ -3252,7 +3250,6 @@ contains
            hio_npp_dead_understory_si_scls     => this%hvars(ih_npp_dead_understory_si_scls)%r82d, &
            hio_npp_seed_understory_si_scls     => this%hvars(ih_npp_seed_understory_si_scls)%r82d, &
            hio_npp_stor_understory_si_scls     => this%hvars(ih_npp_stor_understory_si_scls)%r82d, &
-           hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
            hio_yesterdaycanopylevel_canopy_si_scls     => this%hvars(ih_yesterdaycanopylevel_canopy_si_scls)%r82d, &
            hio_yesterdaycanopylevel_understory_si_scls => this%hvars(ih_yesterdaycanopylevel_understory_si_scls)%r82d, &
            hio_fracarea_si         => this%hvars(ih_fracarea_si)%r81d, &
@@ -3279,7 +3276,6 @@ contains
            hio_cwd_bg_out_si_cwdsc              => this%hvars(ih_cwd_bg_out_si_cwdsc)%r82d, &
            hio_crownarea_si_cnlf                => this%hvars(ih_crownarea_si_cnlf)%r82d, &
            hio_crownarea_cl                 => this%hvars(ih_crownarea_cl)%r82d, &
-           hio_nplant_si_scag                   => this%hvars(ih_nplant_si_scag)%r82d, &
            hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
            hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d)
 
@@ -3290,9 +3286,6 @@ contains
              hio_meanliqvol_si_pft                => this%hvars(ih_meanliqvol_si_pft)%r82d, &
              hio_meansmp_si_pft                   => this%hvars(ih_meansmp_si_pft)%r82d, &
              hio_elong_factor_si_pft              => this%hvars(ih_elong_factor_si_pft)%r82d, &
-             hio_nplant_si_scag                   => this%hvars(ih_nplant_si_scag)%r82d, &
-             hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
-             hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d, &
              hio_disturbance_rate_si_lulu         => this%hvars(ih_disturbance_rate_si_lulu)%r82d, &
              hio_cstarvmortality_continuous_carbonflux_si_pft  => this%hvars(ih_cstarvmortality_continuous_carbonflux_si_pft)%r82d, &
              hio_transition_matrix_si_lulu      => this%hvars(ih_transition_matrix_si_lulu)%r82d)
@@ -3881,23 +3874,12 @@ contains
                         hio_biomass_si_scls(io_si,scls) = hio_biomass_si_scls(io_si,scls) + &
                              total_m * ccohort%n * AREA_INV
 
-                        ! update size-class x patch-age related quantities
-
-                        iscag = get_sizeage_class_index(ccohort%dbh,cpatch%age)
-
-                        hio_nplant_si_scag(io_si,iscag) = hio_nplant_si_scag(io_si,iscag) + ccohort%n / m2_per_ha
+                        ! update size-class quantities
 
                         hio_nplant_si_scls(io_si,scls) = hio_nplant_si_scls(io_si,scls) + ccohort%n / m2_per_ha
 
-
-                        ! update size, age, and PFT - indexed quantities
-                        iscagpft = get_sizeagepft_class_index(ccohort%dbh,cpatch%age,ccohort%pft)
-
-                        hio_nplant_si_scagpft(io_si,iscagpft) = hio_nplant_si_scagpft(io_si,iscagpft) + ccohort%n / m2_per_ha
-
                         ! update SCPF/SCLS- and canopy/subcanopy- partitioned quantities
                         canlayer: if (ccohort%canopy_layer .eq. 1) then
-                           hio_nplant_canopy_si_scag(io_si,iscag) = hio_nplant_canopy_si_scag(io_si,iscag) + ccohort%n / m2_per_ha
                            hio_bstor_canopy_si_scpf(io_si,scpf) = hio_bstor_canopy_si_scpf(io_si,scpf) + &
                                 store_m * ccohort%n / m2_per_ha
                            hio_bleaf_canopy_si_scpf(io_si,scpf) = hio_bleaf_canopy_si_scpf(io_si,scpf) + &
@@ -4009,8 +3991,6 @@ contains
 
 
                         else canlayer
-                           hio_nplant_understory_si_scag(io_si,iscag) = hio_nplant_understory_si_scag(io_si,iscag) + ccohort%n / m2_per_ha
-
                            hio_bstor_understory_si_scpf(io_si,scpf) = hio_bstor_understory_si_scpf(io_si,scpf) + &
                                 store_m * ccohort%n / m2_per_ha
                            hio_bleaf_understory_si_scpf(io_si,scpf) = hio_bleaf_understory_si_scpf(io_si,scpf) + &
@@ -4738,7 +4718,7 @@ contains
 
     type(fates_cohort_type), pointer :: ccohort
     type(fates_patch_type),  pointer :: cpatch
-    integer :: s, ft, iagepft, i_agefuel, iscag, i_fuel, i_scls, io_si
+    integer :: s, ft, iagepft, i_agefuel, iscag, iscagpft, i_fuel, i_scls, io_si
     real(r8) :: mort
     real(r8) :: sapw_m             ! Sapwood mass (elemental, c,n or p) [kg/plant]
     real(r8) :: struct_m           ! Structural mass ""
@@ -4770,6 +4750,10 @@ contains
          hio_npp_si_agepft  => this%hvars(ih_npp_si_agepft)%r82d, &  ! TODO: Move to update_history_hifrq2_ageclass, as gpp? Maybe not, because it comes from npp_acc_hold
          hio_ddbh_canopy_si_scag              => this%hvars(ih_ddbh_canopy_si_scag)%r82d, &
          hio_fire_intensity_si_age          => this%hvars(ih_fire_intensity_si_age)%r82d, &
+         hio_nplant_si_scag                   => this%hvars(ih_nplant_si_scag)%r82d, &
+         hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
+         hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
+         hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d, &
          hio_ddbh_understory_si_scag          => this%hvars(ih_ddbh_understory_si_scag)%r82d)
 
     siteloop: do s = 1,nsites
@@ -4865,6 +4849,16 @@ contains
    
              iscag = get_sizeage_class_index(ccohort%dbh, cpatch%age)
              iagepft = get_agepft_class_index(cpatch%age,ccohort%pft)
+             iscagpft = get_sizeagepft_class_index(ccohort%dbh,cpatch%age,ccohort%pft)
+
+             ! Number of plants
+             hio_nplant_si_scag(io_si,iscag) = hio_nplant_si_scag(io_si,iscag) + cohort_n_div_site_area
+             hio_nplant_si_scagpft(io_si,iscagpft) = hio_nplant_si_scagpft(io_si,iscagpft) + cohort_n_div_site_area
+             canlayer: if (ccohort%canopy_layer .eq. 1) then
+                hio_nplant_canopy_si_scag(io_si,iscag) = hio_nplant_canopy_si_scag(io_si,iscag) + cohort_n_div_site_area
+             else canlayer
+                hio_nplant_understory_si_scag(io_si,iscag) = hio_nplant_understory_si_scag(io_si,iscag) + cohort_n_div_site_area
+             end if canlayer
 
              ! Biomass
              sapw_m   = ccohort%prt%GetState(sapw_organ, carbon12_element)
@@ -7613,20 +7607,23 @@ contains
           ! size class by age dimensioned variables
 
           call this%set_history_var(vname='FATES_NPLANT_SZAP', units = 'm-2',        &
-               long='number of plants per m2 in each size x age class',             &
+               long='number of plants per m2, per size x age class'//             &
+               this%per_ageclass_norm_info('FATES_PATCHAREA/FATES_PATCHAREA_AP'),  &
                use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_nplant_si_scag)
 
           call this%set_history_var(vname='FATES_NPLANT_CANOPY_SZAP', units = 'm-2', &
-               long='number of plants per m2 in canopy in each size x age class',   &
+               long='number of canopy plants per m2, per size x age class'//   &
+               this%per_ageclass_norm_info('FATES_PATCHAREA/FATES_PATCHAREA_AP'),  &
                use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_nplant_canopy_si_scag)
 
           call this%set_history_var(vname='FATES_NPLANT_USTORY_SZAP',                &
                units = 'm-2',                                                       &
-               long='number of plants per m2 in understory in each size x age class', &
+               long='number of understory plants per m2 understory, per size x age class'// &
+               this%per_ageclass_norm_info('FATES_PATCHAREA/FATES_PATCHAREA_AP'),   &
                use_default='inactive', avgflag='A', vtype=site_scag_r8,             &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_nplant_understory_si_scag)
@@ -7662,7 +7659,8 @@ contains
           ! size x age x pft dimensioned
 
           call this%set_history_var(vname='FATES_NPLANT_SZAPPF',units = 'm-2',       &
-               long='number of plants per m2 in each size x age x pft class',       &
+               long='number of plants per m2, per size x age x pft class'//        &
+               this%per_ageclass_norm_info('FATES_PATCHAREA/FATES_PATCHAREA_AP'),  &
                use_default='inactive', avgflag='A', vtype=site_scagpft_r8,          &
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar,                                 &
                initialize=initialize_variables, index = ih_nplant_si_scagpft)
