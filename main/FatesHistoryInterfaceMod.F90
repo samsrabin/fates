@@ -3252,7 +3252,6 @@ contains
            hio_yesterdaycanopylevel_canopy_si_scls     => this%hvars(ih_yesterdaycanopylevel_canopy_si_scls)%r82d, &
            hio_yesterdaycanopylevel_understory_si_scls => this%hvars(ih_yesterdaycanopylevel_understory_si_scls)%r82d, &
            hio_fracarea_si         => this%hvars(ih_fracarea_si)%r81d, &
-           hio_fracarea_si_age         => this%hvars(ih_fracarea_si_age)%r82d, &
            hio_canopy_area_si  => this%hvars(ih_canopy_area_si)%r81d, &
            hio_agesince_anthrodist_si     => this%hvars(ih_agesince_anthrodist_si)%r81d, &
            hio_secondarylands_fracarea_si    => this%hvars(ih_secondarylands_fracarea_si)%r81d, &
@@ -3372,10 +3371,6 @@ contains
                 cpatch%age_class  = get_age_class_index(cpatch%age)
                 age_class_area = sites(s)%area_by_age(cpatch%age_class)
                 hio_fracarea_si(io_si) = hio_fracarea_si(io_si) &
-                     + cpatch%area * AREA_INV
-
-                ! Increment the fractional area in each age class bin
-                hio_fracarea_si_age(io_si,cpatch%age_class) = hio_fracarea_si_age(io_si,cpatch%age_class) &
                      + cpatch%area * AREA_INV
 
                 ! ignore land use info on nocomp bareground (where landuse label = 0)
@@ -4739,6 +4734,7 @@ contains
          hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
          hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
          hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d, &
+         hio_fracarea_si_age                  => this%hvars(ih_fracarea_si_age)%r82d, &
          hio_agesince_anthrodist_si_age       => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
          hio_secondarylands_fracarea_si_age   => this%hvars(ih_secondarylands_fracarea_si_age)%r82d, &
          hio_ddbh_understory_si_scag          => this%hvars(ih_ddbh_understory_si_scag)%r82d)
@@ -4753,9 +4749,13 @@ contains
           patch_area_div_site_area = cpatch%area * AREA_INV
           patch_canarea_div_site_area = cpatch%total_canopy_area * AREA_INV
 
-          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          !!! Weighting by patch area relative to total site area !!!
-          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          !!! Weighting by (or using) patch area relative to total site area !!!
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+          ! Increment the fractional area in each age class bin
+          hio_fracarea_si_age(io_si,cpatch%age_class) = hio_fracarea_si_age(io_si,cpatch%age_class) &
+          + cpatch%area * AREA_INV
 
           hio_ncl_si(io_si) = hio_ncl_si(io_si) + cpatch%ncl_p * patch_area_div_site_area
 
