@@ -3256,7 +3256,6 @@ contains
            hio_fracarea_si_age         => this%hvars(ih_fracarea_si_age)%r82d, &
            hio_canopy_area_si  => this%hvars(ih_canopy_area_si)%r81d, &
            hio_canopy_area_si_age  => this%hvars(ih_canopy_area_si_age)%r82d, &
-           hio_npatches_si_age     => this%hvars(ih_npatches_si_age)%r82d, &
            hio_agesince_anthrodist_si     => this%hvars(ih_agesince_anthrodist_si)%r81d, &
            hio_agesince_anthrodist_si_age     => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
            hio_secondarylands_fracarea_si    => this%hvars(ih_secondarylands_fracarea_si)%r81d, &
@@ -3389,8 +3388,6 @@ contains
                         hio_fracarea_si_landuse(io_si, cpatch%land_use_label) &
                         + cpatch%area * AREA_INV
                 end if
-
-                hio_npatches_si_age(io_si,cpatch%age_class) = hio_npatches_si_age(io_si,cpatch%age_class) + 1._r8
 
                 ! some diagnostics on secondary forest area and its age distribution
                 if ( cpatch%land_use_label .eq. secondaryland ) then
@@ -4750,6 +4747,7 @@ contains
          hio_npp_si_agepft  => this%hvars(ih_npp_si_agepft)%r82d, &  ! TODO: Move to update_history_hifrq2_ageclass, as gpp? Maybe not, because it comes from npp_acc_hold
          hio_ddbh_canopy_si_scag              => this%hvars(ih_ddbh_canopy_si_scag)%r82d, &
          hio_fire_intensity_si_age          => this%hvars(ih_fire_intensity_si_age)%r82d, &
+         hio_npatches_si_age                  => this%hvars(ih_npatches_si_age)%r82d, &
          hio_nplant_si_scag                   => this%hvars(ih_nplant_si_scag)%r82d, &
          hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
          hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
@@ -4818,6 +4816,9 @@ contains
           hio_fire_intensity_si_age(io_si, cpatch%age_class) = hio_fire_intensity_si_age(io_si,cpatch%age_class) + &
               cpatch%FI * J_per_kJ &  ! [kJ/m/s] -> [J/m/s]
               * cpatch%frac_burnt * patch_area_div_site_area
+
+          ! Not weighted
+          hio_npatches_si_age(io_si,cpatch%age_class) = hio_npatches_si_age(io_si,cpatch%age_class) + 1._r8
 
           cpatch => cpatch%younger
        end do patchloop
