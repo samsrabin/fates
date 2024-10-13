@@ -3078,7 +3078,6 @@ contains
     real(r8) :: storep_understory_scpf(numpft*nlevsclass)
     real(r8) :: storec_canopy_scpf(numpft*nlevsclass)
     real(r8) :: storec_understory_scpf(numpft*nlevsclass)
-    real(r8) :: age_class_area  ! [m2]
 
     integer  :: i_dist, j_dist
 
@@ -3368,7 +3367,6 @@ contains
 
 
                 cpatch%age_class  = get_age_class_index(cpatch%age)
-                age_class_area = sites(s)%area_by_age(cpatch%age_class)
                 hio_fracarea_si(io_si) = hio_fracarea_si(io_si) &
                      + cpatch%area * AREA_INV
 
@@ -5315,8 +5313,6 @@ contains
     real(r8) :: npp         ! npp for this time-step (adjusted for g resp) [kgC/indiv/step]
     real(r8) :: aresp       ! autotrophic respiration (adjusted for g resp) [kgC/indiv/step]
     real(r8) :: n_perm2     ! individuals per m2 for the whole column
-    real(r8) :: ageclass_area  ! [m2]
-    real(r8) :: ageclass_canopy_area  ! [m2]
     real(r8) :: canopy_area_by_age(nlevage) ! canopy area in each bin for normalizing purposes
     real(r8) :: site_area_veg_inv           ! 1/area of the site that is not bare-ground 
     integer  :: ipa2     ! patch incrementer
@@ -5401,8 +5397,6 @@ contains
          do while(associated(cpatch))
 
             ipa = ipa + 1
-            ageclass_area = sites(s)%area_by_age(cpatch%age_class)
-            ageclass_canopy_area = canopy_area_by_age(cpatch%age_class)
 
             ccohort => cpatch%shortest
             do while(associated(ccohort))
