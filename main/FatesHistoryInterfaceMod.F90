@@ -3055,8 +3055,8 @@ contains
     real(r8) :: struct_m_net_alloc ! mass allocated to structure [kg/yr]
     real(r8) :: repro_m_net_alloc  ! mass allocated to reproduction [kg/yr]
     real(r8) :: n_perm2            ! abundance per m2
-    integer  :: ageclass_since_anthrodist  ! what is the equivalent age class for
-                                           ! time-since-anthropogenic-disturbance of secondary forest
+    integer  :: iscag_anthrodist  ! what is the equivalent age class for
+                                  ! time-since-anthropogenic-disturbance of secondary forest
     real(r8) :: patch_fracarea  ! Fraction of area for this patch
     real(r8) :: ageclass_fracarea  ! Fraction of area for this age class
     real(r8) :: frac_canopy_in_bin  ! fraction of a leaf's canopy that is within a given height bin
@@ -3255,9 +3255,7 @@ contains
            hio_fracarea_si_age         => this%hvars(ih_fracarea_si_age)%r82d, &
            hio_canopy_area_si  => this%hvars(ih_canopy_area_si)%r81d, &
            hio_agesince_anthrodist_si     => this%hvars(ih_agesince_anthrodist_si)%r81d, &
-           hio_agesince_anthrodist_si_age     => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
            hio_secondarylands_fracarea_si    => this%hvars(ih_secondarylands_fracarea_si)%r81d, &
-           hio_secondarylands_fracarea_si_age    => this%hvars(ih_secondarylands_fracarea_si_age)%r82d, &
            hio_fracarea_si_landuse     => this%hvars(ih_fracarea_si_landuse)%r82d, &
                                 ! hio_fire_rate_of_spread_front_si_age  => this%hvars(ih_fire_rate_of_spread_front_si_age)%r82d, &
            hio_burnt_frac_litter_si_fuel      => this%hvars(ih_burnt_frac_litter_si_fuel)%r82d, &
@@ -3390,26 +3388,17 @@ contains
                 ! some diagnostics on secondary forest area and its age distribution
                 if ( cpatch%land_use_label .eq. secondaryland ) then
 
-                   ageclass_since_anthrodist = get_age_class_index(cpatch%age_since_anthro_disturbance)
-
+                   iscag_anthrodist = get_age_class_index(cpatch%age_since_anthro_disturbance)
                    ageclass_fracarea = cpatch%area * AREA_INV
-                   hio_agesince_anthrodist_si_age(io_si,ageclass_since_anthrodist) = &
-                        hio_agesince_anthrodist_si_age(io_si,ageclass_since_anthrodist)  &
-                        + ageclass_fracarea
+
                    hio_agesince_anthrodist_si(io_si) = &
                         hio_agesince_anthrodist_si(io_si)  &
                         + ageclass_fracarea
 
-                   ageclass_fracarea = cpatch%area * AREA_INV
-                   hio_secondarylands_fracarea_si_age(io_si,cpatch%age_class) = &
-                        hio_secondarylands_fracarea_si_age(io_si,cpatch%age_class) &
-                        + ageclass_fracarea
                     hio_secondarylands_fracarea_si(io_si) = &
                          hio_secondarylands_fracarea_si(io_si) &
                          + ageclass_fracarea
                 endif
-
-
 
                 ! patch-age-resolved fire variables
                 do ft = 1,numpft
@@ -4711,6 +4700,8 @@ contains
     type(fates_cohort_type), pointer :: ccohort
     type(fates_patch_type),  pointer :: cpatch
     integer :: s, ft, iagepft, i_agefuel, iscag, iscagpft, i_fuel, i_scls, io_si
+    integer :: iscag_anthrodist  ! what is the equivalent age class for
+                                 ! time-since-anthropogenic-disturbance of secondary forest
     real(r8) :: mort
     real(r8) :: sapw_m             ! Sapwood mass (elemental, c,n or p) [kg/plant]
     real(r8) :: struct_m           ! Structural mass ""
@@ -4748,6 +4739,8 @@ contains
          hio_nplant_si_scagpft                => this%hvars(ih_nplant_si_scagpft)%r82d, &
          hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
          hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d, &
+         hio_agesince_anthrodist_si_age       => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
+         hio_secondarylands_fracarea_si_age   => this%hvars(ih_secondarylands_fracarea_si_age)%r82d, &
          hio_ddbh_understory_si_scag          => this%hvars(ih_ddbh_understory_si_scag)%r82d)
 
     siteloop: do s = 1,nsites
@@ -4797,6 +4790,20 @@ contains
              hio_zstar_si(io_si) = hio_zstar_si(io_si) &
                   + cpatch%zstar * patch_area_div_site_area
           end if
+
+          ! some diagnostics on secondary forest area and its age distribution
+          if ( cpatch%land_use_label .eq. secondaryland ) then
+
+             iscag_anthrodist = get_age_class_index(cpatch%age_since_anthro_disturbance)
+
+             hio_agesince_anthrodist_si_age(io_si,iscag_anthrodist) = &
+                  hio_agesince_anthrodist_si_age(io_si,iscag_anthrodist)  &
+                  + patch_area_div_site_area
+
+             hio_secondarylands_fracarea_si_age(io_si,cpatch%age_class) = &
+                  hio_secondarylands_fracarea_si_age(io_si,cpatch%age_class) &
+                  + patch_area_div_site_area
+          endif
 
           !!!!!!!!!!!!!!!!!!!!!!!
           !!! Other weighting !!!
