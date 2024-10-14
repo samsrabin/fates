@@ -3266,9 +3266,7 @@ contains
            hio_cwd_ag_out_si_cwdsc              => this%hvars(ih_cwd_ag_out_si_cwdsc)%r82d, &
            hio_cwd_bg_out_si_cwdsc              => this%hvars(ih_cwd_bg_out_si_cwdsc)%r82d, &
            hio_crownarea_si_cnlf                => this%hvars(ih_crownarea_si_cnlf)%r82d, &
-           hio_crownarea_cl                 => this%hvars(ih_crownarea_cl)%r82d, &
-           hio_nplant_canopy_si_scag            => this%hvars(ih_nplant_canopy_si_scag)%r82d, &
-           hio_nplant_understory_si_scag        => this%hvars(ih_nplant_understory_si_scag)%r82d)
+           hio_crownarea_cl                     => this%hvars(ih_crownarea_cl)%r82d)
 
         ! Break up associates for NAG compilers
         associate( hio_site_dstatus_si_pft              => this%hvars(ih_site_dstatus_si_pft)%r82d, &
@@ -4858,15 +4856,6 @@ contains
              iagepft = get_agepft_class_index(cpatch%age,ccohort%pft)
              iscagpft = get_sizeagepft_class_index(ccohort%dbh,cpatch%age,ccohort%pft)
 
-             ! Number of plants
-             hio_nplant_si_scag(io_si,iscag) = hio_nplant_si_scag(io_si,iscag) + cohort_n_div_site_area
-             hio_nplant_si_scagpft(io_si,iscagpft) = hio_nplant_si_scagpft(io_si,iscagpft) + cohort_n_div_site_area
-             canlayer: if (ccohort%canopy_layer .eq. 1) then
-                hio_nplant_canopy_si_scag(io_si,iscag) = hio_nplant_canopy_si_scag(io_si,iscag) + cohort_n_div_site_area
-             else canlayer
-                hio_nplant_understory_si_scag(io_si,iscag) = hio_nplant_understory_si_scag(io_si,iscag) + cohort_n_div_site_area
-             end if canlayer
-
              ! Biomass
              sapw_m   = ccohort%prt%GetState(sapw_organ, carbon12_element)
              struct_m = ccohort%prt%GetState(struct_organ, carbon12_element)
@@ -4885,6 +4874,8 @@ contains
                 hio_npp_si_agepft(io_si,iagepft) = hio_npp_si_agepft(io_si,iagepft) + &
                      ccohort%npp_acc_hold / days_per_year / sec_per_day &  ! [kgC/indiv/yr] -> [kgC/s]
                      * cohort_n_div_site_area
+                hio_nplant_si_scag(io_si,iscag) = hio_nplant_si_scag(io_si,iscag) + cohort_n_div_site_area
+                hio_nplant_si_scagpft(io_si,iscagpft) = hio_nplant_si_scagpft(io_si,iscagpft) + cohort_n_div_site_area
 
                 ! Canopy vs. understory variables
                 mort = ccohort%SumMortForHistory(per_year = .true.)
@@ -4894,12 +4885,14 @@ contains
                    hio_ddbh_canopy_si_scag(io_si,iscag) = hio_ddbh_canopy_si_scag(io_si,iscag) + &
                         ccohort%ddbhdt * m_per_cm &  ! [m] -> [cm]
                         * cohort_n_div_site_area
+                   hio_nplant_canopy_si_scag(io_si,iscag) = hio_nplant_canopy_si_scag(io_si,iscag) + cohort_n_div_site_area
                 else
                    hio_mortality_understory_si_scag(io_si,iscag) = hio_mortality_understory_si_scag(io_si,   iscag) + &
                         mort * cohort_n_div_site_area
                    hio_ddbh_understory_si_scag(io_si,iscag) = hio_ddbh_understory_si_scag(io_si,iscag) + &
                         ccohort%ddbhdt * m_per_cm &  ! [m] -> [cm]
                         * cohort_n_div_site_area
+                   hio_nplant_understory_si_scag(io_si,iscag) = hio_nplant_understory_si_scag(io_si,iscag) + cohort_n_div_site_area
                 end if  ! canopy layer?
              end if  ! cohort is new?
 
