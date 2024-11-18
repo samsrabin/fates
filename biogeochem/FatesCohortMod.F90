@@ -224,23 +224,24 @@ module FatesCohortMod
     ! MORTALITY
     real(r8) :: dmort            ! proportional mortality rate [/year]
 
-    ! Mortality Rate Partitions
-    real(r8) :: bmort            ! background mortality rate [indiv/year]
-    real(r8) :: cmort            ! carbon starvation mortality rate [indiv/year]
-    real(r8) :: hmort            ! hydraulic failure mortality rate [indiv/year]
-    real(r8) :: frmort           ! freezing mortality rate [indiv/year]
-    real(r8) :: smort            ! senesence mortality [indiv/year]
-    real(r8) :: asmort           ! age senescence mortality [indiv/year]
-    real(r8) :: dgmort           ! damage mortality [indiv/year]
+    ! Mortality Rate Partitions 
+    real(r8) :: bmort            ! background mortality rate [/year]
+    real(r8) :: cmort            ! carbon starvation mortality rate [/year]
+    real(r8) :: hmort            ! hydraulic failure mortality rate [/year]
+    real(r8) :: frmort           ! freezing mortality rate [/year]
+    real(r8) :: smort            ! senesence mortality [/year]
+    real(r8) :: asmort           ! age senescence mortality [/year]
+    real(r8) :: dgmort           ! damage mortality [/year]
 
-    ! Logging Mortality Rate 
+    ! Logging Mortality Fractions
+    ! (ie fraction of existing stems lost during event)
     ! Yi Xu & M. Huang
-    real(r8) :: lmort_direct     ! directly logging rate [fraction/logging activity]
-    real(r8) :: lmort_collateral ! collaterally damaged rate [fraction/logging activity]
-    real(r8) :: lmort_infra      ! mechanically damaged rate [fraction/logging activity]
+    real(r8) :: lmort_direct     ! directly logging rate [fraction/event]
+    real(r8) :: lmort_collateral ! collaterally damaged rate [fraction/event]
+    real(r8) :: lmort_infra      ! mechanically damaged rate [fraction/event]
     real(r8) :: l_degrad         ! rate of trees that are not killed but suffer from forest degradation
                                  !  (i.e. they are moved to newly-anthro-disturbed secondary 
-                                 !  forest patch)  [fraction/logging activity]
+                                 !  forest patch)  [fraction/event]
 
     !---------------------------------------------------------------------------
 
@@ -1009,9 +1010,10 @@ module FatesCohortMod
       !
       ! DESCRIPTION:
       ! Sum the various cohort-level mortality variables for saving to history.
-      ! Units depend on per_year:
-      !    per_year  true: kg m-2 yr-1
-      !    per_year false: kg m-2 s-1
+      ! 
+      ! Output units depend on per_year:
+      !    per_year  true: yr-1
+      !    per_year false:  s-1
 
       ! ARGUMENTS:
       class(fates_cohort_type) :: this ! current cohort of interest
@@ -1026,14 +1028,14 @@ module FatesCohortMod
       ! "Natural" mortality
       mort_natural = this%bmort + this%hmort + this%cmort + this%frmort + this%smort + this%asmort + this%dgmort
       if (.not. per_year) then
-         ! Convert kg m-2 yr-1 to kg m-2 s-1
+         ! Convert yr-1 to s-1
          mort_natural = mort_natural * days_per_sec * years_per_day
       end if
 
       ! Logging mortality
       mort_logging = this%lmort_direct + this%lmort_collateral + this%lmort_infra
       if (per_year) then
-         ! Convert kg m-2 s-1 to kg m-2 yr-1
+         ! Convert s-1 to yr-1
          mort_logging = mort_logging * sec_per_day * days_per_year
       end if
 
