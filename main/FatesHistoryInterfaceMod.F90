@@ -673,6 +673,8 @@ module FatesHistoryInterfaceMod
   integer :: ih_c_lblayer_si_age
   integer :: ih_agesince_anthrodist_si
   integer :: ih_agesince_anthrodist_si_age
+  integer :: ih_secondarylands_area_si
+  integer :: ih_primarylands_area_si
   integer :: ih_secondarylands_area_si_age
   integer :: ih_primarylands_area_si_age
   integer :: ih_area_burnt_si_age
@@ -3271,6 +3273,8 @@ contains
            hio_npp_si_age                     => this%hvars(ih_npp_si_age)%r82d, &
            hio_npp_si_landuse                 => this%hvars(ih_npp_si_landuse)%r82d, &
            hio_agesince_anthrodist_si_age     => this%hvars(ih_agesince_anthrodist_si_age)%r82d, &
+           hio_secondarylands_area_si    => this%hvars(ih_secondarylands_area_si)%r81d, &
+           hio_primarylands_area_si      => this%hvars(ih_primarylands_area_si)%r81d, &
            hio_secondarylands_area_si_age    => this%hvars(ih_secondarylands_area_si_age)%r82d, &
            hio_primarylands_area_si_age      => this%hvars(ih_primarylands_area_si_age)%r82d, &
            hio_area_si_landuse               => this%hvars(ih_area_si_landuse)%r82d, &
@@ -3462,11 +3466,18 @@ contains
                         hio_agesince_anthrodist_si_age(io_si,ageclass_since_anthrodist)  &
                         + cpatch%area * AREA_INV
 
+                   hio_secondarylands_area_si(io_si) = &
+                        hio_secondarylands_area_si(io_si) &
+                        + cpatch%area * AREA_INV
+
                    hio_secondarylands_area_si_age(io_si,cpatch%age_class) = &
                         hio_secondarylands_area_si_age(io_si,cpatch%age_class) & 
                         + cpatch%area * AREA_INV
 
                 else if ( cpatch%land_use_label .eq. primaryland) then
+                   hio_primarylands_area_si(io_si) = &
+                        hio_primarylands_area_si(io_si) &
+                        + cpatch%area * AREA_INV
                    hio_primarylands_area_si_age(io_si,cpatch%age_class) = &
                         hio_primarylands_area_si_age(io_si,cpatch%age_class) & 
                         + cpatch%area * AREA_INV
@@ -7061,6 +7072,20 @@ contains
                use_default='inactive', avgflag='A', vtype=site_r8,               &
                hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
                index=ih_agesince_anthrodist_si)
+
+          call this%set_history_var(vname='FATES_SECONDARY_AREA',                    &
+               units='m2 m-2',                                                       &
+               long='secondary forest patch area since any kind of disturbance',     &
+               use_default='inactive', avgflag='A', vtype=site_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
+               index=ih_secondarylands_area_si)
+
+          call this%set_history_var(vname='FATES_PRIMARY_AREA',                      &
+               units='m2 m-2',                                                       &
+               long='primary forest patch area since any kind of disturbance',       &
+               use_default='inactive', avgflag='A', vtype=site_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables, &
+               index=ih_primarylands_area_si)
 
           call this%set_history_var(vname='FATES_SECONDARY_AREA_AP',                &
                units='m2 m-2',                                                       &
