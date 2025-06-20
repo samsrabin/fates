@@ -32,7 +32,7 @@ import subprocess
 import matplotlib.pyplot as plt
 
 from build_fortran_tests import build_tests, build_exists
-from path_utils import add_cime_lib_to_path
+from path_utils import add_cime_lib_to_path, path_to_fates_root
 from utils import copy_file, create_nc_from_cdl, config_to_dict, parse_test_list
 
 # load the functional test classes
@@ -44,14 +44,14 @@ from CIME.utils import run_cmd
 
 # constants for this script
 _FILE_DIR = os.path.dirname(__file__)
-_DEFAULT_CONFIG_FILE = os.path.join(_FILE_DIR, "functional_tests.cfg")
+_TESTING_DIR = os.path.join(path_to_fates_root(), "testing")
+_CMAKE_BASE_DIR = os.path.join(_TESTING_DIR, os.pardir)
+_DEFAULT_CONFIG_FILE = os.path.join(_TESTING_DIR, "functional_tests.cfg")
 _DEFAULT_CDL_PATH = os.path.abspath(os.path.join(
-    _FILE_DIR,
-    os.pardir,
+    path_to_fates_root(),
     "parameter_files",
     "fates_params_default.cdl",
 ))
-_CMAKE_BASE_DIR = os.path.join(_FILE_DIR, os.pardir)
 _TEST_SUB_DIR = "testing"
 
 
