@@ -7,7 +7,7 @@ import sys
 # path to the root directory of FATES, based on the path of this file
 # it's important that this NOT end with a trailing slash
 _FATES_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir)
 )
 
 

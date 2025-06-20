@@ -3,7 +3,11 @@ Builds/compiles any tests within the FATES repository
 """
 import os
 import shutil
-from path_utils import add_cime_lib_to_path
+os.chdir(os.path.dirname(os.path.dirname(__file__)))
+print(os.getcwd())
+import sys
+sys.path.insert(1, os.getcwd())
+from path_utils import add_cime_lib_to_path  # pylint: disable=wrong-import-position
 
 add_cime_lib_to_path()
 
