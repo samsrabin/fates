@@ -21,7 +21,7 @@ import os
 import argparse
 
 from build_fortran_tests import build_tests
-from path_utils import add_cime_lib_to_path
+from path_utils import add_cime_lib_to_path, path_to_fates_root
 from utils import config_to_dict, parse_test_list
 
 add_cime_lib_to_path()
@@ -30,8 +30,9 @@ from CIME.utils import run_cmd_no_fail  # pylint: disable=wrong-import-position,
 
 # constants for this script
 _FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-_CMAKE_BASE_DIR = os.path.join(_FILE_DIR, os.pardir)
-_DEFAULT_CONFIG_FILE = os.path.join(_FILE_DIR, "unit_tests.cfg")
+_TESTING_DIR = os.path.join(path_to_fates_root(), "testing")
+_CMAKE_BASE_DIR = os.path.join(_TESTING_DIR, os.pardir)
+_DEFAULT_CONFIG_FILE = os.path.join(_TESTING_DIR, "unit_tests.cfg")
 _TEST_SUB_DIR = "testing"
 
 

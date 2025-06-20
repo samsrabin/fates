@@ -7,7 +7,7 @@ os.chdir(os.path.dirname(os.path.dirname(__file__)))
 print(os.getcwd())
 import sys
 sys.path.insert(1, os.getcwd())
-from path_utils import add_cime_lib_to_path  # pylint: disable=wrong-import-position
+from path_utils import path_to_cime, add_cime_lib_to_path  # pylint: disable=wrong-import-position
 
 add_cime_lib_to_path()
 
@@ -18,7 +18,6 @@ from CIME.BuildTools.configure import configure, FakeCase # pylint: disable=wron
 from CIME.XML.env_mach_specific import EnvMachSpecific # pylint: disable=wrong-import-position,import-error,wrong-import-order
 
 # constants for this script
-_CIMEROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../cime")
 _MPI_LIBRARY = "mpi-serial"
 
 def build_tests(build_dir:str, cmake_directory:str, make_j:int, clean:bool=False, 
@@ -184,16 +183,16 @@ def run_cmake(test_dir:str, pfunit_path:str, netcdf_c_path:str, netcdf_f_path:st
     if not os.path.isfile("CMakeCache.txt"):
         
         # directory with cmake modules
-        cmake_module_dir = os.path.abspath(os.path.join(_CIMEROOT, "CIME", "non_py",
+        cmake_module_dir = os.path.abspath(os.path.join(path_to_cime(), "CIME", "non_py",
                                                         "src", "CMake"))
         # directory with genf90
-        genf90_dir = os.path.join(_CIMEROOT, "CIME", "non_py", "externals", "genf90")
+        genf90_dir = os.path.join(path_to_cime(), "CIME", "non_py", "externals", "genf90")
 
         cmake_command = [
           "cmake",
           "-C Macros.cmake",
           test_dir,
-          f"-DCIMEROOT={_CIMEROOT}",
+          f"-DCIMEROOT={path_to_cime()}",
           f"-DSRC_ROOT={get_src_root()}",
           f"-DCIME_CMAKE_MODULE_DIRECTORY={cmake_module_dir}",
           "-DCMAKE_BUILD_TYPE=CESM_DEBUG",
