@@ -1,0 +1,61 @@
+module test_Ecotypes
+  !
+  ! DESCRIPTION:
+  !  Test the FATES ecotypes code
+  !
+  use FatesConstantsMod, only : r8 => fates_r8
+  use FatesEcotypesMod, only : does_patch_have_forest_tcthresh
+  use FatesEcotypesMod, only : does_patch_have_grass_bmthresh
+  use FatesEcotypesMod, only : is_patch_forest
+  use FatesFactoryMod,  only : InitializeGlobals, GetSyntheticPatch
+  use FatesPatchMod,    only : fates_patch_type
+  use SyntheticPatchTypes, only : synthetic_patch_array_type
+  use SyntheticPatchTypes, only : forest_tree_fraction_threshold
+  use SyntheticPatchTypes, only : grass_biomass_threshold
+  use funit
+
+  implicit none
+
+  ! CONSTANTS:
+  integer,  parameter :: num_levsoil = 10      ! number of soil layers
+  real(r8), parameter :: step_size = 1800.0_r8 ! step-size [s]
+
+  @TestCase
+  type, extends(TestCase) :: TestEcotypes
+
+    type(synthetic_patch_array_type) :: patch_data
+    type(fates_patch_type), pointer  :: patch
+
+    contains
+      procedure :: setUp
+
+  end type TestEcotypes
+
+  real(r8), parameter :: tol = 1.e-7_r8
+  real(r8), parameter :: nan = 0._r8 / 0._r8
+
+  integer, parameter :: n_to_sort = 5
+
+
+  contains
+
+    subroutine setUp(this)
+      class(TestEcotypes), intent(inout) :: this
+
+      ! initialize some global data we need
+      call InitializeGlobals(step_size)
+    end subroutine setUp
+
+    @Test
+    subroutine test_isforest_tropical(this)
+      class(TestEcotypes), intent(inout) :: this
+
+      call this%patch_data%GetSyntheticPatchData('tropical')
+      call GetSyntheticPatch(this%patch_data%patches(1), num_levsoil, this%patch)
+
+      @assertTrue(does_patch_have_forest_tcthresh(this%patch, forest_tree_fraction_threshold))
+
+    end subroutine test_isforest_tropical
+
+
+  end module test_Ecotypes
