@@ -9,9 +9,6 @@ module FatesEcotypesMod
 
   ! Make public necessary subroutines and functions
   public :: is_patch_forest
-  ! For unit testing
-  public :: does_patch_have_forest_tcthresh
-  public :: does_patch_have_grass_bmthresh
 
 contains
 
