@@ -1,0 +1,43 @@
+module test_Ecotypes
+  !
+  ! DESCRIPTION:
+  !  Test the FATES ecotypes code
+  !
+  use FatesConstantsMod, only : r8 => fates_r8
+  use FatesEcotypesMod, only : does_patch_have_forest_tcthresh
+  use FatesEcotypesMod, only : does_patch_have_grass_bmthresh
+  use FatesEcotypesMod, only : is_patch_forest
+  use FatesFactoryMod,  only : InitializeGlobals, GetSyntheticPatch
+  use FatesPatchMod,    only : fates_patch_type
+  use funit
+
+  implicit none
+
+  ! CONSTANTS:
+  real(r8), parameter :: patch_area = 500.0_r8  ! m2
+
+  real(r8), parameter :: tol = 1.e-7_r8
+  real(r8), parameter :: nan = 0._r8 / 0._r8
+
+  integer, parameter :: n_to_sort = 5
+
+  @TestCase
+  type, extends(TestCase) :: TestEcotypes
+
+  end type TestEcotypes
+
+
+  contains
+
+    @Test
+    subroutine test_tcthresh_0(this)
+      class(TestEcotypes), intent(inout) :: this
+      real(r8) :: tree_area = 0
+      real(r8) :: forest_tree_fraction_threshold = 0.5
+
+      @assertFalse(does_patch_have_forest_tcthresh(patch_area, tree_area, forest_tree_fraction_threshold))
+
+    end subroutine test_tcthresh_0
+
+
+  end module test_Ecotypes

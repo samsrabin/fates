@@ -1451,7 +1451,7 @@ contains
              currentPatch%total_canopy_area = currentPatch%area
           endif
 
-          currentPatch%is_forest = is_patch_forest(currentPatch, forest_tree_fraction_threshold)
+          currentPatch%is_forest = is_patch_forest(currentPatch%area, currentPatch%total_tree_area, currentPatch%livegrass, forest_tree_fraction_threshold)
 
           currentPatch => currentPatch%younger
        end do !patch loop

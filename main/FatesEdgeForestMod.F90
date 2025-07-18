@@ -57,7 +57,7 @@ contains
         call currentPatch%UpdateTreeGrassArea()
         tree_fraction = tree_fraction + currentPatch%total_tree_area/AREA
         grass_fraction = grass_fraction + currentPatch%total_grass_area/AREA
-        currentPatch%is_forest = is_patch_forest(currentPatch, forest_tree_fraction_threshold)
+        currentPatch%is_forest = is_patch_forest(currentPatch%area, currentPatch%total_tree_area, currentPatch%livegrass, forest_tree_fraction_threshold)
       end if
       currentPatch => currentPatch%younger
     end do
