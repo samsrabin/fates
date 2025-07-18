@@ -97,7 +97,7 @@ module SyntheticPatchTypes
   
   ! --------------------------------------------------------------------------------------
   
-   subroutine AddPatch(this, patch_id, patch_name, area, ages, dbhs, densities, pft_ids, &
+   subroutine AddPatch(this, patch_name, area, ages, dbhs, densities, pft_ids, &
     canopy_layers)
     !
     ! DESCRIPTION:
@@ -106,7 +106,6 @@ module SyntheticPatchTypes
     
     ! ARGUMENTS:
     class(synthetic_patch_array_type), intent(inout) :: this              ! array of synthetic patches
-    integer,                           intent(in)    :: patch_id          ! patch id
     character(len=*),                  intent(in)    :: patch_name        ! name of patch
     real(r8),                          intent(in)    :: area              ! patch area
     real(r8),                          intent(in)    :: ages(:)           ! cohort ages [yr]
@@ -137,7 +136,7 @@ module SyntheticPatchTypes
       this%num_patches = 1
     end if 
     
-    call patch_data%InitSyntheticPatchData(patch_id, patch_name, area, ages, dbhs,       &
+    call patch_data%InitSyntheticPatchData(this%num_patches, patch_name, area, ages, dbhs,       &
       densities, pft_ids, canopy_layers)
     
     this%patches(this%num_patches) = patch_data
@@ -206,7 +205,7 @@ module SyntheticPatchTypes
     add_all = .not. present(patch_name_in)
 
     if (add_all .or. patch_name_in == 'tropical') then
-      call this%AddPatch(patch_id=1, patch_name='tropical', area=500.0_r8,                 &
+      call this%AddPatch(patch_name='tropical', area=500.0_r8,                             &
         ages=(/100.0_r8, 80.0_r8, 40.0_r8, 20.0_r8/),                                      &
         dbhs=(/60.0_r8, 50.0_r8, 25.0_r8, 10.0_r8/),                                       &
         densities=(/0.005_r8, 0.008_r8, 0.02_r8, 0.017_r8/),                               &
@@ -215,7 +214,7 @@ module SyntheticPatchTypes
     end if
     
     if (add_all .or. patch_name_in == 'evergreen') then
-      call this%AddPatch(patch_id=2, patch_name='evergreen', area=500.0_r8,                &
+      call this%AddPatch(patch_name='evergreen', area=500.0_r8,                            &
         ages=(/50.0_r8, 50.0_r8/),                                                         &
         dbhs=(/30.0_r8, 25.0_r8/),                                                         &
         densities=(/0.015_r8, 0.015_r8/),                                                  &
@@ -224,7 +223,7 @@ module SyntheticPatchTypes
     end if
       
     if (add_all .or. patch_name_in == 'savannah') then
-      call this%AddPatch(patch_id=3, patch_name='savannah', area=500.0_r8,                 &
+      call this%AddPatch(patch_name='savannah', area=500.0_r8,                             &
         ages=(/20.0_r8, 1.0_r8/),                                                          &
         dbhs=(/15.0_r8, 1.0_r8/),                                                          &
         densities=(/0.015_r8, 0.015_r8/),                                                  &
@@ -233,7 +232,7 @@ module SyntheticPatchTypes
     end if
       
     if (add_all .or. patch_name_in == 'grassland') then
-      call this%AddPatch(patch_id=4, patch_name='grassland', area=500.0_r8,                &
+      call this%AddPatch(patch_name='grassland', area=500.0_r8,                            &
         ages=(/1.0_r8, 2.0_r8/),                                                           &
         dbhs=(/1.0_r8, 1.0_r8/),                                                           &
         densities=(/0.015_r8, 0.015_r8/),                                                  &
@@ -242,7 +241,7 @@ module SyntheticPatchTypes
     end if
       
     if (add_all .or. patch_name_in == 'temperate') then
-      call this%AddPatch(patch_id=5, patch_name='temperate', area=500.0_r8,                &
+      call this%AddPatch(patch_name='temperate', area=500.0_r8,                            &
         ages=(/80.0_r8, 50.0_r8, 20.0_r8, 5.0_r8/),                                        &
         dbhs=(/50.0_r8, 30.0_r8, 15.0_r8, 3.0_r8/),                                        &
         densities=(/0.005_r8, 0.01_r8, 0.015_r8, 0.005_r8/),                               &
