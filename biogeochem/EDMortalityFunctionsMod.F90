@@ -83,6 +83,7 @@ contains
     logical, parameter :: test_zero_mortality = .false. ! Developer test which
                                                         ! may help to debug carbon imbalances
                                                         ! and the like
+                                                        
      
    ! Size Dependent Senescence
     ! rate (r) and inflection point (ip) define the increase in mortality rate with dbh
@@ -134,18 +135,28 @@ if (hlm_use_ed_prescribed_phys .eq. ifalse) then
      min_fmc = min(min_fmc_ag, min_fmc_tr)
      min_fmc = min(min_fmc, min_fmc_ar)
      flc = 1.0_r8-min_fmc
-     if(flc >= hf_flc_threshold .and. hf_flc_threshold < 1.0_r8 )then 
-       hmort = (flc-hf_flc_threshold)/(1.0_r8-hf_flc_threshold) * &
+   ! Hui hydraullic failure is irrelevant to moss and lichen, avoid doing this for moss and lichen 
+     if (EDPftvarcon_inst%stomatal_model(cohort_in%pft) == 1 .or. EDPftvarcon_inst%stomatal_model(cohort_in%pft) == 2) then  
+      if(flc >= hf_flc_threshold .and. hf_flc_threshold < 1.0_r8 )then 
+        hmort = (flc-hf_flc_threshold)/(1.0_r8-hf_flc_threshold) * &
            EDPftvarcon_inst%mort_scalar_hydrfailure(cohort_in%pft)
+      else
+       hmort = 0.0_r8
+      endif
      else
        hmort = 0.0_r8
-     endif      
+     end if      
     else
-     if(cohort_in%patchptr%btran_ft(cohort_in%pft) <= hf_sm_threshold)then 
+    ! Hui hydraullic failure is irrelevant to moss and lichen, avoid doing this for moss and lichen
+     if (EDPftvarcon_inst%stomatal_model(cohort_in%pft) == 1 .or. EDPftvarcon_inst%stomatal_model(cohort_in%pft) == 2) then
+      if(cohort_in%patchptr%btran_ft(cohort_in%pft) <= hf_sm_threshold)then 
        hmort = EDPftvarcon_inst%mort_scalar_hydrfailure(cohort_in%pft)
+      else
+       hmort = 0.0_r8
+      endif
      else
        hmort = 0.0_r8
-     endif
+     end if     
     endif 
     
     ! Carbon Starvation induced mortality.

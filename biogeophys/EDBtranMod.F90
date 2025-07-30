@@ -140,7 +140,13 @@ contains
 
              do ft = 1,numpft
 
-                call set_root_fraction(sites(s)%rootfrac_scr, ft, sites(s)%zi_soil ) 
+! Hui: Add a pft filter to avoid calculating btran for moss and lichen
+! Hui: since root fraction is set to 0, btran should be 0 for moss and lichen, no need to modify here. 
+                if (EDPftvarcon_inst%stomatal_model(ft) >= 3) then
+                   sites(s)%rootfrac_scr(:) = 0.0_r8
+                else
+                   call set_root_fraction(sites(s)%rootfrac_scr, ft, sites(s)%zi_soil ) 
+                end if 
 
                 cpatch%btran_ft(ft) = 0.0_r8
                 do j = 1,bc_in(s)%nlevsoil

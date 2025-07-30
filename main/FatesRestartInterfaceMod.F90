@@ -2892,7 +2892,7 @@ contains
    
    ! ====================================================================================
 
-   subroutine update_3dpatch_radiation(this, nsites, sites, bc_out)
+   subroutine update_3dpatch_radiation(this, nsites, sites, bc_out, bc_in)
 
      ! -------------------------------------------------------------------------
      ! This subroutine populates output boundary conditions related to radiation
@@ -2909,6 +2909,7 @@ contains
      integer                     , intent(in)            :: nsites
      type(ed_site_type)          , intent(inout), target :: sites(nsites)
      type(bc_out_type)           , intent(inout)         :: bc_out(nsites)
+     type(bc_in_type)           , intent(in)            :: bc_in(nsites)
 
      ! locals
      ! ----------------------------------------------------------------------------------
@@ -2969,19 +2970,32 @@ contains
                     bc_out(s)%albd_parb(ifp,ib) = currentPatch%gnd_alb_dir(ib)
                     bc_out(s)%albd_parb(ifp,ib) = currentPatch%gnd_alb_dif(ib)
                     bc_out(s)%ftdd_parb(ifp,ib)= 1.0_r8
-                    bc_out(s)%ftid_parb(ifp,ib)= 1.0_r8
+                    bc_out(s)%ftid_parb(ifp,ib)= 0.0_r8
                     bc_out(s)%ftii_parb(ifp,ib)= 1.0_r8
                  enddo
               else
                  
                  call PatchNormanRadiation (currentPatch, &
+                      bc_in(s)%fwet_pa(ifp),              &  ! in
+                      bc_in(s)%snow_depth_si,             &  ! in
                       bc_out(s)%albd_parb(ifp,:), &
                       bc_out(s)%albi_parb(ifp,:), &
                       bc_out(s)%fabd_parb(ifp,:), &
                       bc_out(s)%fabi_parb(ifp,:), &
                       bc_out(s)%ftdd_parb(ifp,:), &
                       bc_out(s)%ftid_parb(ifp,:), &
-                      bc_out(s)%ftii_parb(ifp,:))
+                      bc_out(s)%ftii_parb(ifp,:), 0)
+                      
+                  call PatchNormanRadiation (currentPatch, &
+                      bc_in(s)%fwet_pa(ifp),              &  ! in
+                      bc_in(s)%snow_depth_si,             &  ! in
+                      bc_out(s)%albd_parb(ifp,:), &
+                      bc_out(s)%albi_parb(ifp,:), &
+                      bc_out(s)%fabd_parb(ifp,:), &
+                      bc_out(s)%fabi_parb(ifp,:), &
+                      bc_out(s)%ftdd_parb(ifp,:), &
+                      bc_out(s)%ftid_parb(ifp,:), &
+                      bc_out(s)%ftii_parb(ifp,:), 1)
               
               endif ! is there vegetation? 
               

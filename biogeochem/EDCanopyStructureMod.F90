@@ -30,6 +30,7 @@ module EDCanopyStructureMod
   use FatesInterfaceTypesMod     , only : hlm_use_cohort_age_tracking
   use FatesInterfaceTypesMod     , only : hlm_use_sp
   use FatesInterfaceTypesMod     , only : numpft
+  use FatesInterfaceTypesMod , only : hlm_use_mosslichen, hlm_use_mosslichen_undersnow
   use FatesPlantHydraulicsMod, only : UpdateH2OVeg,InitHydrCohort, RecruitWaterStorage
   use EDTypesMod            , only : maxCohortsPerPatch
   use PRTGenericMod,          only : leaf_organ
@@ -1533,12 +1534,16 @@ contains
              currentCohort%treelai = tree_lai(leaf_c, currentCohort%pft, currentCohort%c_area, &
                   currentCohort%n, currentCohort%canopy_layer,               &
                   currentPatch%canopy_layer_tlai,currentCohort%vcmax25top )    
-
-             currentCohort%treesai = tree_sai(currentCohort%pft, currentCohort%dbh, currentCohort%canopy_trim, &
+             
+             if(hlm_use_sp.eq.ifalse)then
+                currentCohort%treesai = tree_sai(currentCohort%pft, currentCohort%dbh, currentCohort%canopy_trim, &
                   currentCohort%c_area, currentCohort%n, currentCohort%canopy_layer, &
                   currentPatch%canopy_layer_tlai, currentCohort%treelai , &
                   currentCohort%vcmax25top,4)  
-
+             end if
+             print *, "treesai=", currentCohort%treesai
+             print *, "treelai=", currentCohort%treelai
+             
              currentCohort%lai =  currentCohort%treelai *currentCohort%c_area/currentPatch%total_canopy_area 
              currentCohort%sai =  currentCohort%treesai *currentCohort%c_area/currentPatch%total_canopy_area  
 
@@ -1602,6 +1607,7 @@ contains
                         currentCohort%sai
 
                    !snow burial
+                   !Hui: snow burial is taken care in FATES, not in CLM. should modify FATES instead of CLM
                    !write(fates_log(), *) 'calc snow'
                    snow_depth_avg = snow_depth_si * frac_sno_eff_si
                    if(snow_depth_avg  > maxh(iv))then
@@ -1622,7 +1628,8 @@ contains
                    currentPatch%elai_profile(1,ft,iv) = currentPatch%tlai_profile(1,ft,iv) * fraction_exposed
                    currentPatch%esai_profile(1,ft,iv) = currentPatch%tsai_profile(1,ft,iv) * fraction_exposed
 
-                   if ( debug ) write(fates_log(), *) 'leaf_area_profile()', currentPatch%elai_profile(1,ft,iv)
+                   !if ( debug ) write(fates_log(), *) 'leaf_area_profile()', currentPatch%elai_profile(1,ft,iv)
+                   write(fates_log(), *) 'test_rad11: leaf_area_profile()', currentPatch%elai_profile(1,ft,iv), currentPatch%tlai_profile(1,ft,iv), fraction_exposed
 
                 enddo ! (iv) hite bins
 
@@ -1699,13 +1706,21 @@ contains
                    ! We calculate the absolute elevation of each layer to help determine if the layer
                    ! is obscured by snow.
 
-                   layer_top_hite = currentCohort%hite - &
+                   ! Hui: snow burial for moss and lichen, moss totally buried, lichen similar to other pft
+
+                   if ( EDPftvarcon_inst%stomatal_model(ft) == 3 ) then
+                       print *, "moss 3"
+                       layer_top_hite = 0.002
+                       layer_bottom_hite=0.001          
+                   else                   
+                     layer_top_hite = currentCohort%hite - &
                         ( real(iv-1,r8)/currentCohort%NV * currentCohort%hite *  &
                         EDPftvarcon_inst%crown(currentCohort%pft) )
 
-                   layer_bottom_hite = currentCohort%hite - &
+                     layer_bottom_hite = currentCohort%hite - &
                         ( real(iv,r8)/currentCohort%NV * currentCohort%hite * &
                         EDPftvarcon_inst%crown(currentCohort%pft) )
+                   end if
 
                    fraction_exposed = 1.0_r8
                    snow_depth_avg = snow_depth_si * frac_sno_eff_si
@@ -1717,12 +1732,16 @@ contains
                    endif
                    if( snow_depth_avg>= layer_bottom_hite .and. &
                         snow_depth_avg <= layer_top_hite) then !only partly hidden...
-                      fraction_exposed =  max(0._r8,(min(1.0_r8,(snow_depth_avg-layer_bottom_hite)/ &
+                      fraction_exposed =  max(0._r8,(min(1.0_r8,(1-(snow_depth_avg-layer_bottom_hite))/ &
                            (layer_top_hite-layer_bottom_hite ))))
                    endif
 
+! Hui: allow snow burial in this option; for vegetation under snow, snow burial needs to be treated in a different way.
                    ! =========== OVER-WRITE =================
-                   fraction_exposed= 1.0_r8
+                   !if ((hlm_use_mosslichen_undersnow.eq.itrue .or. ((hlm_use_mosslichen_undersnow.eq.2).and.(bc_in(s)%snow_depth_si>0.05))) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3 ) then
+                    if ((hlm_use_mosslichen_undersnow.eq.itrue .or. hlm_use_mosslichen_undersnow.eq.2) .and. EDPftvarcon_inst%stomatal_model(ft) >= 3 ) then
+                          fraction_exposed= 1.0_r8
+                   end if
                    ! =========== OVER-WRITE =================
 
                    if(iv==currentCohort%NV) then
@@ -1744,6 +1763,7 @@ contains
                    currentPatch%elai_profile(cl,ft,iv) = currentPatch%elai_profile(cl,ft,iv) + &
                         remainder * fleaf * currentCohort%c_area/currentPatch%total_canopy_area * &
                         fraction_exposed
+                   print *, "test_rad12: elai_profile=", currentPatch%elai_profile(cl,ft,iv), remainder, fleaf, currentCohort%c_area, currentPatch%total_canopy_area, fraction_exposed
 
                    currentPatch%tsai_profile(cl,ft,iv) = currentPatch%tsai_profile(cl,ft,iv) + &
                         remainder * (1._r8 - fleaf) * currentCohort%c_area/currentPatch%total_canopy_area
@@ -2072,7 +2092,7 @@ contains
     real(r8) :: ai
     ! TODO: THIS MIN LAI IS AN ARTIFACT FROM TESTING LONG-AGO AND SHOULD BE REMOVED
     ! THIS HAS BEEN KEPT THUS FAR TO MAINTAIN B4B IN TESTING OTHER COMMITS
-    real(r8),parameter :: ai_min = 0.1_r8
+    real(r8),parameter :: ai_min = 0.0_r8
     real(r8),pointer   :: ai_profile
 
     ai = 0._r8

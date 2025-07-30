@@ -205,6 +205,8 @@ contains
     fates%bc_in(s)%pop_density(:)      = 0.0_r8
     fates%bc_in(s)%solad_parb(:,:)     = 0.0_r8
     fates%bc_in(s)%solai_parb(:,:)     = 0.0_r8
+    fates%bc_in(s)%flx_absdv(:)        = 0.0_r8
+    fates%bc_in(s)%flx_absiv(:)        = 0.0_r8
     fates%bc_in(s)%smp_sl(:)           = 0.0_r8
     fates%bc_in(s)%eff_porosity_sl(:)  = 0.0_r8
     fates%bc_in(s)%watsat_sl(:)        = 0.0_r8
@@ -418,6 +420,8 @@ contains
       ! Radiation
       allocate(bc_in%solad_parb(maxPatchesPerSite,hlm_numSWb))
       allocate(bc_in%solai_parb(maxPatchesPerSite,hlm_numSWb))
+      allocate(bc_in%flx_absdv(maxPatchesPerSite))
+      allocate(bc_in%flx_absiv(maxPatchesPerSite))
       
       ! Hydrology
       allocate(bc_in%smp_sl(nlevsoil_in))
@@ -440,8 +444,10 @@ contains
       allocate(bc_in%cair_pa(maxPatchesPerSite))
       allocate(bc_in%rb_pa(maxPatchesPerSite))
       allocate(bc_in%t_veg_pa(maxPatchesPerSite))
+      allocate(bc_in%t_moss_pa(maxPatchesPerSite))
       allocate(bc_in%tgcm_pa(maxPatchesPerSite))
       allocate(bc_in%t_soisno_sl(nlevsoil_in))
+      allocate(bc_in%fwet_pa(maxPatchesPerSite))
 
       ! Canopy Radiation
       allocate(bc_in%filter_vegzen_pa(maxPatchesPerSite))
@@ -476,13 +482,13 @@ contains
          allocate(bc_in%hlm_harvest_catnames(0))
       end if
 
-      allocate(bc_in%pft_areafrac(maxpft))
+      allocate(bc_in%pft_areafrac(0:maxpft))
 
       ! Variables for SP mode. 
       if(hlm_use_sp.eq.itrue) then
-        allocate(bc_in%hlm_sp_tlai(maxpft))
-        allocate(bc_in%hlm_sp_tsai(maxpft))     
-        allocate(bc_in%hlm_sp_htop(maxpft))
+        allocate(bc_in%hlm_sp_tlai(0:maxpft))
+        allocate(bc_in%hlm_sp_tsai(0:maxpft))     
+        allocate(bc_in%hlm_sp_htop(0:maxpft))
       end if 
       return
    end subroutine allocate_bcin
@@ -1186,6 +1192,9 @@ contains
          hlm_use_fixed_biogeog = unset_int
          hlm_use_nocomp = unset_int   
          hlm_use_sp = unset_int
+         hlm_use_mosslichen = unset_int
+         hlm_use_mosslichen_undersnow = unset_int
+         hlm_use_mosslichen_photosyn = unset_int
          hlm_use_inventory_init = unset_int
          hlm_inventory_ctrl_file = 'unset'
 
@@ -1465,17 +1474,38 @@ contains
          end if
 
          if(hlm_use_nocomp.eq.unset_int) then
-              if(fates_global_verbose()) then
-             write(fates_log(), *) 'switch for no competition mode. '
+            if(fates_global_verbose()) then
+             write(fates_log(), *) 'switch for no competition mode unset: hlm_use_nocomp, exiting'
             end if
            call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
 
          if(hlm_use_sp.eq.unset_int) then
-              if(fates_global_verbose()) then
-             write(fates_log(), *) 'switch for SP mode. '
+            if(fates_global_verbose()) then
+             write(fates_log(), *) 'switch for SP mode unset: hlm_use_sp, exiting'
             end if
 	       call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+         
+         if(hlm_use_mosslichen.eq.unset_int) then
+            if(fates_global_verbose()) then
+             write(fates_log(), *) 'switch for moss&lichen mode unset: hlm_use_mosslichen, exiting'
+            end if
+         call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+         
+         if(hlm_use_mosslichen_undersnow.eq.unset_int) then
+            if(fates_global_verbose()) then
+              write(fates_log(), *) 'switch for moss&lichen undersnow mode unset: hlm_use_mosslichen_undersnow, exiting'
+            end if
+         call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if(hlm_use_mosslichen_photosyn.eq.unset_int) then
+            if(fates_global_verbose()) then
+              write(fates_log(), *) 'Types of moss&lichen photosynthesis unset: hlm_use_mosslichen_photosyn, exiting'
+            end if
+         call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
 
          if(hlm_use_cohort_age_tracking .eq. unset_int) then
@@ -1490,9 +1520,18 @@ contains
             call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
 
-
          if(hlm_use_sp.eq.itrue.and.hlm_use_fixed_biogeog.eq.ifalse)then
             write(fates_log(), *) 'SP cannot be on if fixed biogeog mode is off. Exiting. '
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if(hlm_use_mosslichen_undersnow.eq.itrue .and. hlm_use_mosslichen.eq.ifalse)then
+            write(fates_log(), *) 'hlm_use_mosslichen_undersnow cannot be on if moss&lichen mode is off. Exiting. '
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+         
+         if(hlm_use_mosslichen_photosyn >= 4)then
+            write(fates_log(), *) 'hlm_use_mosslichen_photosyn cannot be over 3. Exiting.'
             call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
          
@@ -1624,9 +1663,27 @@ contains
 
             case('use_sp')
             hlm_use_sp = ival
-            if (fates_global_verbose()) then
+               if (fates_global_verbose()) then
                    write(fates_log(),*) 'Transfering hlm_use_sp= ',ival,' to FATES'
-            end if
+               end if
+            
+            case('use_mosslichen')
+            hlm_use_mosslichen = ival
+               if (fates_global_verbose()) then
+                   write(fates_log(),*) 'Transfering hlm_use_mosslichen= ',ival,' to FATES'
+               end if
+               
+            case('use_mosslichen_undersnow')
+            hlm_use_mosslichen_undersnow = ival
+               if (fates_global_verbose()) then
+                    write(fates_log(),*) 'Transfering hlm_use_mosslichen_undersnow= ',ival,' to FATES'
+               end if
+               
+             case('use_mosslichen_photosyn')
+             hlm_use_mosslichen_photosyn = ival
+                if (fates_global_verbose()) then
+                     write(fates_log(),*) 'Transfering hlm_use_mosslichen_photosyn= ',ival,' to FATES'
+                end if
 
             case('use_planthydro')
                hlm_use_planthydro = ival

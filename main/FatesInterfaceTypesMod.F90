@@ -188,6 +188,21 @@ module FatesInterfaceTypesMod
 
   integer, public ::  hlm_use_sp                                    !  Flag to use FATES satellite phenology (LAI) mode
                                                                     !  1 = TRUE, 0 = FALSE
+                                                                    
+  integer, public ::  hlm_use_mosslichen                            ! Flag to use FATES moss and lichen functionalities: 
+                                                                    ! photosynthesis, radiation (implemented)
+                                                                    ! carbon allocation, nutrient cycle, fire, cohort&patch dynamics (not yet implemented) 
+                                                                    ! 1 = TRUE, 0= FALSE
+                                                                    
+  integer, public ::  hlm_use_mosslichen_undersnow                  ! Flag to allow the existence of moss&lichen under snow for radiation and photosynthesis. 
+                                                                    ! This flag can be used for more pfts (e.g., dwarf shrub) in the cold region,
+                                                                    ! if their impact on radiation and photosynthesis when they are under snow is not negligible.
+                                                                    ! 1 = TRUE, 0= FALSE
+  integer, public ::  hlm_use_mosslichen_photosyn                   ! Flag to run different type of photosynthesis for moss and lichen
+                                                                    ! 1: normal photosynthesis as other pfts with stomatal control (for testing purpose)
+                                                                    ! 2: moss and lichen photosynthesis without stomatal control (default, https://doi.org/10.5194/bg-10-6989-2013)
+                                                                    ! 3: moss and lichen photosynthesis with explicit treatment of Mesophyll conductance (not implemented yet, https://doi.org/10.1111/nph.15675; https://doi.org/10.1111/tpj.14587)
+
    ! -------------------------------------------------------------------------------------
    ! Parameters that are dictated by FATES and known to be required knowledge
    !  needed by the HLMs
@@ -373,7 +388,12 @@ module FatesInterfaceTypesMod
 
       ! Downwelling diffuse (I-ndirect) radiation (patch,radiation-band) [W/m2]
       real(r8), allocatable :: solai_parb(:,:)
+      
+      ! direct flux absorption factor for bottom snow-soil layer, i.e., top soil layer (patch): VIS [frc]
+      real(r8), allocatable :: flx_absdv(:)  
 
+      ! diffuse flux absorption factor for bottom snow-soil layer, i.e., top soil layer (patch): VIS [frc]
+      real(r8), allocatable :: flx_absiv(:)
       
       ! Nutrient input fluxes (these are integrated fluxes over the day, most
       !                        likely calculated over shorter dynamics steps,
@@ -427,6 +447,12 @@ module FatesInterfaceTypesMod
 
       ! soil temperature (Kelvin)
       real(r8), allocatable :: t_soisno_sl(:)
+      
+      ! moss temperature patch level(Kelvin)
+      real(r8), allocatable :: t_moss_pa(:)
+      
+      ! vegetation water fraction
+      real(r8), allocatable :: fwet_pa(:) 
 
       ! Canopy Radiation Boundaries
       ! ---------------------------------------------------------------------------------
@@ -462,6 +488,7 @@ module FatesInterfaceTypesMod
 
       real(r8) :: snow_depth_si    ! Depth of snow in snowy areas of site (m)
       real(r8) :: frac_sno_eff_si  ! Fraction of ground covered by snow (0-1)
+      
 
       ! Hydrology variables for BTRAN
       ! ---------------------------------------------------------------------------------

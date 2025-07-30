@@ -190,8 +190,8 @@ contains
     if (hlm_use_ed_st3.eq.ifalse)then
       if(hlm_use_sp.eq.ifalse) then
         call phenology(currentSite, bc_in )
-      else 
-        call satellite_phenology(currentSite, bc_in )
+ !     else 
+ !       call satellite_phenology(currentSite, bc_in )
       end if ! SP phenology
     end if
 

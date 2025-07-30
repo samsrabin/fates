@@ -2184,7 +2184,11 @@ contains
     do while(associated(currentCohort))
        pft = currentCohort%pft        
 
-       call set_root_fraction(currentSite%rootfrac_scr, pft, currentSite%zi_soil)
+       if (EDPftvarcon_inst%stomatal_model(pft) >= 3) then
+          currentSite%rootfrac_scr(:) = 0.0_r8
+       else
+          call set_root_fraction(currentSite%rootfrac_scr, pft, currentSite%zi_soil) 
+       end if 
 
        leaf_m_turnover   = currentCohort%prt%GetTurnover(leaf_organ,element_id)
        store_m_turnover  = currentCohort%prt%GetTurnover(store_organ,element_id)

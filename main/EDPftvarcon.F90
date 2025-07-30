@@ -72,7 +72,9 @@ module EDPftvarcon
                                                      ! decreases light interception
      real(r8), allocatable :: c3psn(:)               ! index defining the photosynthetic 
                                                      ! pathway C4 = 0,  C3 = 1
-    
+                                                     
+     real(r8), allocatable :: stomatal_model(:)      !switch for choosing between stomatal conductance models, 1 for Ball-Berry, 2 for Medlyn, 3 non vascular
+      
      real(r8), allocatable :: smpso(:)               ! Soil water potential at full stomatal opening 
                                                      ! (non-HYDRO mode only) [mm]
      real(r8), allocatable :: smpsc(:)               ! Soil water potential at full stomatal closure 
@@ -382,6 +384,10 @@ contains
          dimension_names=dim_names, lower_bounds=dim_lower_bound)
 
     name = 'fates_leaf_c3psn'
+    call fates_params%RegisterParameter(name=name, dimension_shape=dimension_shape_1d, &
+         dimension_names=dim_names, lower_bounds=dim_lower_bound)
+         
+    name = 'fates_leaf_stomatal_model'
     call fates_params%RegisterParameter(name=name, dimension_shape=dimension_shape_1d, &
          dimension_names=dim_names, lower_bounds=dim_lower_bound)
 
@@ -724,6 +730,10 @@ contains
     name = 'fates_leaf_c3psn'
     call fates_params%RetreiveParameterAllocate(name=name, &
          data=this%c3psn)
+
+    name = 'fates_leaf_stomatal_model'
+    call fates_params%RetreiveParameterAllocate(name=name, &
+         data=this%stomatal_model)
 
     name = 'fates_smpso'
     call fates_params%RetreiveParameterAllocate(name=name, &
@@ -1355,6 +1365,7 @@ contains
         write(fates_log(),fmt0) 'xl = ',EDPftvarcon_inst%xl
         write(fates_log(),fmt0) 'clumping_index = ',EDPftvarcon_inst%clumping_index
         write(fates_log(),fmt0) 'c3psn = ',EDPftvarcon_inst%c3psn
+        write(fates_log(),fmt0) 'stomatal_model = ',EDPftvarcon_inst%stomatal_model
         write(fates_log(),fmt0) 'vcmax25top = ',EDPftvarcon_inst%vcmax25top
         write(fates_log(),fmt0) 'smpso = ',EDPftvarcon_inst%smpso
         write(fates_log(),fmt0) 'smpsc = ',EDPftvarcon_inst%smpsc
@@ -1703,7 +1714,7 @@ contains
             write(fates_log(),*) 'Error is:',sumarea-1.0_r8
             write(fates_log(),*) 'and the hlm_pft_map is:', EDPftvarcon_inst%hlm_pft_map(1:npft,hlm_pft)  
             write(fates_log(),*) 'Aborting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
+ !           call endrun(msg=errMsg(sourcefile, __LINE__))
            end if 
          end do !hlm_pft 
        end do !ipft

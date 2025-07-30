@@ -617,7 +617,6 @@ variables:
 	double fates_init_litter ;
 		fates_init_litter:units = "NA" ;
 		fates_init_litter:long_name = "Initialization value for litter pool in cold-start (NOT USED)" ;
-!Hui
 	double fates_leaf_stomatal_model(fates_pft) ;
 		fates_leaf_stomatal_model:units = "unitless" ;
 		fates_leaf_stomatal_model:long_name = "switch for choosing between Ball-Berry (1) stomatal conductance model and Medlyn (2) model and non-vascular plant without stomatal control" ;
@@ -766,7 +765,7 @@ data:
 
  fates_allom_d2ca_coefficient_max = 0.6568464, 0.6568464, 0.6568464, 
     0.6568464, 0.6568464, 0.6568464, 0.6568464, 0.6568464, 0.6568464, 
-    0.6568464, 0.6568464, 0.6568464 ;
+    0.6568464, 0.6568464, 0.6568464, 0.6568464, 0.6568464 ;
 
  fates_allom_d2ca_coefficient_min = 0.3381119, 0.3381119, 0.3381119, 
     0.3381119, 0.3381119, 0.3381119, 0.3381119, 0.3381119, 0.3381119, 
@@ -809,7 +808,6 @@ data:
 
  fates_c2b = 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 ;
 
-! Hui: can be higher for moss and lichen
  fates_displar = 0.67, 0.67, 0.67, 0.67, 0.67, 0.67, 0.67, 0.67, 0.67, 0.67, 
     0.67, 0.67, 0.67, 0.67 ;
 
@@ -848,14 +846,13 @@ data:
 
  fates_fire_bark_scaler = 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 
     0.07, 0.07, 0.07, 0.07, 0.07, 0.07 ;
-! Hui: modify for moss and lichen, to be similar to grass or shrub
+
  fates_fire_crown_depth_frac = 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.95, 0.95, 
     0.95, 1, 1, 1, 1, 1 ;
 
  fates_fire_crown_kill = 0.775, 0.775, 0.775, 0.775, 0.775, 0.775, 0.775, 
     0.775, 0.775, 0.775, 0.775, 0.775, 0.775, 0.775 ;
 
-! Hui, no root for moss and lichen, a and b should be 0, "mode" is not relevant
  fates_fnrt_prof_a = 7, 7, 7, 7, 6, 6, 7, 7, 7, 11, 11, 11, 0, 0 ;
 
  fates_fnrt_prof_b = 1, 2, 2, 1, 2, 2, 1.5, 1.5, 1.5, 2, 2, 2, 0, 0 ;
@@ -869,7 +866,7 @@ data:
 
  fates_fr_flig = 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 
     0.25, 0.25 ;
-! Hui: can be modified for moss and lichen
+
  fates_grperc = 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 
     0.11, 0.11 ;
 
@@ -889,7 +886,7 @@ data:
   8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 ;
 
  fates_hydr_fcap_node =
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08,
   0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ;
@@ -955,13 +952,12 @@ data:
 
  fates_leaf_c3psn = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1 ;
 
-! Hui: clumping index affect extinct coefficient of solar radilation, should be modified by to have higher value of clumping or similar to grass
  fates_leaf_clumping_index = 0.85, 0.85, 0.8, 0.85, 0.85, 0.9, 0.85, 0.9, 
-    0.9, 0.75, 0.75, 0.75, 0.75, 0.75 ;
-! Hui: characteristic dimension of the leaves in the direction of wind flow, affect resistence of leaf
+    0.9, 0.75, 0.75, 0.75, 10, 10 ;
+
  fates_leaf_diameter = 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 
     0.04, 0.04, 0.04, 0.04, 0.04 ;
-! Hui: will need modification
+
  fates_leaf_jmaxha = 43540, 43540, 43540, 43540, 43540, 43540, 43540, 43540, 
     43540, 43540, 43540, 43540, 43540, 43540 ;
 
@@ -978,16 +974,13 @@ data:
     0.03, 0.03, 0.03, 0.03, 0.03, 0.01, 0.01 ;
 
  fates_leaf_slatop = 0.012, 0.01, 0.024, 0.012, 0.03, 0.03, 0.012, 0.03, 
-    0.03, 0.03, 0.03, 0.03 ;
+    0.03, 0.03, 0.03, 0.03, 0.03, 0.03 ;
 
-!Hui, this should have higher value for moss and lichen
  fates_leaf_stomatal_intercept = 10000, 10000, 10000, 10000, 10000, 10000, 
     10000, 10000, 10000, 10000, 10000, 40000, 10000, 10000 ;
 
-!Hui "bb_slop" in code should be high or low for moss and lichen? (bug) C4 plant should have low value???? 
  fates_leaf_stomatal_slope_ballberry = 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 ;
 
-!Hui "g1" in code shoudd be high or low for moss and lichen? 
  fates_leaf_stomatal_slope_medlyn = 4.1, 2.3, 2.3, 4.1, 4.4, 4.4, 4.7, 4.7, 
     4.7, 2.2, 5.3, 1.6, 2.2, 2.2 ;
 
@@ -1002,7 +995,6 @@ data:
 
  fates_leaf_tpuse = 490, 490, 490, 490, 490, 490, 490, 490, 490, 490, 490, 490, 490, 490 ;
 
-!Hui value for moss and lichen are from Druel GMD 2017
  fates_leaf_vcmax25top =
   50, 65, 39, 62, 41, 58, 62, 54, 54, 78, 78, 78, 28, 28 ;
 
@@ -1015,9 +1007,8 @@ data:
  fates_leaf_vcmaxse = 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 
     485 ;
 
-! Hui: leaf orientation needs to be modified, -1 means vertical orientation
  fates_leaf_xl = 0.1, 0.01, 0.01, 0.1, 0.01, 0.25, 0.01, 0.25, 0.25, -0.3, 
-    -0.3, -0.3, -0.3, -0.3 ;
+    -0.3, -0.3, 0, 0 ;
 
  fates_lf_fcel = 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 ;
 
@@ -1038,11 +1029,9 @@ data:
  fates_mort_freezetol = 2.5, -55, -80, -30, 2.5, -30, -60, -10, -80, -80, 
     -20, 2.5, 0, 0 ;
 
-!Hui: irrelevant to moss and lichen, set to 0 
  fates_mort_hf_flc_threshold = 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
     0.5, 0.5, 0.5, 0, 0 ;
 
-! Hui Hydraulic failure if btran is too small, irrelevant to moss and lichen, set to 0
  fates_mort_hf_sm_threshold = 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 
     1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 0, 0 ;
 
@@ -1059,7 +1048,6 @@ data:
  fates_mort_scalar_cstarvation = 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 
     0.6, 0.6, 0.6 ;
 
- !Hui: irrelevant to moss and lichen, parameter for daught motality if use fates_hydro
  fates_mort_scalar_hydrfailure = 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 
     0.6, 0.6, 0.6, 0, 0 ;
 
@@ -1068,7 +1056,7 @@ data:
  fates_nfix2 = _, _, _, _, _, _, _, _, _, _, _, _, _, _ ;
 
  fates_phen_cold_size_threshold = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ;
-Hui: phenology evergreen?
+
  fates_phen_evergreen = 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1 ;
 
  fates_phen_season_decid = 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0 ;
@@ -1077,7 +1065,7 @@ Hui: phenology evergreen?
 
  fates_phen_stress_decid = 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0 ;
 
- fates_phenflush_fraction = _, _, 0.5, _, 0.5, 0.5, _, 0.5, 0.5, 0.5, 0.5, 0.5, _, _, ;
+ fates_phenflush_fraction = _, _, 0.5, _, 0.5, 0.5, _, 0.5, 0.5, 0.5, 0.5, 0.5, _, _ ;
 
  fates_prescribed_mortality_canopy = 0.0194, 0.0194, 0.0194, 0.0194, 0.0194, 
     0.0194, 0.0194, 0.0194, 0.0194, 0.0194, 0.0194, 0.0194, 0.0194, 0.0194 ;
@@ -1106,9 +1094,8 @@ Hui: phenology evergreen?
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ;
 
-! Hui need to modify nitrogen content for top leaf which determin photosynthetic and respiration rate for moss and lichen
  fates_prt_nitr_stoich_p1 =
-  0.033, 0.029, 0.04, 0.033, 0.04, 0.04, 0.033, 0.04, 0.04, 0.04, 0.04, 0.04,
+  0.033, 0.029, 0.04, 0.033, 0.04, 0.04, 0.033, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,
   0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 
     0.024, 0.024, 0.024, 0.024,
   1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 
@@ -1120,7 +1107,7 @@ Hui: phenology evergreen?
     0.0047, 0.0047, 0.0047, 0.0047, 0.0047 ;
 
  fates_prt_nitr_stoich_p2 =
-  0.033, 0.029, 0.04, 0.033, 0.04, 0.04, 0.033, 0.04, 0.04, 0.04, 0.04, 0.04,
+  0.033, 0.029, 0.04, 0.033, 0.04, 0.04, 0.033, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,
   0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 0.024, 
     0.024, 0.024, 0.024, 0.024,
   1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 1e-08, 
@@ -1163,7 +1150,6 @@ Hui: phenology evergreen?
  fates_recruit_initd = 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 
     0.2 ;
     
-!Hui: reflectance need to be modified for moss and lichen
  fates_rholnir = 0.45, 0.35, 0.35, 0.45, 0.45, 0.45, 0.35, 0.45, 0.45, 0.35, 
     0.35, 0.35, 0.35, 0.37 ;
 
@@ -1200,18 +1186,17 @@ Hui: phenology evergreen?
  fates_smpso = -66000, -66000, -66000, -66000, -66000, -66000, -66000, 
     -66000, -66000, -66000, -66000, -66000, -66000, -66000 ;
 
-! Hui: leaf transmittance needs to be modified for moss and lichen
  fates_taulnir = 0.25, 0.1, 0.1, 0.25, 0.25, 0.25, 0.1, 0.25, 0.25, 0.34, 
-    0.34, 0.34, 0.34, 0.25 ;
+    0.34, 0.34, 0.01, 0.01 ;
 
  fates_taulvis = 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 
-    0.05, 0.05, 0.05, 0.12 ;
+    0.05, 0.05, 0.01, 0.01 ;
 
  fates_tausnir = 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 
-    0.001, 0.25, 0.25, 0.25, 0.25, 0.25 ;
+    0.001, 0.25, 0.25, 0.25, 0.01, 0.01 ;
 
  fates_tausvis = 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 
-    0.001, 0.12, 0.12, 0.12, 0.12, 0.12 ;
+    0.001, 0.12, 0.12, 0.12, 0.01, 0.01 ;
 
  fates_trim_inc = 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 
     0.03, 0.03 ;
@@ -1248,7 +1233,7 @@ Hui: phenology evergreen?
     0.7 ;
 
  fates_woody = 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 ;
-Hui: modify for moss and lichen
+
  fates_z0mr = 0.055, 0.055, 0.055, 0.055, 0.055, 0.055, 0.055, 0.055, 0.055, 
     0.055, 0.055, 0.055, 0.055, 0.055 ;
 
@@ -1342,7 +1327,6 @@ Hui: modify for moss and lichen
 
  fates_init_litter = 0.05 ;
 
-! Hui
  fates_leaf_stomatal_model = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 4;
 
  fates_logging_coll_under_frac = 0.55983 ;
