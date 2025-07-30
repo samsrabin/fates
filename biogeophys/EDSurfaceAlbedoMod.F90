@@ -999,7 +999,7 @@ contains
                     fabi_parb_out(ib) = currentPatch%fabi(ib)
                 endif
 
-             !radiation absorbed from fluxes through unfilled part of lower canopy.
+                !radiation absorbed from fluxes through unfilled part of lower canopy.
                 if (currentPatch%NCL_p > 1.and.L == currentPatch%NCL_p)then 
                    abs_rad(ib) = abs_rad(ib) + weighted_dif_down(L-1) * &
                         (1.0_r8-sum(ftweight(L,1:numpft,1)))*(1.0_r8-currentPatch%gnd_alb_dif(ib) )
