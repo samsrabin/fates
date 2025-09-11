@@ -2449,6 +2449,7 @@ contains
     real(r8) :: site_ba            ! Site basal area used for weighting
     real(r8) :: cohort_ba          ! Cohort basal area
     real(r8) :: site_ca            ! Site crown area used for weighting
+    real(r8) :: site_va            ! Site vegetated area used for weighting (sum of all non-bareground patch areas) [m2]
     real(r8) :: store_max          ! Maximum storage capacity for carbon and nutrients
     real(r8) :: sapw_m             ! Sapwood mass (elemental, c,n or p) [kg/plant]
     real(r8) :: struct_m           ! Structural mass ""
@@ -2579,6 +2580,14 @@ contains
 
          site_ba = 0._r8
          site_ca = 0._r8
+         site_va = 0._r8
+         cpatch => sites(s)%oldest_patch
+         do while(associated(cpatch))
+            if (cpatch%nocomp_pft_label /= nocomp_bareground) then
+                site_va = site_va + cpatch%area
+            end if
+            cpatch => cpatch%younger
+         end do
 
          call this%zero_site_hvars(sites(s),upfreq_in=group_dyna_simple)
          
@@ -2788,16 +2797,10 @@ contains
             ! define scalar to counteract the patch albedo scaling logic for conserved quantities
 
             ! Update Fire Variables
-            hio_spitfire_ros_si(io_si)         = hio_spitfire_ros_si(io_si) + cpatch%ROS_front * cpatch%area * AREA_INV / sec_per_min
-            hio_tfc_ros_si(io_si)              = hio_tfc_ros_si(io_si) + cpatch%TFC_ROS * cpatch%area * AREA_INV
-            hio_fire_intensity_si(io_si)       = hio_fire_intensity_si(io_si) + cpatch%FI * cpatch%area * AREA_INV * J_per_kJ
             hio_fire_fracarea_si(io_si)        = hio_fire_fracarea_si(io_si) + cpatch%frac_burnt * cpatch%area * AREA_INV / sec_per_day
-            hio_nonrx_intensity_si(io_si)      = hio_nonrx_intensity_si(io_si) + cpatch%nonrx_FI * cpatch%area * AREA_INV * J_per_kJ
             hio_nonrx_fracarea_si(io_si)       = hio_nonrx_fracarea_si(io_si) + cpatch%nonrx_frac_burnt * cpatch%area * AREA_INV / sec_per_day
-            hio_rx_intensity_si(io_si)         = hio_rx_intensity_si(io_si) + cpatch%rx_FI * cpatch%area * AREA_INV * J_per_kJ
             hio_rx_fracarea_si(io_si)          = hio_rx_fracarea_si(io_si) + cpatch%rx_frac_burnt * cpatch%area * AREA_INV / sec_per_day
             hio_fire_fuel_bulkd_si(io_si)      = hio_fire_fuel_bulkd_si(io_si) + cpatch%fuel%bulk_density_notrunks * cpatch%area * AREA_INV
-            hio_fire_fuel_eff_moist_si(io_si)  = hio_fire_fuel_eff_moist_si(io_si) + cpatch%fuel%average_moisture_notrunks * cpatch%area * AREA_INV
             hio_fire_fuel_sav_si(io_si)        = hio_fire_fuel_sav_si(io_si) + cpatch%fuel%SAV_notrunks * cpatch%area * AREA_INV / m_per_cm
             hio_fire_fuel_mef_si(io_si)        = hio_fire_fuel_mef_si(io_si) + cpatch%fuel%MEF_notrunks * cpatch%area * AREA_INV
             hio_sum_fuel_si(io_si)             = hio_sum_fuel_si(io_si) + cpatch%fuel%non_trunk_loading * cpatch%area * AREA_INV
@@ -2811,24 +2814,67 @@ contains
             hio_fire_intensity_fracarea_product_si(io_si) = hio_fire_intensity_fracarea_product_si(io_si) + &
                  cpatch%FI * cpatch%frac_burnt * cpatch%area * AREA_INV * J_per_kJ
 
-            hio_fire_fdi_si(io_si) = hio_fire_fdi_si(io_si) + &
-               cpatch%FDI * cpatch%area * AREA_INV
+           ! TODO: Remove this conditional. Added to test that answer changes are just from effects
+           ! on the bareground patch. So include here anything that doesn't depend on bare ground
+           ! fire weather. Note that bare ground fuel amount and bare ground burned area don't
+           ! depend on weather, as they will always be zero.
+           if (cpatch%nocomp_pft_label /= nocomp_bareground) then
+              hio_fire_fdi_si(io_si) = hio_fire_fdi_si(io_si) + &
+                 cpatch%FDI * cpatch%area / site_va
 
-            ! number of ignitions [#/km2/day -> #/m2/s]
-            hio_fire_nignitions_si(io_si) =  hio_fire_nignitions_si(io_si) + \
-                 cpatch%NF_successful / m2_per_km2 / sec_per_day * \
-                 cpatch%area * AREA_INV
+              ! number of ignitions [#/km2/day -> #/m2/s]
+              hio_fire_nignitions_si(io_si) =  hio_fire_nignitions_si(io_si) + \
+                   cpatch%NF_successful / m2_per_km2 / sec_per_day * \
+                   cpatch%area / site_va
 
-            ! Nesterov index (unitless)
-            hio_nesterov_fire_danger_si(io_si) = hio_nesterov_fire_danger_si(io_si) + &
-                 cpatch%fireWeather%fire_weather_index * cpatch%area * AREA_INV
+              ! Nesterov index (unitless)
+              hio_nesterov_fire_danger_si(io_si) = hio_nesterov_fire_danger_si(io_si) + &
+                   cpatch%fireWeather%fire_weather_index * cpatch%area / site_va
 
-            hio_effect_wspeed_si(io_si) = hio_effect_wspeed_si(io_si) + &
-                 cpatch%fireWeather%effective_windspeed/sec_per_min * cpatch%area * AREA_INV
+              hio_effect_wspeed_si(io_si) = hio_effect_wspeed_si(io_si) + &
+                   cpatch%fireWeather%effective_windspeed/sec_per_min * cpatch%area / site_va
 
-            ! Prescribed fire burn window
-            hio_rx_burn_window_si(io_si) = hio_rx_burn_window_si(io_si) + &
-                 cpatch%fireWeather%rx_flag * cpatch%area * AREA_INV
+              ! Prescribed fire burn window
+              hio_rx_burn_window_si(io_si) = hio_rx_burn_window_si(io_si) + &
+                   cpatch%fireWeather%rx_flag * cpatch%area / site_va
+
+              hio_fire_intensity_si(io_si) = hio_fire_intensity_si(io_si) + &
+                   cpatch%FI * J_per_kJ * cpatch%area / site_va
+              hio_nonrx_intensity_si(io_si) = hio_nonrx_intensity_si(io_si) + &
+                   cpatch%nonrx_FI * J_per_kJ * cpatch%area / site_va
+              hio_rx_intensity_si(io_si) = hio_rx_intensity_si(io_si) + &
+                   cpatch%rx_FI * J_per_kJ * cpatch%area / site_va
+              hio_tfc_ros_si(io_si) = hio_tfc_ros_si(io_si) + &
+                   cpatch%TFC_ROS * cpatch%area / site_va
+              hio_fire_fuel_eff_moist_si(io_si)  = hio_fire_fuel_eff_moist_si(io_si) + &
+                   cpatch%fuel%average_moisture_notrunks * cpatch%area / site_va
+              hio_spitfire_ros_si(io_si)  = hio_spitfire_ros_si(io_si) + &
+                   cpatch%ROS_front / sec_per_min * cpatch%area / site_va
+
+           else if (site_va == 0._r8) then
+              hio_fire_fdi_si(io_si) = hio_fire_fdi_si(io_si) + &
+                   cpatch%FDI
+              hio_fire_nignitions_si(io_si) =  hio_fire_nignitions_si(io_si) + \
+                   cpatch%NF_successful / m2_per_km2 / sec_per_day
+              hio_nesterov_fire_danger_si(io_si) = hio_nesterov_fire_danger_si(io_si) + &
+                   cpatch%fireWeather%fire_weather_index
+              hio_effect_wspeed_si(io_si) = hio_effect_wspeed_si(io_si) + &
+                   cpatch%fireWeather%effective_windspeed/sec_per_min
+              hio_rx_burn_window_si(io_si) = hio_rx_burn_window_si(io_si) + &
+                   cpatch%fireWeather%rx_flag
+              hio_fire_intensity_si(io_si) = hio_fire_intensity_si(io_si) + &
+                   cpatch%FI * J_per_kJ
+              hio_nonrx_intensity_si(io_si) = hio_nonrx_intensity_si(io_si) + &
+                   cpatch%nonrx_FI * J_per_kJ
+              hio_rx_intensity_si(io_si) = hio_rx_intensity_si(io_si) + &
+                   cpatch%rx_FI * J_per_kJ
+              hio_tfc_ros_si(io_si) = hio_tfc_ros_si(io_si) + &
+                   cpatch%TFC_ROS
+              hio_fire_fuel_eff_moist_si(io_si)  = hio_fire_fuel_eff_moist_si(io_si) + &
+                   cpatch%fuel%average_moisture_notrunks
+              hio_spitfire_ros_si(io_si)  = hio_spitfire_ros_si(io_si) + &
+                   cpatch%ROS_front / sec_per_min
+           end if
 
             litt => cpatch%litter(element_pos(carbon12_element))
 
@@ -3169,6 +3215,7 @@ contains
     integer  :: s                  ! site counter
     integer  :: b                  ! edge bin counter
     integer  :: io_si              ! site's index in the history output array space
+    real(r8) :: site_va            ! Site vegetated area used for weighting (sum of all non-bareground patch areas) [m2]
     integer  :: el                 ! element index
     integer  :: ft                 ! pft index
     real(r8) :: site_ba            ! Site basal area used for weighting
@@ -3433,6 +3480,15 @@ contains
           siteloop: do s = 1,nsites
 
              io_si  = sites(s)%h_gid
+
+             site_va = 0._r8
+             cpatch => sites(s)%oldest_patch
+             do while(associated(cpatch))
+                if (cpatch%nocomp_pft_label /= nocomp_bareground) then
+                    site_va = site_va + cpatch%area
+                end if
+                cpatch => cpatch%younger
+             end do
 
              ! C13 will not get b4b restarts on the first day because
              ! there is no mechanism to remember the previous day's values
@@ -4269,8 +4325,13 @@ contains
 
                 do i_fuel = 1, num_fuel_classes
 
-                   hio_litter_moisture_si_fuel(io_si, i_fuel) = hio_litter_moisture_si_fuel(io_si, i_fuel) + &
-                        cpatch%fuel%effective_moisture(i_fuel) * cpatch%area * AREA_INV
+                   if (cpatch%nocomp_pft_label /= nocomp_bareground) then
+                      hio_litter_moisture_si_fuel(io_si, i_fuel) = hio_litter_moisture_si_fuel(io_si, i_fuel) + &
+                           cpatch%fuel%effective_moisture(i_fuel) * cpatch%area / site_va
+                   else if (site_va == 0._r8) then
+                      hio_litter_moisture_si_fuel(io_si, i_fuel) = hio_litter_moisture_si_fuel(io_si, i_fuel) + &
+                           cpatch%fuel%effective_moisture(i_fuel)
+                   end if
 
                    hio_fuel_amount_si_fuel(io_si, i_fuel) = hio_fuel_amount_si_fuel(io_si, i_fuel) + &
                         cpatch%fuel%frac_loading(i_fuel) * cpatch%fuel%non_trunk_loading * cpatch%area * AREA_INV
