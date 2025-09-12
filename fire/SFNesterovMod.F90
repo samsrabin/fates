@@ -60,15 +60,15 @@ module SFNesterovMod
       this%rh = rh
       this%wind = wind
 
-      if (precip > min_precip_thresh) then ! rezero NI if it rains
+      if (this%precip > min_precip_thresh) then ! rezero NI if it rains
         this%fire_weather_index = 0.0_r8
       else 
         
         ! Calculate dewpoint temperature
-        t_dew = dewpoint(temp_c, rh)
+        t_dew = dewpoint(this%temp_c, this%rh)
         
         ! Accumulate Nesterov index over fire season. 
-        this%fire_weather_index = this%fire_weather_index + calc_nesterov_index(temp_C, t_dew)
+        this%fire_weather_index = this%fire_weather_index + calc_nesterov_index(this%temp_C, t_dew)
       end if 
 
     end subroutine update_nesterov_index
