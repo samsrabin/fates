@@ -115,21 +115,19 @@ contains
     ! taken from the oldest vegetated patch. Using patch-level temperatures should thus be expected
     ! to introduce diffs. This TEMPORARY code block is designed to test whether the diffs I've seen
     ! are indeed due to that.
+    ! TODO SSR: Also using that patch's other fire weather variables, just to be extra safe.
     oldestvegPatch => currentSite%oldest_patch
     if (oldestvegPatch%nocomp_pft_label == nocomp_bareground) then
       oldestvegPatch => oldestvegPatch%younger
     end if
     temp_C = oldestvegPatch%tveg24%GetMean() - tfrz  ! Convert K to °C
+    iofp = oldestvegPatch%patchno
+    precip = bc_in%precip24_pa(iofp)*sec_per_day
+    rh = bc_in%relhumid24_pa(iofp)
+    wind = bc_in%wind24_pa(iofp) * sec_per_min
 
     currentPatch => currentSite%oldest_patch
     patchloop: do while(associated(currentPatch))
-      iofp = currentPatch%patchno
-
-      ! Get fire weather variables other than temperature (see TODO above)
-      precip = bc_in%precip24_pa(iofp)*sec_per_day
-      rh = bc_in%relhumid24_pa(iofp)
-      wind = bc_in%wind24_pa(iofp) * sec_per_min
-
 
       ! update fire weather index
       call currentPatch%fireWeather%UpdateFireWeatherData(temp_C, precip, rh, wind)
