@@ -414,7 +414,7 @@ contains
 
         has_ignition = currentSite%NF > 0.0_r8
         
-        if (has_ignition .or. currentSite%fireWeather%rx_flag == itrue) then
+        if (has_ignition .or. currentPatch%fireWeather%rx_flag == itrue) then
           
           ! fire intensity [kW/m]
           currentPatch%FI = FireIntensity(currentPatch%TFC_ROS/0.45_r8, currentPatch%ROS_front/60.0_r8)
@@ -424,7 +424,7 @@ contains
           rxfire_fuel_check = currentPatch%fuel%non_trunk_loading > SF_val_rxfire_fuel_min .and. & 
             currentPatch%fuel%non_trunk_loading < SF_val_rxfire_fuel_max
 
-          if (currentSite%fireWeather%rx_flag == itrue .and. rxfire_fuel_check) then
+          if (currentPatch%fireWeather%rx_flag == itrue .and. rxfire_fuel_check) then
             
             ! record burnable area after fuel load check
             currentSite%rxfire_area_fuel = currentSite%rxfire_area_fuel + currentPatch%area 
