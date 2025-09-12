@@ -343,7 +343,7 @@ contains
         eps = EffectiveHeatingNumber(currentPatch%fuel%SAV_notrunks)
         
         ! wind factor [unitless]
-        phi_wind = WindFactor(currentSite%fireWeather%effective_windspeed, beta_ratio,      &
+        phi_wind = WindFactor(currentPatch%fireWeather%effective_windspeed, beta_ratio,      &
          currentPatch%fuel%SAV_notrunks)
 
         ! propagating flux [unitless]       
@@ -501,7 +501,7 @@ contains
           
           ! length-to-breadth ratio of fire ellipse [unitless]
           tree_fraction_patch  = currentPatch%total_tree_area/currentPatch%area
-          length_to_breadth = LengthToBreadth(currentSite%fireWeather%effective_windspeed, tree_fraction_patch)
+          length_to_breadth = LengthToBreadth(currentPatch%fireWeather%effective_windspeed, tree_fraction_patch)
 
           ! fire size [m2]
           fire_size = FireSize(length_to_breadth, currentPatch%ROS_back, &
