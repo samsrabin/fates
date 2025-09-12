@@ -39,26 +39,16 @@ module SFNesterovMod
 
     !-------------------------------------------------------------------------------------
 
-    subroutine update_nesterov_index(this, temp_C, precip, rh, wind)
+    subroutine update_nesterov_index(this)
       !
       !  DESCRIPTION:
       !  Updates Nesterov Index
       
       ! ARGUMENTS
       class(nesterov_index), intent(inout) :: this   ! nesterov index extended class
-      real(r8),              intent(in)    :: temp_C ! daily averaged temperature [degrees C]
-      real(r8),              intent(in)    :: precip ! daily precipitation [mm]
-      real(r8),              intent(in)    :: rh     ! daily relative humidity [%]
-      real(r8),              intent(in)    :: wind   ! daily wind speed [m/min]
       
       ! LOCALS:
       real(r8) :: t_dew ! dewpoint temperature [degrees C]
-
-      ! Update these
-      this%temp_C = temp_C
-      this%precip = precip
-      this%rh = rh
-      this%wind = wind
 
       if (this%precip > min_precip_thresh) then ! rezero NI if it rains
         this%fire_weather_index = 0.0_r8

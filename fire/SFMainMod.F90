@@ -121,7 +121,8 @@ contains
     wind = bc_in%wind24_pa(iofp) * sec_per_min
 
     ! update fire weather index
-    call currentSite%fireWeather%UpdateIndex(temp_C, precip, rh, wind)
+    call currentSite%fireWeather%UpdateData(temp_C, precip, rh, wind)
+    call currentSite%fireWeather%UpdateIndex()
 
     ! update prescribed fire burn window
     call currentSite%fireWeather%UpdateRxfireBurnWindow(hlm_use_managed_fire, &

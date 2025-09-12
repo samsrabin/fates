@@ -43,7 +43,8 @@ module test_FireWeather
       real(r8)                              :: wind = 0.0_r8   ! wind speed [m/s]
 
 
-      call this%fireWeatherNesterov%UpdateIndex(tempC, precip, rh, wind)
+      call this%fireWeatherNesterov%UpdateData(tempC, precip, rh, wind)
+      call this%fireWeatherNesterov%UpdateIndex()
 
       @assertEqual(this%fireWeatherNesterov%fire_weather_index, 0.0_r8, tolerance=tol)
 
@@ -58,7 +59,8 @@ module test_FireWeather
       real(r8)                              :: rh = 10.0_r8    ! relative humidity [%]
       real(r8)                              :: wind = 0.0_r8   ! wind speed [m/s]
 
-      call this%fireWeatherNesterov%UpdateIndex(tempC, precip, rh, wind)
+      call this%fireWeatherNesterov%UpdateData(tempC, precip, rh, wind)
+      call this%fireWeatherNesterov%UpdateIndex()
 
       @assertGreaterThan(this%fireWeatherNesterov%fire_weather_index, 0.0_r8, tolerance=tol)
 
@@ -74,7 +76,8 @@ module test_FireWeather
       real(r8)                              :: wind = 0.0_r8    ! wind speed [m/s]
       
 
-      call this%fireWeatherNesterov%UpdateIndex(tempC, precip, rh, wind)
+      call this%fireWeatherNesterov%UpdateData(tempC, precip, rh, wind)
+      call this%fireWeatherNesterov%UpdateIndex()
 
       @assertEqual(this%fireWeatherNesterov%fire_weather_index, 0.0_r8, tolerance=tol)
 
@@ -90,7 +93,8 @@ module test_FireWeather
       real(r8)                              :: bare_fraction = 0.0_r8  ! bare fraction [0-1]
       real(r8) :: dummy = 0.0_r8
 
-      call this%fireWeatherNesterov%UpdateIndex(dummy, dummy, dummy, wind_speed)
+      call this%fireWeatherNesterov%UpdateData(dummy, dummy, dummy, wind_speed)
+      call this%fireWeatherNesterov%UpdateIndex()
       call this%fireWeatherNesterov%UpdateEffectiveWindSpeed(tree_fraction,  &
         grass_fraction, bare_fraction)
       @assertEqual(this%fireWeatherNesterov%effective_windspeed, 0.0_r8, tolerance=tol)
@@ -107,7 +111,8 @@ module test_FireWeather
       real(r8)                              :: bare_fraction = 0.0_r8  ! bare fraction [0-1]
       real(r8) :: dummy = 0.0_r8
 
-      call this%fireWeatherNesterov%UpdateIndex(dummy, dummy, dummy, wind_speed)
+      call this%fireWeatherNesterov%UpdateData(dummy, dummy, dummy, wind_speed)
+      call this%fireWeatherNesterov%UpdateIndex()
       call this%fireWeatherNesterov%UpdateEffectiveWindSpeed(tree_fraction,  &
         grass_fraction, bare_fraction)
         
