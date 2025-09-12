@@ -92,6 +92,7 @@ contains
 
     ! LOCALS:  
     type(fates_patch_type), pointer :: currentPatch   ! patch object
+    type(fates_patch_type), pointer :: loopPatch   ! patch object
     real(r8)                        :: temp_C         ! daily averaged temperature [deg C]
     real(r8)                        :: precip         ! daily precip [mm/day]
     real(r8)                        :: rh             ! daily relative humidity [%]
@@ -135,6 +136,25 @@ contains
     ! update effective wind speed
     call currentSite%fireWeather%UpdateEffectiveWindSpeed(tree_fraction, &
       grass_fraction, bare_fraction)
+
+    loopPatch => currentSite%oldest_patch
+    patchloop: do while(associated(loopPatch))
+
+      ! update fire weather index
+      call loopPatch%fireWeather%UpdateData(temp_C, precip, rh, wind)
+      call loopPatch%fireWeather%UpdateIndex()
+
+      ! update prescribed fire burn window
+      call loopPatch%fireWeather%UpdateRxfireBurnWindow(hlm_use_managed_fire, &
+        SF_val_rxfire_tpup, SF_val_rxfire_tplw, SF_val_rxfire_rhup, SF_val_rxfire_rhlw,    &
+        SF_val_rxfire_wdup, SF_val_rxfire_wdlw)
+
+      ! update effective wind speed
+      call loopPatch%fireWeather%UpdateEffectiveWindSpeed(tree_fraction, &
+        grass_fraction, bare_fraction)
+
+      loopPatch => loopPatch%younger
+    end do patchloop
     
   end subroutine UpdateFireWeather
 

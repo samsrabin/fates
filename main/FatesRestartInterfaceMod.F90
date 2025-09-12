@@ -159,6 +159,7 @@ module FatesRestartInterfaceMod
 
   integer :: ir_nclp_pa
   integer :: ir_zstar_pa
+  integer :: ir_fireweather_index_pa
 
   !Logging
   integer :: ir_lmort_direct_co
@@ -743,6 +744,10 @@ contains
     call this%set_restart_var(vname='fates_acc_nesterov_id', vtype=site_r8, &
          long_name='a nesterov index accumulator', units='unitless', flushval = flushzero, &
          hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fireweather_index_si )
+
+    call this%set_restart_var(vname='fates_acc_nesterov_id_patch', vtype=cohort_r8, &
+         long_name='a nesterov index accumulator (patch)', units='unitless', flushval = flushzero, &
+         hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fireweather_index_pa )
 
     call this%set_restart_var(vname='fates_gdd_site', vtype=site_r8, &
          long_name='growing degree days at each site', units='degC days', flushval = flushzero, &
@@ -2262,6 +2267,7 @@ contains
            rio_cndaysleafoff_si        => this%rvars(ir_cndaysleafoff_si)%int1d, &
            rio_phenmodeldate_si        => this%rvars(ir_phenmodeldate_si)%int1d, &
            rio_fireweather_index_si    => this%rvars(ir_fireweather_index_si)%r81d, &
+           rio_fireweather_index_pa    => this%rvars(ir_fireweather_index_pa)%r81d, &
            rio_gdd_si                  => this%rvars(ir_gdd_si)%r81d, &
            rio_min_allowed_landuse_fraction_si  => this%rvars(ir_min_allowed_landuse_fraction_si)%r81d, &
            rio_landuse_vector_gt_min_si  => this%rvars(ir_landuse_vector_gt_min_si)%int1d, &
@@ -2738,6 +2744,7 @@ contains
              rio_agesinceanthrodist_pa(io_idx_co_1st) = cpatch%age_since_anthro_disturbance
              rio_nocomp_pft_label_pa(io_idx_co_1st)= cpatch%nocomp_pft_label
              rio_area_pa(io_idx_co_1st)        = cpatch%area
+             rio_fireweather_index_pa(io_idx_co_1st) = cpatch%fireWeather%fire_weather_index
 
              ! Patch level running means
              call this%SetRMeanRestartVar(cpatch%tveg24, ir_tveg24_pa, io_idx_co_1st)
@@ -3308,6 +3315,7 @@ contains
           rio_cndaysleafoff_si        => this%rvars(ir_cndaysleafoff_si)%int1d, &
           rio_phenmodeldate_si        => this%rvars(ir_phenmodeldate_si)%int1d, &
           rio_fireweather_index_si    => this%rvars(ir_fireweather_index_si)%r81d, &
+          rio_fireweather_index_pa    => this%rvars(ir_fireweather_index_pa)%r81d, &
           rio_gdd_si                  => this%rvars(ir_gdd_si)%r81d, &
           rio_min_allowed_landuse_fraction_si                  => this%rvars(ir_min_allowed_landuse_fraction_si)%r81d, &
           rio_landuse_vector_gt_min_si               => this%rvars(ir_landuse_vector_gt_min_si)%int1d, &
@@ -3767,6 +3775,7 @@ contains
              cpatch%area               = rio_area_pa(io_idx_co_1st)
              cpatch%age_class          = get_age_class_index(cpatch%age)
              cpatch%fcansno            = rio_fcansno_pa(io_idx_co_1st)
+             cpatch%fireWeather%fire_weather_index = rio_fireweather_index_pa(io_idx_co_1st)
 
              ! Set zenith angle info
 
