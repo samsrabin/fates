@@ -356,7 +356,7 @@ contains
         ! backwards rate of spread [m/min]
         !  backward ROS wind not changed by vegetation - so use wind, not effective_windspeed
         currentPatch%ROS_back = BackwardRateOfSpread(currentPatch%ROS_front,             &
-         currentSite%fireWeather%wind)
+         currentPatch%fireWeather%wind)
 
       end if 
       currentPatch => currentPatch%younger
