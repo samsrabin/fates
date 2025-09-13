@@ -421,7 +421,7 @@ contains
         currentPatch%rx_FI = 0.0_r8
         currentPatch%nonrx_FI = 0.0_r8
 
-        has_ignition = currentSite%NF > 0.0_r8
+        has_ignition = currentPatch%NF > 0.0_r8
         
         if (has_ignition .or. currentPatch%fireWeather%rx_flag == itrue) then
           
@@ -440,7 +440,7 @@ contains
               
             ! determine fire type
             ! prescribed fire and wildfire cannot happen on the same patch
-            is_rxfire = is_prescribed_burn(currentPatch%FI, currentSite%NF, &
+            is_rxfire = is_prescribed_burn(currentPatch%FI, currentPatch%NF, &
               SF_val_rxfire_min_threshold, SF_val_rxfire_max_threshold, SF_val_fire_threshold)
 
             if (is_rxfire) then
@@ -519,7 +519,7 @@ contains
               currentPatch%ROS_front, currentPatch%FD)
 
           ! area burnt [m2/km2]
-          area_burnt = AreaBurnt(fire_size, currentSite%NF, currentPatch%FDI)
+          area_burnt = AreaBurnt(fire_size, currentPatch%NF, currentPatch%FDI)
           
           ! convert to area burned per area patch per day
           ! i.e., fraction of the patch burned on that day
