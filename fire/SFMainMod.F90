@@ -239,6 +239,14 @@ contains
     ! initialize site parameters to zero
     currentSite%NF_successful = 0.0_r8
 
+    ! if the oldest patch is a bareground patch (i.e. nocomp mode is on) use the first vegetated patch
+    ! for the iofp index and fire weather index (i.e. the next younger patch)
+    currentPatch => currentSite%oldest_patch
+    if (currentPatch%nocomp_pft_label == nocomp_bareground)then
+      currentPatch => currentPatch%younger
+    endif
+    iofp = currentPatch%patchno
+
     ! Equation 7 from Venevsky et al GCB 2002 (modification of equation 8 in Thonicke et al. 2010) 
     ! FDI 0.1 = low, 0.3 moderate, 0.75 high, and 1 = extreme ignition potential for alpha 0.000337
     if (hlm_spitfire_mode == hlm_sf_successful_ignitions_def) then
@@ -249,17 +257,9 @@ contains
       cloud_to_ground_strikes = 1.0_r8   
     else  
       ! USING LIGHTNING STRIKE DATA
-      currentSite%FDI  = 1.0_r8 - exp(-SF_val_fdi_alpha*currentSite%fireWeather%fire_weather_index)
+      currentSite%FDI  = 1.0_r8 - exp(-SF_val_fdi_alpha*currentPatch%fireWeather%fire_weather_index)
       cloud_to_ground_strikes = cg_strikes
     end if
-
-    ! if the oldest patch is a bareground patch (i.e. nocomp mode is on) use the first vegetated patch
-    ! for the iofp index (i.e. the next younger patch)
-    currentPatch => currentSite%oldest_patch
-    if (currentPatch%nocomp_pft_label == nocomp_bareground)then
-      currentPatch => currentPatch%younger
-    endif
-    iofp = currentPatch%patchno
 
     ! NF = number of lighting strikes per day per km2 scaled by cloud to ground strikes
     if (hlm_spitfire_mode == hlm_sf_scalar_lightning_def) then
