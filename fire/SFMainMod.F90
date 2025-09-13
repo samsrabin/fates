@@ -228,6 +228,7 @@ contains
     
     ! LOCALS:
     type(fates_patch_type), pointer :: currentPatch            ! patch object
+    type(fates_patch_type), pointer :: loopPatch            ! patch object
     real(r8)                        :: cloud_to_ground_strikes ! fraction of cloud-to-ground strikes [0-1]
     real(r8)                        :: anthro_ignitions        ! anthropogenic ignitions [count/km2/day]
     integer                         :: iofp                    ! patch index
@@ -277,6 +278,14 @@ contains
       anthro_ignitions = igns_per_person_month*6.8_r8*bc_in%pop_density(iofp)**0.43_r8/approx_days_per_month
       currentSite%NF = currentSite%NF + anthro_ignitions
     end if
+
+    loopPatch => currentSite%oldest_patch
+    patchloop: do while(associated(loopPatch))
+      loopPatch%FDI = currentSite%FDI
+      loopPatch%NF = currentSite%NF
+      loopPatch%NF_successful = currentSite%NF_successful
+      loopPatch => loopPatch%younger
+    end do patchloop
 
   end subroutine CalculateIgnitionsandFDI
   
@@ -451,6 +460,8 @@ contains
             currentSite%NF_successful = currentSite%NF_successful + &
             currentSite%NF*currentSite%FDI*currentPatch%area/area
             currentPatch%nonrx_FI = currentPatch%FI
+
+            currentPatch%NF_successful = currentSite%NF_successful
           else if (currentPatch%rx_fire == itrue) then
             currentPatch%rx_FI = currentPatch%FI
           end if
