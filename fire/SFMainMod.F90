@@ -458,7 +458,7 @@ contains
           ! assign fire intensities and ignitions based on fire type
           if (currentPatch%nonrx_fire == itrue) then
             currentSite%NF_successful = currentSite%NF_successful + &
-            currentSite%NF*currentSite%FDI*currentPatch%area/area
+            currentSite%NF*currentPatch%FDI*currentPatch%area/area
             currentPatch%nonrx_FI = currentPatch%FI
 
             currentPatch%NF_successful = currentSite%NF_successful
@@ -508,7 +508,7 @@ contains
         if (currentPatch%nonrx_fire == 1) then
 
           ! fire duration [min]
-          currentPatch%FD = FireDuration(currentSite%FDI)
+          currentPatch%FD = FireDuration(currentPatch%FDI)
           
           ! length-to-breadth ratio of fire ellipse [unitless]
           tree_fraction_patch  = currentPatch%total_tree_area/currentPatch%area
@@ -519,7 +519,7 @@ contains
               currentPatch%ROS_front, currentPatch%FD)
 
           ! area burnt [m2/km2]
-          area_burnt = AreaBurnt(fire_size, currentSite%NF, currentSite%FDI)
+          area_burnt = AreaBurnt(fire_size, currentSite%NF, currentPatch%FDI)
           
           ! convert to area burned per area patch per day
           ! i.e., fraction of the patch burned on that day
