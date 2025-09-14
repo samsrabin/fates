@@ -229,6 +229,7 @@ contains
     ! LOCALS:
     type(fates_patch_type), pointer :: currentPatch            ! patch object
     type(fates_patch_type), pointer :: loopPatch            ! patch object
+    type(fates_patch_type), pointer :: loopPatch2            ! patch object
     real(r8)                        :: cloud_to_ground_strikes ! fraction of cloud-to-ground strikes [0-1]
     real(r8)                        :: anthro_ignitions        ! anthropogenic ignitions [count/km2/day]
     integer                         :: iofp                    ! patch index
@@ -262,6 +263,24 @@ contains
       cloud_to_ground_strikes = cg_strikes
     end if
 
+    loopPatch2 => currentSite%oldest_patch
+    patchloop0: do while(associated(loopPatch2))
+      ! Equation 7 from Venevsky et al GCB 2002 (modification of equation 8 in Thonicke et al. 2010) 
+      ! FDI 0.1 = low, 0.3 moderate, 0.75 high, and 1 = extreme ignition potential for alpha 0.000337
+      if (hlm_spitfire_mode == hlm_sf_successful_ignitions_def) then
+        ! READING "SUCCESSFUL IGNITION" DATA
+        ! force ignition potential to be extreme
+        ! cloud_to_ground_strikes = 1 means using 100% of incoming observed ignitions
+        loopPatch2%FDI = 1.0_r8  
+        cloud_to_ground_strikes = 1.0_r8   
+      else  
+        ! USING LIGHTNING STRIKE DATA
+        loopPatch2%FDI  = 1.0_r8 - exp(-SF_val_fdi_alpha*currentPatch%fireWeather%fire_weather_index)
+        cloud_to_ground_strikes = cg_strikes
+      end if
+      loopPatch2 => loopPatch2%younger
+    end do patchloop0
+
     ! NF = number of lighting strikes per day per km2 scaled by cloud to ground strikes
     if (hlm_spitfire_mode == hlm_sf_scalar_lightning_def) then
       currentSite%NF = ED_val_nignitions*years_per_day*cloud_to_ground_strikes
@@ -281,7 +300,6 @@ contains
 
     loopPatch => currentSite%oldest_patch
     patchloop: do while(associated(loopPatch))
-      loopPatch%FDI = currentSite%FDI
       loopPatch%NF = currentSite%NF
       loopPatch%NF_successful = currentSite%NF_successful
       loopPatch => loopPatch%younger
