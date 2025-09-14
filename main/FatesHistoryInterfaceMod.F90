@@ -2641,9 +2641,6 @@ contains
          hio_fire_nignitions_si(io_si) = sites(s)%NF_successful / m2_per_km2 /  &
               sec_per_day
 
-         ! Fire danger index (FDI) (0-1)
-         hio_fire_fdi_si(io_si) = sites(s)%FDI
-
          ! total rx burnable fraction when fuel condition met
          hio_rx_fracarea_fuel_si(io_si) = sites(s)%rxfire_area_fuel * AREA_INV
 
@@ -2652,6 +2649,15 @@ contains
 
          ! total rx burnable fraction when all conditions met
          hio_rx_fracarea_final_si(io_si) = sites(s)%rxfire_area_final * AREA_INV
+
+         cpatch => sites(s)%oldest_patch
+         do while(associated(cpatch))
+            ! Fire danger index (FDI) (0-1)
+            hio_fire_fdi_si(io_si) = hio_fire_fdi_si(io_si) + &
+                 cpatch%fdi * cpatch%area * AREA_INV
+
+            cpatch => cpatch%younger
+         end do
 
          ! If hydraulics are turned on, track the error terms associated with
          ! dynamics [kg/m2]

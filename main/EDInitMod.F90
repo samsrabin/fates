@@ -325,7 +325,6 @@ contains
     site_in%landuse_transition_matrix(:,:) = 0.0_r8
 
     ! FIRE
-    site_in%FDI              = 0.0_r8     ! daily fire danger index (0-1)
     site_in%NF               = 0.0_r8     ! daily lightning strikes per km2
     site_in%NF_successful    = 0.0_r8     ! daily successful iginitions per km2
 
