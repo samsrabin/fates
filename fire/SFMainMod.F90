@@ -275,7 +275,7 @@ contains
         cloud_to_ground_strikes = 1.0_r8   
       else  
         ! USING LIGHTNING STRIKE DATA
-        loopPatch2%FDI  = 1.0_r8 - exp(-SF_val_fdi_alpha*currentPatch%fireWeather%fire_weather_index)
+        loopPatch2%FDI  = 1.0_r8 - exp(-SF_val_fdi_alpha*loopPatch2%fireWeather%fire_weather_index)
         cloud_to_ground_strikes = cg_strikes
       end if
       loopPatch2 => loopPatch2%younger
