@@ -60,6 +60,7 @@ module FatesFactoryMod
   use FatesInterfaceTypesMod,      only : hlm_regeneration_model
   use SyntheticPatchTypes,         only : synthetic_patch_type
   use shr_log_mod,                 only : errMsg => shr_log_errMsg
+  use SFNesterovMod,               only : nesterov_index
 
   implicit none
   
@@ -421,6 +422,7 @@ module FatesFactoryMod
     integer :: land_use_label_local ! local land use label
     integer :: nocomp_pft_local     ! local nocomp pft label
     integer :: tod_local            ! local tod value
+    class(nesterov_index), pointer :: fireWeather  ! empty fire weather object for initialization
     
     ! CONSTANTS:
     integer :: land_use_label_default = primaryland ! default land use label
@@ -445,10 +447,14 @@ module FatesFactoryMod
     else 
       tod_local = tod_default
     end if
+
+    ! Initialize fire weather object
+    allocate(nesterov_index :: fireWeather)
+    call fireWeather%Init()
     
     allocate(patch)
     call patch%Create(age, area, land_use_label_local, nocomp_pft_local, num_swb,        &
-      num_pft, num_levsoil, tod_local, hlm_regeneration_model)
+      num_pft, num_levsoil, tod_local, hlm_regeneration_model, fireWeather)
     
     patch%patchno = 1
     patch%younger => null()

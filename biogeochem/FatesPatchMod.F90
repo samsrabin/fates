@@ -275,7 +275,7 @@ module FatesPatchMod
 
     !===========================================================================
 
-    subroutine Init(this, num_swb, num_levsoil)
+    subroutine Init(this, num_swb, num_levsoil, site_fireWeather)
       !
       !  DESCRIPTION:
       !  Initialize a new patch - allocate arrays and set values to nan and/or 0.0
@@ -285,6 +285,7 @@ module FatesPatchMod
       class(fates_patch_type), intent(inout) :: this        ! patch object
       integer,                 intent(in)    :: num_swb     ! number of shortwave broad-bands to track
       integer,                 intent(in)    :: num_levsoil ! number of soil layers
+      class(fire_weather),     intent(in)    :: site_fireWeather   ! mean fire weather of site
 
       ! allocate arrays 
       allocate(this%tr_soil_dir(num_swb))
@@ -300,7 +301,7 @@ module FatesPatchMod
 
       ! allocate fire weather
       allocate(nesterov_index :: this%fireWeather)
-      call this%fireWeather%Init()
+      call this%fireWeather%CopyFrom(site_fireWeather)
 
       ! initialize all values to nan
       call this%NanValues()
@@ -732,7 +733,7 @@ module FatesPatchMod
     !===========================================================================
 
     subroutine Create(this, age, area, land_use_label, nocomp_pft, num_swb, num_pft,    &
-      num_levsoil, current_tod, regeneration_model)
+      num_levsoil, current_tod, regeneration_model, site_fireWeather)
       !
       ! DESCRIPTION:
       ! create a new patch with input and default values
@@ -749,10 +750,11 @@ module FatesPatchMod
       integer,                 intent(in)    :: num_levsoil        ! number of soil layers
       integer,                 intent(in)    :: current_tod        ! time of day [seconds past 0Z]
       integer,                 intent(in)    :: regeneration_model ! regeneration model version
+      class(fire_weather),     intent(in)    :: site_fireWeather   ! mean fire weather of site
       
       ! initialize patch
       ! sets all values to nan, then some values to zero
-      call this%Init(num_swb, num_levsoil)
+      call this%Init(num_swb, num_levsoil, site_fireWeather)
 
       ! initialize running means for patch
       call this%InitRunningMeans(current_tod, regeneration_model, num_pft)
