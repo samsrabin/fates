@@ -2439,8 +2439,6 @@ contains
 
     type(fates_cohort_type), pointer :: ccohort
     type(fates_patch_type),  pointer :: cpatch
-    type(fates_patch_type),  pointer :: cpatch_tmp
-    type(fates_patch_type),  pointer :: oldestVegPatch
     type(elem_diag_type), pointer :: elflux_diags_c ! Pointer to site level carbon fluxes
     type(litter_type), pointer :: litt     ! Generic pointer to any litter pool
 
@@ -2813,30 +2811,20 @@ contains
             hio_fire_intensity_fracarea_product_si(io_si) = hio_fire_intensity_fracarea_product_si(io_si) + &
                  cpatch%FI * cpatch%frac_burnt * cpatch%area * AREA_INV * J_per_kJ
 
-            if (cpatch%nocomp_pft_label == nocomp_bareground) then
-               oldestvegPatch => sites(s)%oldest_patch
-               if (oldestvegPatch%nocomp_pft_label == nocomp_bareground) then
-                 oldestvegPatch => oldestvegPatch%younger
-               end if
-               cpatch_tmp => oldestvegPatch
-            else
-               cpatch_tmp => cpatch
-            end if
-
             hio_fire_fdi_si(io_si) = hio_fire_fdi_si(io_si) + &
-               cpatch_tmp%FDI * cpatch%area * AREA_INV
+               cpatch%FDI * cpatch%area * AREA_INV
 
             ! number of ignitions [#/km2/day -> #/m2/s]
             hio_fire_nignitions_si(io_si) =  hio_fire_nignitions_si(io_si) + &
-                 cpatch_tmp%NF_successful / m2_per_km2 / sec_per_day * &
+                 cpatch%NF_successful / m2_per_km2 / sec_per_day * &
                  cpatch%area * AREA_INV
 
             ! Nesterov index (unitless)
             hio_nesterov_fire_danger_si(io_si) = hio_nesterov_fire_danger_si(io_si) + &
-                 cpatch_tmp%fireWeather%fire_weather_index * cpatch%area * AREA_INV
+                 cpatch%fireWeather%fire_weather_index * cpatch%area * AREA_INV
 
             hio_effect_wspeed_si(io_si) = hio_effect_wspeed_si(io_si) + &
-                 cpatch_tmp%fireWeather%effective_windspeed/sec_per_min * cpatch%area * AREA_INV
+                 cpatch%fireWeather%effective_windspeed/sec_per_min * cpatch%area * AREA_INV
 
             ! Prescribed fire burn window
             hio_rx_burn_window_si(io_si) = hio_rx_burn_window_si(io_si) + &
