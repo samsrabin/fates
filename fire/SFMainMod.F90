@@ -122,12 +122,13 @@ contains
     end if
     temp_C = oldestvegPatch%tveg24%GetMean() - tfrz  ! Convert K to °C
     iofp = oldestvegPatch%patchno
-    precip = bc_in%precip24_pa(iofp)*sec_per_day
     rh = bc_in%relhumid24_pa(iofp)
     wind = bc_in%wind24_pa(iofp) * sec_per_min
 
     currentPatch => currentSite%oldest_patch
     patchloop: do while(associated(currentPatch))
+
+      precip = bc_in%precip24_pa(currentPatch%patchno)*sec_per_day
 
       ! update fire weather index
       call currentPatch%fireWeather%UpdateFireWeatherData(temp_C, precip, rh, wind)
