@@ -120,7 +120,6 @@ contains
     if (oldestvegPatch%nocomp_pft_label == nocomp_bareground) then
       oldestvegPatch => oldestvegPatch%younger
     end if
-    temp_C = oldestvegPatch%tveg24%GetMean() - tfrz  ! Convert K to °C
     iofp = oldestvegPatch%patchno
     precip = bc_in%precip24_pa(iofp)*sec_per_day
     rh = bc_in%relhumid24_pa(iofp)
@@ -128,6 +127,8 @@ contains
 
     currentPatch => currentSite%oldest_patch
     patchloop: do while(associated(currentPatch))
+
+      temp_C = currentPatch%tveg24%GetMean() - tfrz  ! Convert K to °C
 
       ! update fire weather index
       call currentPatch%fireWeather%UpdateFireWeatherData(temp_C, precip, rh, wind)
