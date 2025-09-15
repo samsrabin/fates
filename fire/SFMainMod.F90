@@ -124,10 +124,11 @@ contains
     iofp = oldestvegPatch%patchno
     precip = bc_in%precip24_pa(iofp)*sec_per_day
     rh = bc_in%relhumid24_pa(iofp)
-    wind = bc_in%wind24_pa(iofp) * sec_per_min
 
     currentPatch => currentSite%oldest_patch
     patchloop: do while(associated(currentPatch))
+
+      wind = bc_in%wind24_pa(currentPatch%patchno) * sec_per_min
 
       ! update fire weather index
       call currentPatch%fireWeather%UpdateFireWeatherData(temp_C, precip, rh, wind)
