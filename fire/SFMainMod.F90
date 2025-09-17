@@ -101,6 +101,14 @@ contains
     real(r8)                        :: bare_fraction  ! site-level bare ground fraction [0-1]
     integer                         :: iofp           ! index of oldest the fates patch
 
+    ! SSR: Check whether RH varies by patch
+    type(fates_patch_type), pointer :: youngerPatch   ! patch object
+    real(r8) :: max_rh_diff
+    real(r8) :: this_rh_diff
+    integer :: i_current
+    integer :: i_younger
+    real(r8) :: tol = 1e-9_r8
+
     ! NOTE that the boundary conditions of temperature, precipitation and relative humidity
     ! are available at the patch level. We are currently using a simplification where the whole site
     ! is simply using the values associated with the first patch.
@@ -137,6 +145,26 @@ contains
     ! update effective wind speed
     call currentSite%fireWeather%UpdateEffectiveWindSpeed(wind*sec_per_min, tree_fraction, &
       grass_fraction, bare_fraction)
+
+    ! SSR: Check whether RH varies by patch
+    max_rh_diff = 0._r8
+    currentPatch => currentSite%oldest_patch
+    do while(associated(currentPatch))
+      i_current = currentPatch%patchno
+      youngerPatch => currentPatch%younger
+      do while(associated(youngerPatch))
+        i_younger = youngerPatch%patchno
+        this_rh_diff = abs(bc_in%relhumid24_pa(i_current) - bc_in%relhumid24_pa(i_younger))
+        if (this_rh_diff > max_rh_diff) then
+          max_rh_diff = this_rh_diff
+        end if
+        youngerPatch => youngerPatch%younger
+      end do
+      currentPatch => currentPatch%younger
+    end do
+    if (max_rh_diff > tol) then
+      write(fates_log(),*) 'Max RH diff between patches at a site: ', max_rh_diff
+    end if
     
   end subroutine UpdateFireWeather
 
