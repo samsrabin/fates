@@ -143,6 +143,8 @@ module FatesHistoryInterfaceMod
   use FatesSizeAgeTypeIndicesMod, only : get_cdamagesizepft_class_index
   use FatesSizeAgeTypeIndicesMod, only : coagetype_class_index
 
+  use FatesEdgeForestMod, only : CalculateTreeGrassAreaSite
+
   implicit none
   private          ! By default everything is private
 
@@ -3245,6 +3247,12 @@ contains
     type(elem_diag_type), pointer :: elflux_diags
     type(elem_diag_type), pointer :: elflux_diags_c
 
+    ! TODO: Trying this to diagnose run failure in test
+    ! SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdEdgeForestMonthly.
+    ! If this prevents the failure, move this call to the end of spawn_patches() and try
+    ! again.
+    real(r8) :: dummy_tf, dummy_gf, dummy_bf
+
 
     real(r8), parameter :: reallytalltrees = 1000.   ! some large number (m)
 
@@ -3546,6 +3554,13 @@ contains
 
              ! TODO: Move "area of forest in each edge bin" from below into here
              if (hlm_use_edge_forest == itrue .and. sites(s)%area_forest_patches > 0._r8) then
+
+               ! TODO: Trying this to diagnose run failure in test
+               ! SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdEdgeForestMonthly.
+               ! If this prevents the failure, move this call to the end of spawn_patches() and try
+               ! again.
+               call CalculateTreeGrassAreaSite(sites(s), dummy_tf, dummy_gf, dummy_bf)
+
                do b = 1, nlevedgeforest
 
                   ! Skip this bin if site has no forest area in it
