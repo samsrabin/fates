@@ -509,7 +509,6 @@ contains
     type(ed_site_type), pointer, intent(in) :: site
     !
     ! LOCAL VARIABLES:
-    type(fates_patch_type), pointer  :: currentPatch
     integer, dimension(:), allocatable :: indices ! Indices to use if you want to sort patches
     integer, dimension(:), allocatable :: index_forestpatches_to_allpatches  ! Array with length (number of patches in gridcell), values 0 if not forest and otherwise an index corresponding to which number forest patch this is
     integer :: n_forest_patches  ! Number of forest patches
@@ -517,13 +516,6 @@ contains
     real(r8) :: area_site
     real(r8) :: frac_forest
     real(r8), dimension(nlevedgeforest), target :: fraction_forest_in_each_bin
-
-    ! Zero out all fractions
-    currentPatch => site%oldest_patch
-    do while (associated(currentPatch))
-      currentPatch%area_in_edgeforest_bins(:) = 0._r8
-      currentPatch => currentPatch%younger
-    end do
 
     ! Skip sites with no forest patches
     call get_number_of_forest_patches(site, n_forest_patches, area_site)
