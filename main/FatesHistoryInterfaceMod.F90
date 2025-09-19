@@ -3588,7 +3588,7 @@ contains
 
                      ! Skip this patch if it has no area in this bin
                      patch_area_in_this_bin = cpatch%area_in_edgeforest_bins(b)
-                     if (isnan(patch_area_in_this_bin) .or. patch_area_in_this_bin == 0._r8) then
+                     if (patch_area_in_this_bin == 0._r8) then
                         cpatch => cpatch%younger
                         cycle
                      end if
