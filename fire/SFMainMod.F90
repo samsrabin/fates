@@ -92,6 +92,7 @@ contains
 
     ! LOCALS:  
     type(fates_patch_type), pointer :: currentPatch   ! patch object
+    type(fates_patch_type), pointer :: youngerPatch   ! patch object
     type(fates_patch_type), pointer :: oldestvegPatch ! object for oldest vegetated patch
     real(r8)                        :: temp_C         ! daily averaged temperature [deg C]
     real(r8)                        :: precip         ! daily precip [mm/day]
@@ -144,6 +145,22 @@ contains
 
       currentPatch => currentPatch%younger
     end do patchloop
+
+    ! TODO: Remove
+    ! Troubleshooting: Throw error if patch rxflags ever differ
+    currentPatch => currentSite%oldest_patch
+    do while(associated(currentPatch))
+      youngerPatch => currentPatch%younger
+      do while(associated(youngerPatch))
+        if (currentPatch%fireWeather%rx_flag /= youngerPatch%fireWeather%rx_flag) then
+          write(fates_log(),*) 'rx_flags differ between patches'
+          call endrun(msg=errMsg(__FILE__, __LINE__))
+        end if
+        youngerPatch => youngerPatch%younger
+      end do
+      currentPatch => currentPatch%younger
+    end do
+
   end subroutine UpdateFireWeather
 
   !---------------------------------------------------------------------------------------

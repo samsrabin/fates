@@ -2456,6 +2456,8 @@ contains
 
     type(fates_cohort_type), pointer :: ccohort
     type(fates_patch_type),  pointer :: cpatch
+    type(fates_patch_type),  pointer :: currentPatch
+    type(fates_patch_type),  pointer :: youngerPatch
     type(elem_diag_type), pointer :: elflux_diags_c ! Pointer to site level carbon fluxes
     type(litter_type), pointer :: litt     ! Generic pointer to any litter pool
 
@@ -2694,6 +2696,20 @@ contains
          hio_canopy_mortality_carbonflux_si(io_si) = hio_canopy_mortality_carbonflux_si(io_si) + &
               sum(sites(s)%fmort_carbonflux_canopy(:)) / g_per_kg
 
+         ! TODO: Remove
+         ! Troubleshooting: Throw error if patch rxflags ever differ
+         currentPatch => sites(s)%oldest_patch
+         do while(associated(currentPatch))
+           youngerPatch => currentPatch%younger
+           do while(associated(youngerPatch))
+             if (currentPatch%fireWeather%rx_flag /= youngerPatch%fireWeather%rx_flag) then
+               write(fates_log(),*) 'rx_flags differ between patches'
+               call endrun(msg=errMsg(__FILE__, __LINE__))
+             end if
+             youngerPatch => youngerPatch%younger
+           end do
+           currentPatch => currentPatch%younger
+         end do
          
          hio_ustory_mortality_carbonflux_si(io_si) = hio_ustory_mortality_carbonflux_si(io_si) + &
               sum(sites(s)%fmort_carbonflux_ustory(:)) / g_per_kg
