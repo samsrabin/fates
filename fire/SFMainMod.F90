@@ -166,6 +166,26 @@ contains
       write(fates_log(),*) 'Max RH diff between patches at a site: ', max_rh_diff
     end if
     
+    ! SSR: Error if patches aren't always contiguous
+    currentPatch => currentSite%oldest_patch
+    youngerPatch => currentPatch%younger
+    do while(associated(youngerPatch))
+      i_current = currentPatch%patchno
+      i_younger = youngerPatch%patchno
+
+      if (i_younger /= i_current + 1) then
+        write(fates_log(),*) 'currentPatch%patchno ', i_current
+        write(fates_log(),*) 'youngerPatch%patchno ', i_younger
+        call endrun(msg=errMsg(__FILE__, __LINE__))
+      end if
+
+      currentPatch => currentPatch%younger
+      youngerPatch => currentPatch%younger
+    end do
+    if (max_rh_diff > tol) then
+      write(fates_log(),*) 'Max RH diff between patches at a site: ', max_rh_diff
+    end if
+
   end subroutine UpdateFireWeather
 
   !---------------------------------------------------------------------------------------
