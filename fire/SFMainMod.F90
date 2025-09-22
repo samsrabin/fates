@@ -165,7 +165,35 @@ contains
     if (max_rh_diff > tol) then
       write(fates_log(),*) 'Max RH diff between patches at a site: ', max_rh_diff
     end if
-    
+
+    ! SSR: Check whether RH varies by patch, excluding bare ground patch
+    max_rh_diff = 0._r8
+    currentPatch => currentSite%oldest_patch
+    do while(associated(currentPatch))
+      if (currentPatch%nocomp_pft_label == nocomp_bareground) then
+        currentPatch => currentPatch%younger
+        cycle
+      endif
+      i_current = currentPatch%patchno
+      youngerPatch => currentPatch%younger
+      do while(associated(youngerPatch))
+        if (youngerPatch%nocomp_pft_label == nocomp_bareground) then
+          youngerPatch => youngerPatch%younger
+          cycle
+        endif
+        i_younger = youngerPatch%patchno
+        this_rh_diff = abs(bc_in%relhumid24_pa(i_current) - bc_in%relhumid24_pa(i_younger))
+        if (this_rh_diff > max_rh_diff) then
+          max_rh_diff = this_rh_diff
+        end if
+        youngerPatch => youngerPatch%younger
+      end do
+      currentPatch => currentPatch%younger
+    end do
+    if (max_rh_diff > tol) then
+      write(fates_log(),*) 'Max RH diff between veg patches at a site: ', max_rh_diff
+    end if
+
     ! SSR: Error if patches aren't always contiguous
     currentPatch => currentSite%oldest_patch
     youngerPatch => currentPatch%younger
@@ -182,9 +210,6 @@ contains
       currentPatch => currentPatch%younger
       youngerPatch => currentPatch%younger
     end do
-    if (max_rh_diff > tol) then
-      write(fates_log(),*) 'Max RH diff between patches at a site: ', max_rh_diff
-    end if
 
   end subroutine UpdateFireWeather
 
