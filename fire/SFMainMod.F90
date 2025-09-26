@@ -133,18 +133,20 @@ contains
     currentPatch => currentSite%oldest_patch
     patchloop: do while(associated(currentPatch))
 
-      ! update fire weather index
+      ! update fire weather data
       call currentPatch%fireWeather%UpdateFireWeatherData(temp_C, precip, rh, wind)
+
+      ! update effective wind speed
+      call currentPatch%fireWeather%UpdateEffectiveWindSpeed(tree_fraction, &
+        grass_fraction, bare_fraction)
+
+      ! update fire weather index
       call currentPatch%fireWeather%UpdateIndex()
 
       ! update prescribed fire burn window
       call currentPatch%fireWeather%UpdateRxfireBurnWindow(hlm_use_managed_fire, &
         SF_val_rxfire_tpup, SF_val_rxfire_tplw, SF_val_rxfire_rhup, SF_val_rxfire_rhlw,    &
         SF_val_rxfire_wdup, SF_val_rxfire_wdlw)
-
-      ! update effective wind speed
-      call currentPatch%fireWeather%UpdateEffectiveWindSpeed(tree_fraction, &
-        grass_fraction, bare_fraction)
 
       currentPatch => currentPatch%younger
     end do patchloop
