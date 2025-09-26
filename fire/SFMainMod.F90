@@ -142,6 +142,11 @@ contains
       currentPatch => currentPatch%younger
     end do patchloop1
 
+    ! Apply edge forest flammability enhancements to patch%fireWeather
+    if (hlm_use_edge_forest) then
+      call apply_edgeforest_flammability_to_site(currentSite)
+    end if
+
     currentPatch => currentSite%oldest_patch
     patchloop2: do while(associated(currentPatch))
 
