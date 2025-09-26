@@ -3653,6 +3653,8 @@ contains
              end if
 
              ! Loop through patches to sum up diagonistics
+             hio_forest_edge_bin_area_si_edge(io_si,:) = 0._r8
+             hio_forest_edge_bin_anyarea_si_edge(io_si,:) = 0._r8
              cpatch => sites(s)%oldest_patch
              patchloop: do while(associated(cpatch))
 
