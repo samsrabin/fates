@@ -697,10 +697,6 @@ contains
           call endrun(msg=errMsg(__FILE__, __LINE__))
         end if
       else
-        ! TODO: Delete.
-        write(fates_log(),*) 'Unexpectedly seems like RH change intended'
-        call endrun(msg=errMsg(__FILE__, __LINE__))
-
         currentPatch%fireWeather%rh = weather_inout
       end if
 
@@ -719,10 +715,6 @@ contains
           call endrun(msg=errMsg(__FILE__, __LINE__))
         end if
       else
-        ! TODO: Delete.
-        write(fates_log(),*) 'Unexpectedly seems like temp change intended'
-        call endrun(msg=errMsg(__FILE__, __LINE__))
-
         currentPatch%fireWeather%temp_C = weather_inout
       end if
 
@@ -741,10 +733,6 @@ contains
           call endrun(msg=errMsg(__FILE__, __LINE__))
         end if
       else
-        ! TODO: Delete.
-        write(fates_log(),*) 'Unexpectedly seems like wind change intended'
-        call endrun(msg=errMsg(__FILE__, __LINE__))
-
         currentPatch%fireWeather%wind = weather_inout
       end if
 
