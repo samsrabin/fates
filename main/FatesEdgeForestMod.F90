@@ -697,7 +697,8 @@ contains
           call endrun(msg=errMsg(__FILE__, __LINE__))
         end if
       else
-        currentPatch%fireWeather%rh = weather_inout
+        ! RH can't go below zero
+        currentPatch%fireWeather%rh = max(weather_inout, 0._r8)
       end if
 
       ! Temp
