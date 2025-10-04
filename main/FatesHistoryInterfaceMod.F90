@@ -3672,11 +3672,12 @@ contains
                         cycle
                      end if
                      if (abs(hio_fireweather_temp_si_edge(io_si,b)) - hio_fireweather_temp_si_edge(io_si,nlevedgeforest) < 1.e-6_r8) then
-                        write(fates_log(),*) 'patch w/ unexp deep bin temp: ',b
-                        write(fates_log(),*) '               that bin temp: ',hio_fireweather_temp_si_edge(io_si,b)
-                        write(fates_log(),*) '               deep bin temp: ',hio_fireweather_temp_si_edge(io_si,nlevedgeforest)
-                        write(fates_log(),*) '        that bin forest area: ',sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(b)
-                        write(fates_log(),*) '        deep bin forest area: ',sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(nlevedgeforest)
+                        write(fates_log(),*) 'bin w/ unexp deep bin temp: ',b
+                        write(fates_log(),*) '                  deep bin: ',nlevedgeforest
+                        write(fates_log(),*) '             that bin temp: ',hio_fireweather_temp_si_edge(io_si,b)
+                        write(fates_log(),*) '             deep bin temp: ',hio_fireweather_temp_si_edge(io_si,nlevedgeforest)
+                        write(fates_log(),*) '      that bin forest area: ',sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(b)
+                        write(fates_log(),*) '      deep bin forest area: ',sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(nlevedgeforest)
                         call endrun(msg=errMsg(sourcefile, __LINE__))
                      end if
                   end do
