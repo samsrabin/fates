@@ -812,6 +812,12 @@ contains
          if (currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(b) < 200._r8) then
             cycle
          end if
+
+         ! Does this happen for anything other than the fifth bin?
+         if (b == 5) then
+            cycle
+         end if
+
          if (abs(fireweather_temp_edge(b)) - fireweather_temp_edge(nlevedgeforest) < 1.e-6_r8) then
             write(fates_log(),*) 'bin w/ unexp deep bin temp: ',b
             write(fates_log(),*) '                  deep bin: ',nlevedgeforest

@@ -3261,10 +3261,6 @@ contains
     real(r8) :: bin_weight_discrepancy
     real(r8) :: bin_weight_discrepancy_as_frac_site_forest
 
-    ! TODO: Remove after troubleshooting
-    logical :: temp_flam_enh_intended
-    logical :: forest_in_deep_bin
-
     integer  :: i_dist, j_dist
 
     type(elem_diag_type), pointer :: elflux_diags
@@ -3664,26 +3660,7 @@ contains
                ! Check that, if a patch has forest in the deepest bin, and temperature flammability
                ! enhancements were intended, then no non-deep-forest bin has the same fire weather
                ! temperature as the deep-forest bin.
-               temp_flam_enh_intended = .not. &
-                    (all(abs(ED_val_edgeforest_fireweather_temp_C_mult - 1._r8) < 1.e-9_r8) .and. &
-                    all(abs(ED_val_edgeforest_fireweather_temp_C_add) < 1.e-9_r8))
-               forest_in_deep_bin = sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(nlevedgeforest) >= 200._r8
-               if (temp_flam_enh_intended .and. forest_in_deep_bin) then
-                  do b = 1, nlevedgeforest - 1
-                     if (sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(b) < 200._r8) then
-                        cycle
-                     end if
-                     if (abs(hio_fireweather_temp_si_edge(io_si,b)) - hio_fireweather_temp_si_edge(io_si,nlevedgeforest) < 1.e-6_r8) then
-                        write(fates_log(),*) 'bin w/ unexp deep bin temp: ',b
-                        write(fates_log(),*) '                  deep bin: ',nlevedgeforest
-                        write(fates_log(),*) '             that bin temp: ',hio_fireweather_temp_si_edge(io_si,b)
-                        write(fates_log(),*) '             deep bin temp: ',hio_fireweather_temp_si_edge(io_si,nlevedgeforest)
-                        write(fates_log(),*) '      that bin forest area: ',sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(b)
-                        write(fates_log(),*) '      deep bin forest area: ',sites(s)%area_forest_patches * sites(s)%fraction_forest_in_each_bin(nlevedgeforest)
-                        call endrun(msg=errMsg(sourcefile, __LINE__))
-                     end if
-                  end do
-               end if
+               call troubleshoot_no_temp_diff(sites(s))
              end if
 
              ! Loop through patches to sum up diagonistics
@@ -4516,25 +4493,7 @@ contains
              ! Check that, if a patch has forest in the deepest bin, and temperature flammability
              ! enhancements were intended, then no non-deep-forest bin has the same fire weather
              ! temperature as the deep-forest bin.
-             temp_flam_enh_intended = .not. &
-                  (all(abs(ED_val_edgeforest_fireweather_temp_C_mult - 1._r8) < 1.e-9_r8) .and. &
-                  all(abs(ED_val_edgeforest_fireweather_temp_C_add) < 1.e-9_r8))
-             forest_in_deep_bin = hio_forest_edge_bin_area_si_edge(io_si,nlevedgeforest) >= 200._r8
-             if (temp_flam_enh_intended .and. forest_in_deep_bin) then
-                do b = 1, nlevedgeforest - 1
-                   if (hio_forest_edge_bin_area_si_edge(io_si,b) < 200._r8) then
-                      cycle
-                   end if
-                   if (abs(hio_fireweather_temp_si_edge(io_si,b)) - hio_fireweather_temp_si_edge(io_si,nlevedgeforest) < 1.e-6_r8) then
-                      write(fates_log(),*) 'patch w/ unexp deep bin temp: ',b
-                      write(fates_log(),*) '               that bin temp: ',hio_fireweather_temp_si_edge(io_si,b)
-                      write(fates_log(),*) '               deep bin temp: ',hio_fireweather_temp_si_edge(io_si,nlevedgeforest)
-                      write(fates_log(),*) '        that bin forest area: ',hio_forest_edge_bin_area_si_edge(io_si,b)
-                      write(fates_log(),*) '        deep bin forest area: ',hio_forest_edge_bin_area_si_edge(io_si,nlevedgeforest)
-                      call endrun(msg=errMsg(sourcefile, __LINE__))
-                   end if
-                end do
-             end if
+             call troubleshoot_no_temp_diff(sites(s))
 
              ! pass the cohort termination mortality as a flux to the history, and then reset the termination mortality buffer
              ! note there are various ways of reporting the total mortality, so pass to these as well
