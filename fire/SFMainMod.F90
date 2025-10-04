@@ -34,6 +34,7 @@ module SFMainMod
   use FatesAllometryMod,      only : CrownDepth
   use FatesFuelClassesMod,    only : fuel_classes
   use FatesEdgeForestMod,     only : apply_edgeforest_flammability_to_site, calculate_edgeforest_area
+  use FatesEdgeForestMod,     only : troubleshoot_no_temp_diff  ! TROUBLESHOOTING
   
   implicit none
   private
@@ -88,9 +89,6 @@ contains
     use FatesInterfaceTypesMod, only : hlm_use_managed_fire
     use SFParamsMod,            only : SF_val_rxfire_tpup, SF_val_rxfire_tplw, SF_val_rxfire_rhup, &
                                        SF_val_rxfire_rhlw, SF_val_rxfire_wdup, SF_val_rxfire_wdlw
-    ! TROUBLESHOOTING
-    use FatesInterfaceTypesMod, only : nlevedgeforest
-    use FatesEdgeForestParamsMod, only : ED_val_edgeforest_fireweather_temp_C_mult, ED_val_edgeforest_fireweather_temp_C_add
 
     ! ARGUMENTS:
     type(ed_site_type), intent(inout), target :: currentSite
@@ -109,13 +107,6 @@ contains
     real(r8)                        :: bare_fraction  ! site-level bare ground fraction [0-1]
     integer                         :: iofp           ! index of oldest the fates patch
     logical                         :: do_update_weather_only
-
-    ! TROUBLESHOOTING
-    real(r8) :: site_area_in_this_bin, sum_bin_weight_of_all_patches
-    real(r8) :: patch_area_in_this_bin, patch_weight_of_this_bin
-    real(r8), dimension(nlevedgeforest) :: fireweather_temp_edge
-    integer  :: b
-    logical  :: temp_flam_enh_intended, forest_in_deep_bin
 
     ! NOTE that the boundary conditions of temperature, precipitation and relative humidity
     ! are available at the patch level. We are currently using a simplification where the whole site
@@ -162,63 +153,7 @@ contains
     end if
     
     ! TROUBLESHOOTING
-    temp_flam_enh_intended = .not. &
-          (all(abs(ED_val_edgeforest_fireweather_temp_C_mult - 1._r8) < 1.e-9_r8) .and. &
-          all(abs(ED_val_edgeforest_fireweather_temp_C_add) < 1.e-9_r8))
-    forest_in_deep_bin = currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(nlevedgeforest) >= 200._r8
-    if (hlm_use_edge_forest == itrue .and. currentSite%area_forest_patches > 0._r8 .and. temp_flam_enh_intended .and. forest_in_deep_bin) then
-        do b = 1, nlevedgeforest
-
-           ! Skip this bin if site has no forest area in it
-           site_area_in_this_bin = currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(b)
-           if (site_area_in_this_bin == 0._r8) then
-              cycle
-           end if
-
-           ! Calculate (weighted) means across all patches in this bin
-           sum_bin_weight_of_all_patches = 0._r8
-           currentPatch => currentSite%oldest_patch
-           do while(associated(currentPatch))
-
-              ! Skip this patch if it has no area in this bin
-              patch_area_in_this_bin = currentPatch%area_in_edgeforest_bins(b)
-              if (patch_area_in_this_bin == 0._r8) then
-                 currentPatch => currentPatch%younger
-                 cycle
-              end if
-
-              ! Calculate weight of this patch
-              patch_weight_of_this_bin = patch_area_in_this_bin / site_area_in_this_bin
-
-              ! For checking that weighting is correct
-              sum_bin_weight_of_all_patches = sum_bin_weight_of_all_patches + patch_weight_of_this_bin
-
-              ! fire weather in each edge bin
-              fireweather_temp_edge(b) = fireweather_temp_edge(b) + &
-                   currentPatch%fireWeather%temp_C * patch_weight_of_this_bin
-
-              currentPatch => currentPatch%younger
-           end do
-
-        end do
-
-        ! Check that no non-deep-forest bin has the same fire weather
-        ! temperature as the deep-forest bin.
-        do b = 1, nlevedgeforest - 1
-           if (currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(b) < 200._r8) then
-              cycle
-           end if
-           if (abs(fireweather_temp_edge(b)) - fireweather_temp_edge(nlevedgeforest) < 1.e-6_r8) then
-              write(fates_log(),*) 'bin w/ unexp deep bin temp: ',b
-              write(fates_log(),*) '                  deep bin: ',nlevedgeforest
-              write(fates_log(),*) '             that bin temp: ',fireweather_temp_edge(b)
-              write(fates_log(),*) '             deep bin temp: ',fireweather_temp_edge(nlevedgeforest)
-              write(fates_log(),*) '      that bin forest area: ',currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(b)
-              write(fates_log(),*) '      deep bin forest area: ',currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(nlevedgeforest)
-              call endrun(msg=errMsg(__FILE__, __LINE__))
-           end if
-        end do
-      end if
+    call troubleshoot_no_temp_diff(currentSite)
 
     ! If we only wanted to update fire weather data, we're done
     if (.not. present(update_weather_only)) then

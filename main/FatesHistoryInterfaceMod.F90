@@ -3185,6 +3185,7 @@ contains
 
     ! TODO: Remove after troubleshooting
     use FatesEdgeForestParamsMod, only : ED_val_edgeforest_fireweather_temp_C_mult, ED_val_edgeforest_fireweather_temp_C_add
+    use FatesEdgeForestMod,     only : troubleshoot_no_temp_diff  ! TROUBLESHOOTING
 
     ! Arguments
     class(fates_history_interface_type)             :: this
@@ -3570,6 +3571,7 @@ contains
              end do
 
              ! TODO: Move "area of forest in each edge bin" from below into here
+             call troubleshoot_no_temp_diff(sites(s))
              if (hlm_use_edge_forest == itrue .and. sites(s)%area_forest_patches > 0._r8) then
                do b = 1, nlevedgeforest
 
