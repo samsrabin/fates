@@ -742,10 +742,12 @@ contains
       currentPatch => currentPatch%younger
     end do
 
+    call troubleshoot_no_temp_diff(site, temp_C_by_edge_bin)
+
   end subroutine apply_edgeforest_flammability_to_site
 
 
-  subroutine troubleshoot_no_temp_diff(currentSite)
+  subroutine troubleshoot_no_temp_diff(currentSite, temp_C_by_edge_bin)
     ! DESCRIPTION:
     ! Check whether there's an unexpected no temp diff
     !
@@ -757,6 +759,7 @@ contains
     !
     ! ARGUMENTS:
     type(ed_site_type), pointer, intent(in) :: currentSite
+    real(r8), intent(in), optional :: temp_C_by_edge_bin(nlevedgeforest)  ! temp_C value in each edge bin
     !
     ! LOCAL VARIABLES:
     real(r8) :: site_area_in_this_bin, sum_bin_weight_of_all_patches
@@ -765,11 +768,13 @@ contains
     integer  :: b
     logical  :: temp_flam_enh_intended, forest_in_deep_bin
     type (fates_patch_type), pointer :: currentPatch ! patch object
+    logical :: any_bad
 
     temp_flam_enh_intended = .not. &
           (all(abs(ED_val_edgeforest_fireweather_temp_C_mult - 1._r8) < 1.e-9_r8) .and. &
           all(abs(ED_val_edgeforest_fireweather_temp_C_add) < 1.e-9_r8))
     forest_in_deep_bin = currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(nlevedgeforest) >= 200._r8
+
     if (hlm_use_edge_forest == itrue .and. currentSite%area_forest_patches > 0._r8 .and. temp_flam_enh_intended .and. forest_in_deep_bin) then
       do b = 1, nlevedgeforest
 
@@ -808,6 +813,7 @@ contains
 
       ! Check that no non-deep-forest bin has the same fire weather
       ! temperature as the deep-forest bin.
+      any_bad = .false.
       do b = 1, nlevedgeforest - 1
          if (currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(b) < 200._r8) then
             cycle
@@ -819,12 +825,57 @@ contains
             write(fates_log(),*) '             deep bin temp: ',fireweather_temp_edge(nlevedgeforest)
             write(fates_log(),*) '      that bin forest area: ',currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(b)
             write(fates_log(),*) '      deep bin forest area: ',currentSite%area_forest_patches * currentSite%fraction_forest_in_each_bin(nlevedgeforest)
-            call endrun(msg=errMsg(__FILE__, __LINE__))
+            any_bad = .true.
+            exit
          end if
       end do
+      if (any_bad) then
+         write(fates_log(),*) '================================='
+
+         write(fates_log(),*) 'site forest area: ', currentSite%area_forest_patches
+
+         if (present(temp_C_by_edge_bin)) then
+            write(fates_log(),*) 'temp in edge bins:'
+            do b = 1, nlevedgeforest
+               write(fates_log(),*) '   bin ',b,': ',temp_C_by_edge_bin(b)
+            end do
+         end if
+
+         currentPatch => currentSite%oldest_patch
+         do while(associated(currentPatch))
+            if (currentPatch%is_forest) then
+               call troubleshoot_print_one_patch(currentPatch)
+            end if
+            currentPatch => currentPatch%younger
+         end do
+
+         call endrun(msg=errMsg(__FILE__, __LINE__))
+      end if
     end if
 
   end subroutine troubleshoot_no_temp_diff
+
+  subroutine troubleshoot_print_one_patch(currentPatch)
+    !
+    ! USES:
+    use FatesInterfaceTypesMod, only : nlevedgeforest
+    !
+    ! ARGUMENTS:
+    type(fates_patch_type), pointer, intent(in) :: currentPatch
+    !
+    ! LOCALS
+    character(len=3) :: indent = '   '
+    integer :: b
+    
+    write(fates_log(),*) 'patch num: ',currentPatch%patchno
+    write(fates_log(),*) indent,'fireWeather%temp_C: ',currentPatch%fireWeather%temp_C
+    write(fates_log(),*) indent,'area in forest bins:'
+    do b = 1, nlevedgeforest
+      if (currentPatch%area_in_edgeforest_bins(b) > 0) then
+        write(fates_log(),*) indent,indent,b,': ',currentPatch%area_in_edgeforest_bins(b)
+      end if
+    end do
+  end subroutine troubleshoot_print_one_patch
 
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
