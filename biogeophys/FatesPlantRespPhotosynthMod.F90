@@ -385,11 +385,13 @@ contains
 
                   ! [PORTED by Hui Tang: use NVP surface temperature for gas parameters when
                   !  patch contains NVP cohorts; walk cohort list to detect NVP presence]
+                  write(fates_log(),*) 'SSRts: t_cohort = bc_in(s)%t_veg_pa(ifp): ', bc_in(s)%t_veg_pa(ifp)
                   t_cohort = bc_in(s)%t_veg_pa(ifp)
                   if (hlm_use_nvp == itrue) then
                      currentCohort => currentPatch%tallest
                      do while (associated(currentCohort))
                         if (currentCohort%nvp_dz > nearzero) then
+                           write(fates_log(),*) 'SSRts: t_cohort = bc_in(s)%t_nvp_pa(ifp): ', bc_in(s)%t_nvp_pa(ifp)
                            t_cohort = bc_in(s)%t_nvp_pa(ifp)
                            exit
                         end if
@@ -397,12 +399,15 @@ contains
                      end do
                   end if
 
+                  write(fates_log(),*) 'SSRts: bc_in(s)%forc_pbot:    ', bc_in(s)%forc_pbot
+                  write(fates_log(),*) 'SSRts: bc_in(s)%oair_pa(ifp): ', bc_in(s)%oair_pa(ifp)
                   call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
                        bc_in(s)%oair_pa(ifp),    & ! in
                        t_cohort,                  & ! in  [PORTED: NVP or veg temperature]
                        mm_kco2,                  & ! out
                        mm_ko2,                   & ! out
                        co2_cpoint)
+                  write(fates_log(),*) 'SSRts: co2_cpoint after GetCanopyGasParameters(): ', co2_cpoint
 
                   ! The host models use velocity based conductances and resistance
                   ! this is the factor that converts a conductance from

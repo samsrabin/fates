@@ -558,6 +558,9 @@ contains
     
     je = GetJe(par_abs,jmax,fnps)
 
+    write(fates_log(),*) 'SSRts: ci in AgrossRuBPC3():         ', ci
+    write(fates_log(),*) 'SSRts: co2_cpoint in AgrossRuBPC3(): ', co2_cpoint
+    write(fates_log(),*) 'SSRts: denom in AgrossRuBPC3(): ', 4._r8*ci+8._r8*co2_cpoint
     aj = je * max(ci-co2_cpoint, 0._r8) / &
          (4._r8*ci+8._r8*co2_cpoint)
        
@@ -1348,11 +1351,15 @@ contains
     
     ! Not trivial solution, some biomass and some light
     ! Initialize first guess of intracellular co2 conc [Pa]
+    write(fates_log(),*) 'SSRts LeafLayerPhotosynthesis(): can_co2_ppress: ', can_co2_ppress
     if (lb_params%c3psn(ft) == c3_path_index) then
+      write(fates_log(),*) 'SSRts LeafLayerPhotosynthesis(): init_a2l_co2_c3: ', init_a2l_co2_c3
        ci0 = init_a2l_co2_c3 * can_co2_ppress
     else
+      write(fates_log(),*) 'SSRts LeafLayerPhotosynthesis(): init_a2l_co2_c4: ', init_a2l_co2_c4
        ci0 = init_a2l_co2_c4 * can_co2_ppress
     end if
+      write(fates_log(),*) 'SSRts LeafLayerPhotosynthesis(): ci0: ', ci0
 
     loop_continue = .true.
     iter_loop: do while(loop_continue)
@@ -1704,12 +1711,16 @@ contains
     if( veg_tempk.gt.150_r8 .and. veg_tempk.lt.350_r8 )then
        mm_kco2       = kc25 * ft1_f(veg_tempk, kcha)
        mm_ko2         = ko25 * ft1_f(veg_tempk, koha)
+       write(fates_log(),*) 'SSRts GetCanopyGasParameters(): cp25:      ', cp25
+       write(fates_log(),*) 'SSRts GetCanopyGasParameters(): veg_tempk: ', veg_tempk
+       write(fates_log(),*) 'SSRts GetCanopyGasParameters(): cpha:      ', cpha
        co2_cpoint     = cp25 * ft1_f(veg_tempk, cpha)
     else
        mm_kco2    = 1.0_r8
        mm_ko2     = 1.0_r8
        co2_cpoint = 1.0_r8
     end if
+    write(fates_log(),*) 'SSRts GetCanopyGasParameters(): co2_cpoint: ', co2_cpoint
 
     return
   end subroutine GetCanopyGasParameters
