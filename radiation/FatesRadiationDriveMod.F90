@@ -481,7 +481,6 @@ contains
                 ! Approach B (NVP as leaf layer): override snow case only using SNICAR fractions;
                 !   no-snow case is handled by Norman solver via standard fabd_sun_z/fabd_sha_z.
                 write(fates_log(),*) 'SSRts: bc_in(s)%coszen: ', bc_in(s)%coszen
-                if (.not. isnan(bc_in(s)%coszen)) then
                 if (hlm_use_nvp == itrue .and. bc_in(s)%coszen > 0._r8) then
                    write(fates_log(),*) 'SSRts: entering IF'
                    trd_nvp = bc_in(s)%solad_parb(ifp,ipar) * bc_out(s)%ftdd_parb(ifp,ipar)
@@ -545,7 +544,6 @@ contains
                       end if
                    end if
                 end if
-                end if  ! .not. isnan(bc_in(s)%coszen)
 
              else  ! if_norm_twostr
 
