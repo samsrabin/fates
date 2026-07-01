@@ -924,6 +924,7 @@ contains
 
                       ! Stop patches being initilialized when PFT not present in nocomop mode
                       new_patch_area_gt_zero: if(newparea .gt. min_patch_area_forced) then 
+                         write(*,*) 'SSRts: init_patches(): Creating patch for nocomp_pft ', nocomp_pft
                          allocate(newp)
 
                          call newp%Create(age, newparea, i_lu_state, nocomp_pft, &
