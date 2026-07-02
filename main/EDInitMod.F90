@@ -553,6 +553,14 @@ contains
                                     EDPftvarcon_inst%hlm_pft_map(fates_pft,hlm_pft) * bc_in(s)%pft_areafrac_lu(hlm_pft,i_landusetype)
                             end do
                          end do !hlm_pft
+
+                         ! SSRts
+                         do fates_pft = 1,numpft
+                            if (sites(s)%area_pft(fates_pft,i_landusetype) > nearzero) then
+                               write(*,*) 'SSRts: set_site_properties(): area_pft A > 0 for fates_pft ', fates_pft
+                            end if
+                         end do
+
                       else
                          ! for crops, we need to use different logic because the bc_in(s)%pft_areafrac_lu() information only exists for natural PFTs
                          sites(s)%area_pft(crop_lu_pft_vector(i_landusetype),i_landusetype) = 1._r8
@@ -583,11 +591,21 @@ contains
 
                 do hlm_pft = 1,size( EDPftvarcon_inst%hlm_pft_map,2)
                    do fates_pft = 1,numpft ! loop round all fates pfts for all hlm pfts
+                      if (EDPftvarcon_inst%hlm_pft_map(fates_pft,hlm_pft) > nearzero) then
+                         write(*,'(A,I3,A,I3,A,F6.3)') 'SSRts: EDPftvarcon_inst%hlm_pft_map(', fates_pft, ',', hlm_pft, ') = ', EDPftvarcon_inst%hlm_pft_map(fates_pft,hlm_pft)
+                      end if
                       sites(s)%area_pft(fates_pft,primaryland) = sites(s)%area_pft(fates_pft,primaryland) + &
                            EDPftvarcon_inst%hlm_pft_map(fates_pft,hlm_pft) * bc_in(s)%pft_areafrac(hlm_pft)
                    end do
                    sites(s)%area_bareground = bc_in(s)%pft_areafrac(0)
                 end do !hlm_pft
+
+                ! SSRts
+                do fates_pft = 1,numpft
+                   if (sites(s)%area_pft(fates_pft,primaryland) > nearzero) then
+                      write(*,*) 'SSRts: set_site_properties(): area_pft B > 0 for fates_pft ', fates_pft
+                   end if
+                end do
 
              endif use_fates_luh_if
 
@@ -653,6 +671,15 @@ contains
                 
           end if !fixed biogeog
 
+          ! SSRts
+          do i_landusetype = 1, n_landuse_cats
+            do fates_pft = 1,numpft
+                if (sites(s)%area_pft(fates_pft,i_landusetype) > nearzero) then
+                   write(*,*) 'SSRts: set_site_properties(): area_pft Z > 0 for fates_pft ', fates_pft
+                end if
+             end do
+          end do
+
           do ft = 1,numpft
              ! Setting this to true ensures that all pfts
              ! are used for nocomp with no biogeog
@@ -660,9 +687,12 @@ contains
              if(hlm_use_fixed_biogeog.eq.itrue)then
                 if(any(sites(s)%area_pft(ft,:).gt.0.0_r8))then
                    sites(s)%use_this_pft(ft) = itrue
+                   write(*,*) 'SSRts: set_site_properties(): sites(s)%use_this_pft(ft) A true for PFT ', ft
                 else
                    sites(s)%use_this_pft(ft) = ifalse
                 end if !area
+             else
+                write(*,*) 'SSRts: set_site_properties(): sites(s)%use_this_pft(ft) B true for PFT ', ft
              end if !SBG
           end do !ft
 
@@ -915,11 +945,20 @@ contains
                          if(hlm_use_fixed_biogeog.eq.itrue)then
                             newparea = sites(s)%area_pft(nocomp_pft,i_lu_state) * area * state_vector(i_lu_state) &
                                  * (1._r8 - sites(s)%area_bareground)
+                            if (newparea > nearzero) then
+                               write(*,'(A,I3,A,F9.3)') 'SSRts: init_patches(): nocomp_pft ', nocomp_pft, ' newparea A = ', newparea
+                            end if
                          else
                             newparea = area * state_vector(i_lu_state) / numpft
+                            if (newparea > nearzero) then
+                               write(*,'(A,I3,A,F9.3)') 'SSRts: init_patches(): nocomp_pft ', nocomp_pft, ' newparea B = ', newparea
+                            end if
                          end if
                       else  ! The default case is initialized w/ one patch with the area of the whole site.
                          newparea = area * state_vector(i_lu_state)
+                         if (newparea > nearzero) then
+                            write(*,'(A,I3,A,F9.3)') 'SSRts: init_patches(): nocomp_pft ', nocomp_pft, ' newparea C = ', newparea
+                         end if
                       end if  !nocomp mode
 
                       ! Stop patches being initilialized when PFT not present in nocomop mode
@@ -1228,11 +1267,17 @@ contains
                ! whose identity does not correspond to this patch label
                use_pft_local(pft) = ifalse ! Case 3
             endif
+            if (use_pft_local(pft) == itrue) then
+               write(*,*) 'SSRts: init_cohorts(): use_pft_local A true for pft ', pft
+            end if
          else
             if (hlm_use_nocomp .eq. itrue .and. pft .ne. patch_in%nocomp_pft_label) then
                ! This case has all PFTs on their own patch everywhere
                use_pft_local(pft) = ifalse ! Case 4
             endif
+            if (use_pft_local(pft) == itrue) then
+               write(*,*) 'SSRts: init_cohorts(): use_pft_local B true for pft ', pft
+            end if
          endif
       end do
 
