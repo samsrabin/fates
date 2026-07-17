@@ -1,5 +1,5 @@
 {
-  "attributes": {"history": "05/11/25, First instantation, copied from: ../parameter_files/fates_params_default.cdl. "},
+  "attributes": {"history": "2026-07-17: Copied from fates_params_default_moss.json, but changed fates_hlm_pft_map back to how it was in non-moss paramfile fates_params_default_moss.json. This was needed to add fates_nvp_alb_wet and fates_nvp_alb_dry, which were missing in the original non-moss paramfile. This also has the effect of changing the following relative to the original non-moss paramfile: fates_leaf_agross_btran_model (for NVP only, from 1 to 0), fates_nvp_bulk_density (from 75 to 10), and fates_nvp_sla (from 0.3 to 0.01)."},
   "dimensions": {
     "fates_NCWD": 4,
     "fates_history_age_bins": 7,
@@ -833,7 +833,7 @@
       "dims": ["fates_pft"],
       "long_name": "model switch for how gross assimilation affects conductance. See LeafBiophysicsMod.F90, integer constants  btran_on_",
       "units": "index",
-      "data": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+      "data": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
     },
     "fates_leaf_c3psn": {
       "dtype": "integer",
@@ -1738,19 +1738,33 @@
       "units": "unitless",
       "data": [0.5]
     },
+    "fates_nvp_alb_wet": {
+      "dtype": "float",
+      "dims": ["scalar"],
+      "long_name": "NVP (moss/lichen) broadband albedo when saturated (fwet_nvp=1)",
+      "units": "unitless",
+      "data": [0.15]
+    },
+    "fates_nvp_alb_dry": {
+      "dtype": "float",
+      "dims": ["scalar"],
+      "long_name": "NVP (moss/lichen) broadband albedo when dry (fwet_nvp=0)",
+      "units": "unitless",
+      "data": [0.4]
+    },
     "fates_nvp_bulk_density": {
       "dtype": "float",
       "dims": ["scalar"],
       "long_name": "NVP (moss/lichen) bulk density",
       "units": "kg m-3",
-      "data": [75.0]
+      "data": [10.0]
     },
     "fates_nvp_sla": {
       "dtype": "float",
       "dims": ["scalar"],
       "long_name": "NVP (moss/lichen) specific leaf area",
       "units": "m2 g-1",
-      "data": [0.3]
+      "data": [0.01]
     },
     "fates_fire_active_crown_fire": {
       "dtype": "integer",
