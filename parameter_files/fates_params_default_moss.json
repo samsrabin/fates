@@ -381,7 +381,7 @@
       "data": [1.0, 1.0, 1.0, 2.5, 2.5, 2.5, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
     },
     "fates_allom_zroot_min_z": {
-      "dtype": "float",/
+      "dtype": "float",
       "dims": ["fates_pft"],
       "long_name": "the maximum rooting depth defined at dbh  fates_allom_zroot_min_dbh. note  max_zmin_zlarge, sets rooting depth to soil depth",
       "units": "m",
