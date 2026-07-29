@@ -284,6 +284,7 @@ contains
     real(r8)               :: vmol_cf            ! velocity to molar conductance conversion (m/s) -> (umol/m2/s)
     ! [PORTED by Hui Tang: cohort temperature: t_nvp_pa for NVP cohorts, t_veg_pa otherwise]
     real(r8)               :: t_cohort           ! effective leaf temperature for this cohort [K]
+    real(r8)               :: t_for_gas_params   ! effective leaf temperature to be used by GetCanopyGasParameters() [K]
     
     ! -----------------------------------------------------------------------------------
     ! Keeping these two definitions in case they need to be added later
@@ -386,12 +387,12 @@ contains
 
                   ! [PORTED by Hui Tang: use NVP surface temperature for gas parameters when
                   !  patch contains NVP cohorts; walk cohort list to detect NVP presence]
-                  t_cohort = bc_in(s)%t_veg_pa(ifp)
+                  t_for_gas_params = bc_in(s)%t_veg_pa(ifp)
                   if (hlm_use_nvp == itrue .and. hlm_use_nvp_temp_for_patch_gas_params == itrue) then
                      currentCohort => currentPatch%tallest
                      do while (associated(currentCohort))
                         if (currentCohort%nvp_dz > nearzero) then
-                           t_cohort = bc_in(s)%t_nvp_pa(ifp)
+                           t_for_gas_params = bc_in(s)%t_nvp_pa(ifp)
                            exit
                         end if
                         currentCohort => currentCohort%shorter
@@ -400,7 +401,7 @@ contains
 
                   call GetCanopyGasParameters(bc_in(s)%forc_pbot,       & ! in
                        bc_in(s)%oair_pa(ifp),    & ! in
-                       t_cohort,                  & ! in  [PORTED: NVP or veg temperature]
+                       t_for_gas_params,         & ! in  [PORTED: NVP or veg temperature]
                        mm_kco2,                  & ! out
                        mm_ko2,                   & ! out
                        co2_cpoint)
