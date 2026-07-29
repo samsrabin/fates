@@ -220,6 +220,8 @@ module FatesInterfaceTypesMod
   integer, public :: hlm_use_nvp              ! Master NVP on/off flag (1=on, 0=off)
   integer, public :: hlm_use_nvp_undersnow    ! NVP under-snow mode (0=off, 1=on)
   integer, public :: hlm_nvp_rad_model_ground ! NVP radiation model: 1=Approach A (ground boundary), 0=Approach B (leaf layer)
+  integer, public :: hlm_use_nvp_temp_for_patch_gas_params  ! Whether to use NVP temperature when getting entire patch's
+                                                            ! gas exchange parameters. 1 = TRUE, 0 = FALSE
 
 
   ! Flag specifying what types of history fields to allocate and prepare

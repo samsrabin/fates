@@ -124,6 +124,7 @@ contains
     use FatesAllometryMod, only : set_root_fraction
     use DamageMainMod, only : GetCrownReduction
     use FatesInterfaceTypesMod, only : hlm_use_tree_damage
+    use FatesInterfaceTypesMod, only : hlm_use_nvp_temp_for_patch_gas_params
 
     ! ARGUMENTS:
     ! -----------------------------------------------------------------------------------
@@ -386,7 +387,7 @@ contains
                   ! [PORTED by Hui Tang: use NVP surface temperature for gas parameters when
                   !  patch contains NVP cohorts; walk cohort list to detect NVP presence]
                   t_cohort = bc_in(s)%t_veg_pa(ifp)
-                  if (hlm_use_nvp == itrue) then
+                  if (hlm_use_nvp == itrue .and. hlm_use_nvp_temp_for_patch_gas_params == itrue) then
                      currentCohort => currentPatch%tallest
                      do while (associated(currentCohort))
                         if (currentCohort%nvp_dz > nearzero) then

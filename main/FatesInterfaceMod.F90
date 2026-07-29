@@ -1612,6 +1612,7 @@ contains
          hlm_use_nvp              = unset_int
          hlm_use_nvp_undersnow    = unset_int
          hlm_nvp_rad_model_ground = unset_int
+         hlm_use_nvp_temp_for_patch_gas_params = unset_int
          hlm_use_inventory_init = unset_int
          hlm_inventory_ctrl_file = 'unset'
          hlm_hist_level_dynam = unset_int
@@ -2097,6 +2098,12 @@ contains
                hlm_nvp_rad_model_ground = ival
                if (fates_global_verbose()) then
                   write(fates_log(),*) 'Transfering hlm_nvp_rad_model_ground= ',ival,' to FATES'
+               end if
+
+            case('use_nvp_temp_for_patch_gas_params')
+               hlm_use_nvp_temp_for_patch_gas_params = ival
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_use_nvp_temp_for_patch_gas_params= ',ival,' to FATES'
                end if
 
             case('use_planthydro')
