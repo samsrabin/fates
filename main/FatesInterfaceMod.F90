@@ -1852,39 +1852,43 @@ contains
             call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
 
-         if(hlm_moss_height_allom.eq.unset_int) then
-            write(fates_log(), *) 'moss height allometry mode is unset: hlm_moss_height_allom, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
-         end if
+         if (hlm_use_moss == itrue) then
 
-         if( abs(hlm_moss_bulk_density-unset_double)<1e-10 ) then
-            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_bulk_density, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
-         end if
+            if(hlm_moss_height_allom.eq.unset_int) then
+               write(fates_log(), *) 'moss height allometry mode is unset: hlm_moss_height_allom, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
 
-         if( abs(hlm_moss_fuel_moisture_live_intercept-unset_double)<1e-10 ) then
-            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_intercept, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
-         end if
+            if( abs(hlm_moss_bulk_density-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_bulk_density, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
 
-         if( abs(hlm_moss_fuel_moisture_live_slope-unset_double)<1e-10 ) then
-            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_slope, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
-         end if
+            if( abs(hlm_moss_fuel_moisture_live_intercept-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_intercept, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
 
-         if( abs(hlm_moss_fuel_moisture_dead_intercept-unset_double)<1e-10 ) then
-            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_dead_intercept, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
-         end if
+            if( abs(hlm_moss_fuel_moisture_live_slope-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_slope, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
 
-         if( abs(hlm_moss_fuel_moisture_dead_slope-unset_double)<1e-10 ) then
-            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_dead_slope, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
-         end if
+            if( abs(hlm_moss_fuel_moisture_dead_intercept-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_dead_intercept, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
 
-         if( abs(hlm_moss_max_burn_frac-unset_double)<1e-10 ) then
-            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_max_burn_frac, exiting'
-            call endrun(msg=errMsg(sourcefile, __LINE__))
+            if( abs(hlm_moss_fuel_moisture_dead_slope-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_dead_slope, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
+
+            if( abs(hlm_moss_max_burn_frac-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_max_burn_frac, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
+
          end if
 
          if(hlm_use_cohort_age_tracking .eq. unset_int) then
