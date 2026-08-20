@@ -216,6 +216,30 @@ module FatesInterfaceTypesMod
   integer, public ::  hlm_use_sp                                    !  Flag to use FATES satellite phenology (LAI) mode
                                                                     !  1 = TRUE, 0 = FALSE
 
+  integer, public ::  hlm_use_moss                                  !  Flag to use the FATES moss PFT
+                                                                    !  1 = TRUE, 0 = FALSE
+
+  integer, public ::  hlm_moss_height_allom                         !  Height allometry mode for moss PFTs
+                                                                    !  1 = grass_powerlaw, 2 = mat_thickness
+
+  real(r8), public ::  hlm_moss_bulk_density                        !  Moss mat bulk density (kg m-3) used by
+                                                                    !  the mat_thickness height allometry
+
+  real(r8), public ::  hlm_moss_fuel_moisture_live_intercept        !  Intercept of live-moss fuel moisture as
+                                                                    !  a function of the moss wetness proxy
+
+  real(r8), public ::  hlm_moss_fuel_moisture_live_slope            !  Slope of live-moss fuel moisture as a
+                                                                    !  function of the moss wetness proxy
+
+  real(r8), public ::  hlm_moss_fuel_moisture_dead_intercept        !  Intercept of dead-moss fuel moisture as
+                                                                    !  a function of the moss wetness proxy
+
+  real(r8), public ::  hlm_moss_fuel_moisture_dead_slope            !  Slope of dead-moss fuel moisture as a
+                                                                    !  function of the moss wetness proxy
+
+  real(r8), public ::  hlm_moss_max_burn_frac                       !  Maximum fraction of live moss fuel that
+                                                                    !  can burn in a fire
+
   
   ! Flag specifying what types of history fields to allocate and prepare
   ! The "_dynam" refers to history fields that can be updated on the dynamics (daily) step

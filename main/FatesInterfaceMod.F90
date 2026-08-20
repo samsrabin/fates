@@ -1573,6 +1573,14 @@ contains
          hlm_use_fixed_biogeog = unset_int
          hlm_use_nocomp = unset_int   
          hlm_use_sp = unset_int
+         hlm_use_moss = unset_int
+         hlm_moss_height_allom = unset_int
+         hlm_moss_bulk_density = unset_double
+         hlm_moss_fuel_moisture_live_intercept = unset_double
+         hlm_moss_fuel_moisture_live_slope = unset_double
+         hlm_moss_fuel_moisture_dead_intercept = unset_double
+         hlm_moss_fuel_moisture_dead_slope = unset_double
+         hlm_moss_max_burn_frac = unset_double
          hlm_use_inventory_init = unset_int
          hlm_inventory_ctrl_file = 'unset'
          hlm_hist_level_dynam = unset_int
@@ -1839,6 +1847,46 @@ contains
             call endrun(msg=errMsg(sourcefile, __LINE__))
          end if
 
+         if(hlm_use_moss.eq.unset_int) then
+            write(fates_log(), *) 'switch for moss PFT unset: hlm_use_moss, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if(hlm_moss_height_allom.eq.unset_int) then
+            write(fates_log(), *) 'moss height allometry mode is unset: hlm_moss_height_allom, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if( abs(hlm_moss_bulk_density-unset_double)<1e-10 ) then
+            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_bulk_density, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if( abs(hlm_moss_fuel_moisture_live_intercept-unset_double)<1e-10 ) then
+            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_intercept, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if( abs(hlm_moss_fuel_moisture_live_slope-unset_double)<1e-10 ) then
+            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_slope, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if( abs(hlm_moss_fuel_moisture_dead_intercept-unset_double)<1e-10 ) then
+            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_dead_intercept, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if( abs(hlm_moss_fuel_moisture_dead_slope-unset_double)<1e-10 ) then
+            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_dead_slope, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
+         if( abs(hlm_moss_max_burn_frac-unset_double)<1e-10 ) then
+            write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_max_burn_frac, exiting'
+            call endrun(msg=errMsg(sourcefile, __LINE__))
+         end if
+
          if(hlm_use_cohort_age_tracking .eq. unset_int) then
             write(fates_log(), *) 'switch for cohort_age_tracking  unset: hlm_use_cohort_age_tracking, exiting'
             call endrun(msg=errMsg(sourcefile, __LINE__))
@@ -2040,6 +2088,18 @@ contains
                   write(fates_log(),*) 'Transfering hlm_use_sp= ',ival,' to FATES'
                end if
 
+            case('use_moss')
+               hlm_use_moss = ival
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_use_moss= ',ival,' to FATES'
+               end if
+
+            case('moss_height_allom')
+               hlm_moss_height_allom = ival
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_height_allom= ',ival,' to FATES'
+               end if
+
             case('use_planthydro')
                hlm_use_planthydro = ival
                if (fates_global_verbose()) then
@@ -2210,6 +2270,36 @@ contains
                hlm_hio_ignore_val = rval
                if (fates_global_verbose()) then
                   write(fates_log(),*) 'Transfering hio_ignore_val = ',rval,' to FATES'
+               end if
+            case ('moss_bulk_density')
+               hlm_moss_bulk_density = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_bulk_density = ',rval,' to FATES'
+               end if
+            case ('moss_fuel_moisture_live_intercept')
+               hlm_moss_fuel_moisture_live_intercept = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_fuel_moisture_live_intercept = ',rval,' to FATES'
+               end if
+            case ('moss_fuel_moisture_live_slope')
+               hlm_moss_fuel_moisture_live_slope = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_fuel_moisture_live_slope = ',rval,' to FATES'
+               end if
+            case ('moss_fuel_moisture_dead_intercept')
+               hlm_moss_fuel_moisture_dead_intercept = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_fuel_moisture_dead_intercept = ',rval,' to FATES'
+               end if
+            case ('moss_fuel_moisture_dead_slope')
+               hlm_moss_fuel_moisture_dead_slope = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_fuel_moisture_dead_slope = ',rval,' to FATES'
+               end if
+            case ('moss_max_burn_frac')
+               hlm_moss_max_burn_frac = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_max_burn_frac = ',rval,' to FATES'
                end if
             case default
                write(fates_log(),*) 'fates NL tag not recognized:',trim(tag)
