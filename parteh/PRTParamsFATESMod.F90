@@ -128,6 +128,10 @@ contains
     allocate(prt_params%woody(num_pft))
     prt_params%woody(:) = param_p%i_data_1d(:)
     
+    param_p => pstruct%GetParamFromName('fates_vascular')
+    allocate(prt_params%vascular(num_pft))
+    prt_params%vascular(:) = param_p%i_data_1d(:)
+
     param_p => pstruct%GetParamFromName('fates_wood_density')
     allocate(prt_params%wood_density(num_pft))
     prt_params%wood_density(:) = param_p%r_data_1d(:)
@@ -469,6 +473,7 @@ contains
         write(fates_log(),fmt0) 'stoich_phos = ',prt_params%phos_stoich_p1
         write(fates_log(),fmt0) 'alloc_organ_priority = ',prt_params%alloc_priority
         write(fates_log(),fmt0) 'woody = ',prt_params%woody
+        write(fates_log(),fmti) 'vascular = ',prt_params%vascular
         write(fates_log(),fmt0) 'roota_par = ',prt_params%fnrt_prof_a
         write(fates_log(),fmt0) 'rootb_par = ',prt_params%fnrt_prof_b
         write(fates_log(),fmt0) 'fnrt_prof_mode = ',prt_params%fnrt_prof_mode
@@ -521,6 +526,9 @@ contains
      ! Examples:
      ! A woody plant cannot have a structural biomass allometry intercept of 0, and a 
      ! non-woody plant (grass) can't have a non-zero intercept...
+     !
+     ! Note: the fates_vascular/fates_woody consistency check lives in
+     ! EDPftvarcon:FatesCheckParams, which is where hlm_use_moss is in scope.
      ! -----------------------------------------------------------------------------------
 
 

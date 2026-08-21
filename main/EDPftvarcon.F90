@@ -950,6 +950,7 @@ contains
     use FatesInterfaceTypesMod, only : hlm_use_fixed_biogeog,hlm_use_sp, hlm_name
     use FatesInterfaceTypesMod, only : hlm_use_inventory_init
     use FatesInterfaceTypesMod, only : hlm_use_nocomp
+    use FatesInterfaceTypesMod, only : hlm_use_moss
     use EDParamsMod        , only : max_nocomp_pfts_by_landuse, maxpatches_by_landuse
     use FatesConstantsMod  , only : n_landuse_cats
 
@@ -976,6 +977,48 @@ contains
      npft = size(EDPftvarcon_inst%freezetol,1)
 
      if(.not.is_master) return
+
+     ! Check that fates_vascular is 0 or 1, then that no PFT is both
+     ! non-vascular and woody.  Moss is identified via vascular(ft) == ifalse,
+     ! so the parameter must be binary for that test to be sound.
+     do ipft = 1,npft
+        if ( .not.any( prt_params%vascular(ipft) == [ifalse,itrue] ) ) then
+           write(fates_log(),*) 'fates_vascular must be 0 (non-vascular) or 1 (vascular).'
+           write(fates_log(),*) 'pft number: ',ipft,' fates_vascular: ',prt_params%vascular(ipft)
+           write(fates_log(),*) 'Please correct this before re-running. Aborting.'
+           call endrun(msg=errMsg(sourcefile, __LINE__))
+        end if
+        if ( ( prt_params%vascular(ipft) == ifalse ) .and. &
+             ( prt_params%woody(ipft) == itrue ) ) then
+           write(fates_log(),*) 'Non-vascular PFTs (fates_vascular = 0) cannot be woody.'
+           write(fates_log(),*) 'fates_vascular and fates_woody are set inconsistently'
+           write(fates_log(),*) 'for pft number: ',ipft
+           write(fates_log(),*) 'fates_vascular: ',prt_params%vascular(ipft)
+           write(fates_log(),*) 'fates_woody: ',prt_params%woody(ipft)
+           write(fates_log(),*) 'Please correct this discrepancy before re-running. Aborting.'
+           call endrun(msg=errMsg(sourcefile, __LINE__))
+        end if
+     end do
+
+     ! Check that the use_fates_moss namelist switch and the parameter file
+     ! agree on whether a non-vascular (moss) PFT is present.  If use_fates_moss
+     ! is on, the parameter file must define at least one PFT with
+     ! fates_vascular = 0; if it is off, no PFT may set fates_vascular = 0.
+     if ( (hlm_use_moss == itrue) .neqv. any(prt_params%vascular(1:npft) == ifalse) ) then
+        write(fates_log(),*) 'use_fates_moss and fates_vascular are set inconsistently.'
+        write(fates_log(),*) 'use_fates_moss: ',hlm_use_moss
+        if (hlm_use_moss == itrue) then
+           write(fates_log(),*) 'use_fates_moss is on, so the parameter file must define at'
+           write(fates_log(),*) 'least one PFT with fates_vascular = 0 (a moss PFT).'
+           write(fates_log(),*) 'No such PFT was found in the parameter file.'
+        else
+           write(fates_log(),*) 'use_fates_moss is off, so no PFT in the parameter file may'
+           write(fates_log(),*) 'set fates_vascular = 0.'
+           write(fates_log(),*) 'At least one such PFT was found in the parameter file.'
+        end if
+        write(fates_log(),*) 'Please correct this discrepancy before re-running. Aborting.'
+        call endrun(msg=errMsg(sourcefile, __LINE__))
+     end if
 
      select case (hlm_parteh_mode)
      case (prt_cnp_flex_allom_hyp)
