@@ -9,7 +9,7 @@ program FatesTestFuel
   use SFFireWeatherMod,            only : fire_weather
   use SFNesterovMod,               only : nesterov_index
   use FatesFuelMod,                only : fuel_type
-  use FatesFuelClassesMod,         only : num_fuel_classes
+  use FatesInterfaceTypesMod,      only : num_fuel_classes
   use SFParamsMod,                 only : SF_val_SAV, SF_val_drying_ratio
   use SFParamsMod,                 only : SF_val_FBD
   
@@ -47,6 +47,13 @@ program FatesTestFuel
   
   ! number of fuel models to test
   num_fuel_models = size(fuel_models)
+
+  ! read in parameter file name and DATM file from command line
+  param_file = command_line_arg(1)
+  datm_file = command_line_arg(2)
+
+  ! read in parameter file
+  call ReadParameters(param_file)
   
   ! allocate arrays
   allocate(temp_degC(n_days))
@@ -64,13 +71,6 @@ program FatesTestFuel
   allocate(fuel_names(num_fuel_models))
   allocate(carriers(num_fuel_models))
   
-  ! read in parameter file name and DATM file from command line
-  param_file = command_line_arg(1)
-  datm_file = command_line_arg(2)
-
-  ! read in parameter file
-  call ReadParameters(param_file)
-  
   ! read in DATM data
   call ReadDatmData(datm_file, temp_degC, precip, rh, wind)
   
@@ -84,6 +84,7 @@ program FatesTestFuel
   do f = 1, num_fuel_models
     
     ! uses data from fuel_models to initialize fuel
+    call fuel(f)%Init()
     call SetUpFuel(fuel(f), fuel_models_array, fuel_models(f), fuel_names(f), carriers(f))
     
     ! sum up fuel and calculate loading

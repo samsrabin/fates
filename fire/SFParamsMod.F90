@@ -4,7 +4,9 @@ module SFParamsMod
    !
    use FatesConstantsMod,        only : r8 => fates_r8
    use FatesConstantsMod,        only : fates_check_param_set
-   use FatesFuelClassesMod,      only : num_fuel_classes
+   use FatesConstantsMod,        only : itrue, ifalse
+   use FatesInterfaceTypesMod,   only : num_fuel_classes
+   use FatesInterfaceTypesMod,   only : hlm_use_moss
    use FatesLitterMod,           only : ncwd
    use FatesGlobals,             only : fates_log
    use FatesGlobals,             only : endrun => fates_endrun
@@ -28,15 +30,15 @@ module SFParamsMod
    real(r8),protected, public :: SF_val_drying_ratio
    real(r8),protected, public :: SF_val_fire_threshold    ! threshold for fires that spread or go out. kW/m (Pyne 1996)
    real(r8),protected, public :: SF_val_CWD_frac(ncwd)
-   real(r8),protected, public :: SF_val_max_decomp(num_fuel_classes)
-   real(r8),protected, public :: SF_val_SAV(num_fuel_classes)
-   real(r8),protected, public :: SF_val_FBD(num_fuel_classes)
-   real(r8),protected, public :: SF_val_min_moisture(num_fuel_classes)
-   real(r8),protected, public :: SF_val_mid_moisture(num_fuel_classes)
-   real(r8),protected, public :: SF_val_low_moisture_Coeff(num_fuel_classes)
-   real(r8),protected, public :: SF_val_low_moisture_Slope(num_fuel_classes)
-   real(r8),protected, public :: SF_val_mid_moisture_Coeff(num_fuel_classes)
-   real(r8),protected, public :: SF_val_mid_moisture_Slope(num_fuel_classes)
+   real(r8),protected, allocatable, public :: SF_val_max_decomp(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_SAV(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_FBD(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_min_moisture(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_mid_moisture(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_low_moisture_Coeff(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_low_moisture_Slope(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_mid_moisture_Coeff(:)  ! [num_fuel_classes]
+   real(r8),protected, allocatable, public :: SF_val_mid_moisture_Slope(:)  ! [num_fuel_classes]
     ! Prescribed fire relevant parameters
    real(r8),protected, public :: SF_val_rxfire_tpup   ! temperature upper threshold above which rx fire is disallowed
    real(r8),protected, public :: SF_val_rxfire_tplw   ! temperature lower threshold below which rx fire is disallowed
@@ -82,6 +84,15 @@ contains
 
 
      if(.not.is_master) return
+
+     ! Make sure number of fuel classes is correct given moss setting
+     if (hlm_use_moss == itrue .and. num_fuel_classes /= 8) then
+        write(fates_log(),*) 'Size of fates_litterclass on paramfile must be 8 for moss runs, got ' , num_fuel_classes
+        call endrun(msg=errMsg(sourcefile, __LINE__))
+     else if (hlm_use_moss == ifalse .and. num_fuel_classes /= 6) then
+        write(fates_log(),*) 'Size of fates_litterclass on paramfile must be 6 for non-moss runs, got ' , num_fuel_classes
+        call endrun(msg=errMsg(sourcefile, __LINE__))
+     end if
      
      ! Move these checks to initialization
      do c = 1,num_fuel_classes
@@ -122,13 +133,29 @@ contains
   end subroutine SpitFireCheckParams
 
   !-----------------------------------------------------------------------
-  subroutine SpitFireParamsInit()
+  subroutine SpitFireParamsInit(pstruct)
     ! Initialize all parameters to nan to ensure that we get valid
     ! values back from the host.
     
     use shr_infnan_mod , only : nan => shr_infnan_nan, assignment(=)
 
     implicit none
+
+    type(params_type), intent(in) :: pstruct  ! Data structure containing all parameters and dimensions
+
+    ! Get number of fuel classes from parameter file
+    num_fuel_classes = pstruct%GetDimSizeFromName('fates_litterclass')
+
+    ! Allocate variables with dimension num_fuel_classes
+    allocate(SF_val_max_decomp(num_fuel_classes))
+    allocate(SF_val_SAV(num_fuel_classes))
+    allocate(SF_val_FBD(num_fuel_classes))
+    allocate(SF_val_min_moisture(num_fuel_classes))
+    allocate(SF_val_mid_moisture(num_fuel_classes))
+    allocate(SF_val_low_moisture_Coeff(num_fuel_classes))
+    allocate(SF_val_low_moisture_Slope(num_fuel_classes))
+    allocate(SF_val_mid_moisture_Coeff(num_fuel_classes))
+    allocate(SF_val_mid_moisture_Slope(num_fuel_classes))
 
     SF_val_fdi_alpha = nan
     SF_val_miner_total = nan
@@ -178,7 +205,7 @@ contains
     type(params_type) :: pstruct         ! Data structure containing all parameters and dimensions
     type(param_type),pointer :: param_p  ! Pointer to one specific parameter
 
-    call SpitFireParamsInit()
+    call SpitFireParamsInit(pstruct)
 
     param_p => pstruct%GetParamFromName("fates_fire_fdi_alpha")
     SF_val_fdi_alpha = param_p%r_data_scalar

@@ -1,6 +1,7 @@
 module FatesFuelMod
 
-  use FatesFuelClassesMod, only : num_fuel_classes, fuel_classes
+  use FatesFuelClassesMod, only : fuel_classes
+  use FatesInterfaceTypesMod, only : num_fuel_classes
   use FatesConstantsMod,   only : r8 => fates_r8
   use FatesConstantsMod,   only : nearzero
   use SFNesterovMod,       only : nesterov_index
@@ -14,10 +15,10 @@ module FatesFuelMod
 
   type, public :: fuel_type
     
-    real(r8) :: loading(num_fuel_classes)            ! fuel loading of each fuel class [kgC/m2]
-    real(r8) :: effective_moisture(num_fuel_classes) ! fuel effective moisture all fuel class (moisture/MEF) [m3/m3]
-    real(r8) :: frac_loading(num_fuel_classes)       ! fractional loading of all fuel classes [0-1] 
-    real(r8) :: frac_burnt(num_fuel_classes)         ! fraction of litter burnt by fire [0-1]
+    real(r8), allocatable :: loading(:)            ! fuel loading of each fuel class [kgC/m2]
+    real(r8), allocatable :: effective_moisture(:) ! fuel effective moisture all fuel class (moisture/MEF) [m3/m3]
+    real(r8), allocatable :: frac_loading(:)       ! fractional loading of all fuel classes [0-1]
+    real(r8), allocatable :: frac_burnt(:)         ! fraction of litter burnt by fire [0-1]
     real(r8) :: non_trunk_loading                    ! total fuel loading excluding trunks [kgC/m2]
     real(r8) :: average_moisture_notrunks            ! weighted average of fuel moisture across non-trunk fuel classes [m3/m3]
     real(r8) :: bulk_density_notrunks                ! weighted average of bulk density across non-trunk fuel classes [kg/m3]
@@ -36,6 +37,7 @@ module FatesFuelMod
       procedure :: AverageSAV_NoTrunks
       procedure :: CalculateFuelBurnt
       procedure :: CalculateResidenceTime
+      procedure :: Deallocate
 
   end type fuel_type
   
@@ -47,6 +49,12 @@ module FatesFuelMod
 
       ! ARGUMENTS:
       class(fuel_type), intent(inout) :: this ! fuel class
+
+      ! Allocate
+      allocate(this%loading(1:num_fuel_classes))
+      allocate(this%frac_loading(num_fuel_classes))
+      allocate(this%frac_burnt(num_fuel_classes))
+      allocate(this%effective_moisture(num_fuel_classes))
       
       ! just zero everything
       this%loading(1:num_fuel_classes) = 0.0_r8
@@ -469,5 +477,27 @@ module FatesFuelMod
       tau_l = min(8.0_r8, tau_l) 
 
     end subroutine CalculateResidenceTime
+
+    subroutine Deallocate(this)
+      ! DESCRIPTION:
+      !   Deallocate fuel class
+
+      ! ARGUMENTS:
+      class(fuel_type), intent(inout) :: this ! fuel class
+
+      if (allocated(this%loading)) then
+         deallocate(this%loading)
+      end if
+      if (allocated(this%frac_loading)) then
+         deallocate(this%frac_loading)
+      end if
+      if (allocated(this%frac_burnt)) then
+         deallocate(this%frac_burnt)
+      end if
+      if (allocated(this%effective_moisture)) then
+         deallocate(this%effective_moisture)
+      end if
+
+    end subroutine Deallocate
     
 end module FatesFuelMod

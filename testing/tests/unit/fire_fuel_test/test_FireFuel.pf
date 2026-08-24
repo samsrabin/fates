@@ -5,7 +5,8 @@ module test_FireFuel
   !
   use FatesConstantsMod,   only : r8 => fates_r8
   use FatesFuelMod,        only : fuel_type
-  use FatesFuelClassesMod, only : fuel_classes, num_fuel_classes
+  use FatesFuelClassesMod, only : fuel_classes
+  use FatesInterfaceTypesMod, only : num_fuel_classes
   use funit
 
   implicit none
@@ -15,16 +16,24 @@ module test_FireFuel
     type(fuel_type) :: fuel
     contains
       procedure :: setUp
+      procedure :: tearDown
   end type TestFireFuel
 
   real(r8), parameter :: tol = 1.e-13_r8
+  integer , parameter :: num_fuel_classes_test = 6
 
   contains 
 
     subroutine setUp(this)
       class(TestFireFuel), intent(inout) :: this
+      num_fuel_classes = num_fuel_classes_test
       call this%fuel%Init()
     end subroutine setUp
+
+    subroutine tearDown(this)
+      class(TestFireFuel), intent(inout) :: this
+      call this%fuel%Deallocate()
+    end subroutine tearDown
 
     @Test 
     subroutine UpdateLoading_CorrectInputOrder(this)

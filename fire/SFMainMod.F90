@@ -27,7 +27,7 @@ module SFMainMod
   use FatesCohortMod,         only : fates_cohort_type
   use EDtypesMod,             only : AREA
   use FatesLitterMod,         only : litter_type
-  use FatesFuelClassesMod,    only : num_fuel_classes
+  use FatesInterfaceTypesMod, only : num_fuel_classes
   use PRTGenericMod,          only : carbon12_element
   use FatesInterfaceTypesMod, only : numpft
   use FatesAllometryMod,      only : CrownDepth

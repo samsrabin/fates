@@ -127,7 +127,7 @@ module FatesHistoryInterfaceMod
   use FatesSizeAgeTypeIndicesMod, only : get_layersizetype_class_index
   use FatesSizeAgeTypeIndicesMod, only : get_age_class_index
 
-  use FatesFuelClassesMod , only : num_fuel_classes
+  use FatesInterfaceTypesMod, only : num_fuel_classes
   use FatesLitterMod      , only : ncwd
   use FatesConstantsMod   , only : ican_upper
   use FatesConstantsMod   , only : ican_ustory

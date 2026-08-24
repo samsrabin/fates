@@ -11,7 +11,7 @@ module FatesTestFireMod
   use FatesUnitTestIOMod,  only : OpenNCFile, GetVar, CloseNCFile, RegisterNCDims
   use FatesUnitTestIOMod,  only : RegisterVar, EndNCDef, WriteVar
   use FatesUnitTestIOMod,  only : type_double, type_int, type_char
-  use FatesFuelClassesMod, only : num_fuel_classes
+  use FatesInterfaceTypesMod, only : num_fuel_classes
   use SyntheticFuelModels, only : fuel_models_array_class
   use SFParamsMod,         only : SF_val_CWD_frac
   use FatesFuelMod,        only : fuel_type

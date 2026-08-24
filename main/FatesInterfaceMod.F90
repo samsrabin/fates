@@ -1207,7 +1207,7 @@ contains
     
     subroutine fates_history_maps
        
-       use FatesFuelClassesMod, only : num_fuel_classes
+       use FatesInterfaceTypesMod, only : num_fuel_classes
        use EDParamsMod, only : nclmax
        use EDParamsMod, only : nlevleaf
        use EDParamsMod, only : ED_val_history_sizeclass_bin_edges

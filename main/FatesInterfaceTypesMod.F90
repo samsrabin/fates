@@ -388,6 +388,7 @@ module FatesInterfaceTypesMod
    integer, public :: nlevcoage        ! The total number of cohort age bins output to history 
    integer, public :: nleafage         ! The total number of leaf age classes
    integer, public :: nlevdamage       ! The total number of damage classes
+   integer, public :: num_fuel_classes ! The total number of fuel classes
    
    ! -------------------------------------------------------------------------------------
    ! Structured Boundary Conditions (SITE/PATCH SCALE)

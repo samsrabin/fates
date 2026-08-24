@@ -9,6 +9,7 @@ module FatesUnitTestParamReaderMod
   use JSONParameterUtilsMod,  	  only : JSONDumpParameter
   use PRTParametersMod,           only : prt_params
   use FatesInterfaceTypesMod,     only : nleafage
+  use FatesInterfaceTypesMod,     only : num_fuel_classes
   use FatesParameterDerivedMod,   only : param_derived
   use FatesGlobals              , only : fates_log
   use FatesLeafBiophysParamsMod , only : TransferParamsLeafBiophys

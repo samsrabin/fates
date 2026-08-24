@@ -30,6 +30,7 @@ module FatesRestartInterfaceMod
   use FatesInterfaceTypesMod,  only : fates_maxElementsPerSite
   use FatesInterfaceTypesMod,  only : hlm_use_tree_damage
   use FatesInterfaceTypesMod,  only : hlm_hio_ignore_val
+  use FatesInterfaceTypesMod,  only : num_fuel_classes
   use FatesHydraulicsMemMod,   only : nshell
   use FatesHydraulicsMemMod,   only : n_hypool_ag
   use FatesHydraulicsMemMod,   only : n_hypool_troot
@@ -45,7 +46,6 @@ module FatesRestartInterfaceMod
   use FatesInterfaceTypesMod,  only : hlm_regeneration_model
   use FatesLitterMod,          only : litter_type
   use FatesLitterMod,          only : ncwd
-  use FatesFuelClassesMod,     only : num_fuel_classes
   use FatesLitterMod,          only : ndcmpy
   use EDTypesMod,              only : area
   use EDTypesMod,              only : set_patchno
