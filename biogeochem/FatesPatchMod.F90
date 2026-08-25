@@ -32,6 +32,7 @@ module FatesPatchMod
   use FatesRadiationMemMod,   only : num_rad_stream_types
   use FatesInterfaceTypesMod, only : hlm_hio_ignore_val
   use FatesInterfaceTypesMod, only : numpft
+  use FatesInterfaceTypesMod, only : hlm_use_moss
   use shr_infnan_mod,         only : nan => shr_infnan_nan, assignment(=)
   use shr_log_mod,            only : errMsg => shr_log_errMsg
 
@@ -219,6 +220,7 @@ module FatesPatchMod
     ! FUELS AND FIRE
     ! fuel characteristics
     real(r8)              :: livegrass               ! total aboveground grass biomass in patch [kgC/m2]
+    real(r8)              :: livemoss                ! total aboveground moss biomass in patch [kgC/m2]
 
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
@@ -263,7 +265,7 @@ module FatesPatchMod
       procedure :: InsertCohort
       procedure :: SortCohorts
       procedure :: UpdateTreeGrassArea
-      procedure :: UpdateLiveGrass
+      procedure :: UpdateLiveNonwoody
       procedure :: FreeMemory
       procedure :: Dump
       procedure :: CheckVars
@@ -519,6 +521,7 @@ module FatesPatchMod
   
       ! FUELS AND FIRE
       this%livegrass                    = nan 
+      this%livemoss                     = nan
       this%ros_front                    = nan
       this%ros_back                     = nan   
       this%tau_l                        = nan
@@ -610,6 +613,7 @@ module FatesPatchMod
 
       ! FIRE
       this%livegrass                         = 0.0_r8
+      this%livemoss                          = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
       this%tau_l                             = 0.0_r8
@@ -811,35 +815,43 @@ module FatesPatchMod
 
     !===========================================================================
 
-    subroutine UpdateLiveGrass(this)
+    subroutine UpdateLiveNonwoody(this)
       !
       ! DESCRIPTION:
-      ! Calculates the sum of live grass biomass [kgC/m2] on a patch
+      ! Calculates the sum of live grass or moss biomass [kgC/m2] on a patch
     
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this ! patch
       
       ! LOCALS:
       real(r8)                         :: live_grass    ! live grass [kgC/m2]
+      real(r8)                         :: live_moss     ! live moss [kgC/m2]
+      real(r8)                         :: biomass       ! aboveground biomass of cohort [kgC/m2]
       type(fates_cohort_type), pointer :: currentCohort ! cohort type
 
       live_grass = 0.0_r8
+      live_moss  = 0.0_r8
       currentCohort => this%tallest
       do while(associated(currentCohort))
-          ! for grasses sum all aboveground tissues
+          ! for grasses and moss sum all aboveground tissues
           if (prt_params%woody(currentCohort%pft) == ifalse) then 
-            live_grass = live_grass +                                      &
-              (currentCohort%prt%GetState(leaf_organ, carbon12_element) +  &
+            biomass = (currentCohort%prt%GetState(leaf_organ, carbon12_element) +  &
               currentCohort%prt%GetState(sapw_organ, carbon12_element) +   &
               currentCohort%prt%GetState(struct_organ, carbon12_element))* &
               currentCohort%n/this%area
+            if (hlm_use_moss == itrue .and. prt_params%vascular(currentCohort%pft) == ifalse) then
+              live_moss = live_moss + biomass
+            else
+              live_grass = live_grass + biomass
+            end if
         endif
         currentCohort => currentCohort%shorter
       enddo
-      
-      this%livegrass = live_grass
 
-    end subroutine UpdateLiveGrass
+      this%livegrass = live_grass
+      this%livemoss  = live_moss
+
+    end subroutine UpdateLiveNonwoody
 
     !===========================================================================
 

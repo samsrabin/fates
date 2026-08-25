@@ -6,15 +6,17 @@ module SyntheticFuelModels
   private
   
   ! Fuel model numbers come from Scott and Burgen (2005) RMRS-GTR-153
+  ! Plus a few (4-digit) for moss testing
 
-  integer, parameter, public, dimension(52) :: all_fuel_models = (/1, 2, 101, 102, 104,  &
+  integer, parameter, public, dimension(54) :: all_fuel_models = (/1, 2, 101, 102, 104,  &
                                                       107, 121, 122, 3, 103, 105, 106,   &
                                                       108, 109, 123, 124, 4, 5, 6, 141,  &
                                                       142, 145, 147, 161, 164, 10, 7,    &
                                                       143, 144, 146, 148, 149, 162,      &
                                                       163, 8, 9, 181, 182, 183, 184,     &
                                                       185, 186, 187, 188, 189, 11, 12,   &
-                                                      13, 201, 202, 203, 204/)
+                                                      13, 201, 202, 203, 204,            &
+                                                      1080, 1081/)
   
   integer,  parameter :: chunk_size = 10
   real(r8), parameter :: ustons_to_kg = 907.185_r8
@@ -37,6 +39,7 @@ module SyntheticFuelModels
     real(r8)           :: hr100_loading       ! fuel loading for 100 hour fuels [kg/m2]
     real(r8)           :: live_herb_loading   ! fuel loading for live herbacious fuels [kg/m2]
     real(r8)           :: live_woody_loading  ! fuel loading for live woody fuels [kg/m2]
+    real(r8)           :: live_moss_loading   ! fuel loading for live moss fuels [kg/m2]
     real(r8)           :: fuel_depth          ! fuel bed depth [m]
     contains 
     
@@ -66,7 +69,7 @@ module SyntheticFuelModels
     
   subroutine InitFuelModel(this, fuel_model_index, carrier, fuel_model_name,             &
     wind_adj_factor, hr1_loading, hr10_loading, hr100_loading, live_herb_loading,        &
-    live_woody_loading, fuel_depth)
+    live_woody_loading, live_moss_loading, fuel_depth)
     !
     ! DESCRIPTION:
     ! Initializes the fuel model with input characteristics
@@ -86,6 +89,7 @@ module SyntheticFuelModels
     real(r8),                    intent(in)    :: hr100_loading      ! loading for 100-hr fuels [US tons/acre]
     real(r8),                    intent(in)    :: live_herb_loading  ! loading for live herbacious fuels [US tons/acre]
     real(r8),                    intent(in)    :: live_woody_loading ! loading for live woody fuels [US tons/acre]
+    real(r8),                    intent(in)    :: live_moss_loading  ! loading for live moss fuels [US tons/acre]
     real(r8),                    intent(in)    :: fuel_depth         ! fuel bed depth [ft]
         
     this%fuel_model_index = fuel_model_index
@@ -97,6 +101,7 @@ module SyntheticFuelModels
     this%hr100_loading = hr100_loading*ustons_acre_to_kgC_m2  ! convert to kgC/m2
     this%live_herb_loading = live_herb_loading*ustons_acre_to_kgC_m2  ! convert to kgC/m2
     this%live_woody_loading = live_woody_loading*ustons_acre_to_kgC_m2  ! convert to kgC/m2
+    this%live_moss_loading = live_moss_loading*ustons_acre_to_kgC_m2  ! convert to kgC/m2
     this%fuel_depth = fuel_depth*ft_to_m ! convert to m
       
   end subroutine InitFuelModel
@@ -105,7 +110,7 @@ module SyntheticFuelModels
     
   subroutine AddFuelModel(this, fuel_model_index, carrier, fuel_model_name,              &
     wind_adj_factor, hr1_loading, hr10_loading, hr100_loading, live_herb_loading,        &
-    live_woody_loading, fuel_depth)
+    live_woody_loading, fuel_depth, live_moss_loading)
     !
     ! DESCRIPTION:
     ! Adds a fuel model to the dynamic array
@@ -125,10 +130,19 @@ module SyntheticFuelModels
     real(r8),                       intent(in)    :: live_herb_loading  ! loading for live herbacious fuels [US tons/acre]
     real(r8),                       intent(in)    :: live_woody_loading ! loading for live woody fuels [US tons/acre]
     real(r8),                       intent(in)    :: fuel_depth         ! fuel bed depth [ft]
+    real(r8),             intent(in), optional    :: live_moss_loading  ! loading for live moss fuels [US tons/acre]
     
     ! LOCALS:
     type(synthetic_fuel_model)              :: fuel_model         ! fuel model
     type(synthetic_fuel_model), allocatable :: temporary_array(:) ! temporary array to hold data while re-allocating
+    real(r8) :: live_moss
+
+    ! Handle optional inputs
+    if (present(live_moss_loading)) then
+       live_moss = live_moss_loading
+    else
+       live_moss = 0._r8
+    end if
     
     ! first make sure we have enough space in the array
     if (allocated(this%fuel_models)) then
@@ -150,7 +164,7 @@ module SyntheticFuelModels
     
     call fuel_model%InitFuelModel(fuel_model_index, carrier, fuel_model_name,            &
       wind_adj_factor, hr1_loading, hr10_loading, hr100_loading, live_herb_loading,      &
-      live_woody_loading, fuel_depth)
+      live_woody_loading, live_moss, fuel_depth)
     
     this%fuel_models(this%num_fuel_models) = fuel_model
       
@@ -277,6 +291,14 @@ module SyntheticFuelModels
     call this%AddFuelModel(fuel_model_index=108, carrier='GR', fuel_model_name='high load humid climate grass', &
       wind_adj_factor=0.49_r8, hr1_loading=0.5_r8, hr10_loading=1.0_r8, hr100_loading=0.0_r8,                   &
       live_herb_loading=7.3_r8, live_woody_loading=0.0_r8, fuel_depth=4.0_r8)
+
+    call this%AddFuelModel(fuel_model_index=1080, carrier='GR', fuel_model_name='high load humid climate moss', &
+      wind_adj_factor=0.49_r8, hr1_loading=0.5_r8, hr10_loading=1.0_r8, hr100_loading=0.0_r8,                   &
+      live_herb_loading=0._r8, live_woody_loading=0.0_r8, fuel_depth=4.0_r8, live_moss_loading=7.3_r8)
+
+    call this%AddFuelModel(fuel_model_index=1081, carrier='GR', fuel_model_name='high load humid climate grass-moss', &
+      wind_adj_factor=0.49_r8, hr1_loading=0.5_r8, hr10_loading=1.0_r8, hr100_loading=0.0_r8,                   &
+      live_herb_loading=4.0_r8, live_woody_loading=0.0_r8, fuel_depth=4.0_r8, live_moss_loading=3.3_r8)
       
     call this%AddFuelModel(fuel_model_index=109, carrier='GR', fuel_model_name='very high load humid climate grass-shrub', &
       wind_adj_factor=0.52_r8, hr1_loading=1.0_r8, hr10_loading=1.0_r8, hr100_loading=0.0_r8,                              &

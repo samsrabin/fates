@@ -11,25 +11,65 @@ module test_FireFuel
 
   implicit none
 
-  @TestCase
-  type, extends(TestCase) :: TestFireFuel
-    type(fuel_type) :: fuel
-    contains
-      procedure :: setUp
-      procedure :: tearDown
+  ! Enable running these tests with different values of num_fuel_classes
+  @testParameter
+  type, extends(AbstractTestParameter) :: FuelClassCount
+     integer :: param_num_fuel_classes
+   contains
+     procedure :: toString  ! (deferred in AbstractTestParameter; defined as a function in this module)
+  end type FuelClassCount
+
+  ! The test case extends ParameterizedTestCase and stores the parameter(s)
+  @testCase(constructor=newTestFireFuel, testParameters={getParameters()})
+  type, extends(ParameterizedTestCase) :: TestFireFuel
+     type(fuel_type) :: fuel
+     real(r8)        :: live_moss
+     real(r8)        :: dead_moss
+     integer         :: param_num_fuel_classes
+   contains
+     procedure :: setUp
+     procedure :: tearDown
   end type TestFireFuel
 
   real(r8), parameter :: tol = 1.e-13_r8
-  integer , parameter :: num_fuel_classes_test = 6
+  real(r8), parameter :: dummy_litter = 5.0_r8   ! dummy litter value [kgC/m2]
 
-  contains 
+  contains
+
+    ! constructor: bakes parameter(s) into the fixture instance
+    function newTestFireFuel(testParameter) result(test)
+      type(FuelClassCount), intent(in) :: testParameter
+      type(TestFireFuel)               :: test
+      test%param_num_fuel_classes = testParameter%param_num_fuel_classes
+    end function newTestFireFuel
+
+    ! the parameter list: the generated suite calls this
+    function getParameters() result(params)
+      type(FuelClassCount), allocatable :: params(:)
+      params = [FuelClassCount(6), FuelClassCount(8)]
+    end function getParameters
+
+    ! label used in output, e.g. "param_num_fuel_classes=8"
+    function toString(this) result(string)
+      class(FuelClassCount), intent(in) :: this
+      character(:), allocatable :: string
+      character(len=32) :: buf
+      write(buf,'(i0)') this%param_num_fuel_classes
+      string = 'nclass=' // trim(buf)
+    end function toString
 
     subroutine setUp(this)
       class(TestFireFuel), intent(inout) :: this
-      num_fuel_classes = num_fuel_classes_test
+      num_fuel_classes = this%param_num_fuel_classes
       call this%fuel%Init()
+      if (fuel_classes%moss_classes_present()) then
+         this%live_moss = dummy_litter
+         this%dead_moss = 0.0_r8  ! TEMPORARY until I handle dead moss in the code
+      else
+         this%live_moss = 0._r8
+         this%dead_moss = 0._r8
+      end if
     end subroutine setUp
-
     subroutine tearDown(this)
       class(TestFireFuel), intent(inout) :: this
       call this%fuel%Deallocate()
@@ -46,8 +86,13 @@ module test_FireFuel
       real(r8)                           :: trunk_litter = 25.0_r8 ! trunk branch litter [kgC/m2]
       real(r8)                           :: live_grass   = 30.0_r8 ! live grass [kgC/m2]
 
+      ! Replace dummy moss with "real"
+      if (fuel_classes%moss_classes_present()) then
+         this%live_moss = 0.5_r8
+      end if
+
       call this%fuel%UpdateLoading(leaf_litter, twig_litter, sm_br_litter,            &
-        lg_br_litter, trunk_litter, live_grass)
+        lg_br_litter, trunk_litter, live_grass, this%live_moss)
 
       @assertEqual(this%fuel%loading(fuel_classes%dead_leaves()), leaf_litter, tolerance=tol)
       @assertEqual(this%fuel%loading(fuel_classes%twigs()), twig_litter, tolerance=tol)
@@ -55,6 +100,11 @@ module test_FireFuel
       @assertEqual(this%fuel%loading(fuel_classes%large_branches()), lg_br_litter, tolerance=tol)
       @assertEqual(this%fuel%loading(fuel_classes%trunks()), trunk_litter, tolerance=tol)
       @assertEqual(this%fuel%loading(fuel_classes%live_grass()), live_grass, tolerance=tol)
+      if (fuel_classes%moss_classes_present()) then
+         @assertEqual(this%fuel%loading(fuel_classes%live_moss()), this%live_moss, tolerance=tol)
+         ! TEMPORARY until I handle dead moss in the code
+         @assertEqual(this%fuel%loading(fuel_classes%dead_moss()), 0._r8, tolerance=tol)
+      end if
 
     end subroutine UpdateLoading_CorrectInputOrder
 
@@ -62,14 +112,18 @@ module test_FireFuel
     subroutine SumLoading_CorrectValues(this)
       ! test that the fuel is summed correctly (and ignores trunks)
       class(TestFireFuel), intent(inout) :: this                    ! fuel test object
-      real(r8)                           :: dummy_litter = 5.0_r8   ! dummy litter value [kgC/m2]
       real(r8)                           :: trunk_litter = 100.0_r8 ! trunk branch litter [kgC/m2]
       real(r8)                           :: non_trunk_loading       ! what non-trunk loading should be [kgC/m2]
       
-      non_trunk_loading = dummy_litter*5.0_r8
+      non_trunk_loading = dummy_litter*float(num_fuel_classes - 1)
+
+      ! TEMPORARY until I handle dead moss in the code
+      if (num_fuel_classes == 8) then
+         non_trunk_loading = non_trunk_loading - dummy_litter
+      end if
 
       call this%fuel%UpdateLoading(dummy_litter, dummy_litter, dummy_litter,          &
-        dummy_litter, trunk_litter, dummy_litter)
+        dummy_litter, trunk_litter, dummy_litter, this%live_moss)
       
       call this%fuel%SumLoading()
 
@@ -81,22 +135,35 @@ module test_FireFuel
     subroutine CalculateFractionalLoading_CorrectValues(this)
       ! test that the fractional loading is calculated correctly (and ignores trunks)
       class(TestFireFuel), intent(inout) :: this                    ! fuel test object
-      real(r8)                           :: dummy_litter = 5.0_r8   ! dummy litter value [kgC/m2]
       real(r8)                           :: trunk_litter = 100.0_r8 ! trunk branch litter [kgC/m2]
       real(r8)                           :: non_trunk_loading       ! what non-trunk loading should be [kgC/m2]
       real(r8)                           :: frac_loading            ! what the fractional loading should be [0-1]
       integer                            :: i                       ! looping index
       
       non_trunk_loading = dummy_litter*float(num_fuel_classes - 1)
+
+      ! TEMPORARY until I handle dead moss in the code
+      if (num_fuel_classes == 8) then
+         non_trunk_loading = non_trunk_loading - dummy_litter
+      end if
+
       frac_loading = dummy_litter/non_trunk_loading
 
       call this%fuel%UpdateLoading(dummy_litter, dummy_litter, dummy_litter,          &
-        dummy_litter, trunk_litter, dummy_litter)
+        dummy_litter, trunk_litter, dummy_litter, this%live_moss)
       
       call this%fuel%SumLoading()
       call this%fuel%CalculateFractionalLoading()
 
       do i = 1, num_fuel_classes 
+
+        ! TEMPORARY until I handle dead moss in the code
+        if (num_fuel_classes == 8) then
+           if (i == fuel_classes%dead_moss()) then
+              cycle
+           end if
+        end if
+
         if (i /= fuel_classes%trunks()) then 
           @assertEqual(this%fuel%frac_loading(i), frac_loading, tolerance=tol)
         else 

@@ -12,6 +12,7 @@ module FatesTestFireMod
   use FatesUnitTestIOMod,  only : RegisterVar, EndNCDef, WriteVar
   use FatesUnitTestIOMod,  only : type_double, type_int, type_char
   use FatesInterfaceTypesMod, only : num_fuel_classes
+  use FatesFuelClassesMod, only : fuel_classes
   use SyntheticFuelModels, only : fuel_models_array_class
   use SFParamsMod,         only : SF_val_CWD_frac
   use FatesFuelMod,        only : fuel_type
@@ -45,6 +46,7 @@ module FatesTestFireMod
       real(r8) :: small_branch_litter ! small branch litter [kg/m2]
       real(r8) :: large_branch_litter ! large branch litter [kg/m2]
       real(r8) :: grass_litter        ! grass litter [kg/m2]
+      real(r8) :: moss_litter         ! moss litter [kg/m2]
       
 
       ! get fuel model position in array
@@ -61,13 +63,15 @@ module FatesTestFireMod
         (SF_val_CWD_frac(2) + SF_val_CWD_frac(3))
         
       grass_litter = fuel_model_array%fuel_models(i)%live_herb_loading
+      moss_litter = fuel_model_array%fuel_models(i)%live_moss_loading
       
       fuel_name = fuel_model_array%fuel_models(i)%fuel_model_name
       fuel_carrier = fuel_model_array%fuel_models(i)%carrier
       
       call fuel%UpdateLoading(leaf_litter, twig_litter, small_branch_litter,    &
-        large_branch_litter, 0.0_r8, grass_litter)
+        large_branch_litter, 0.0_r8, grass_litter, moss_litter)
       
+
     end subroutine SetUpFuel
 
     !=====================================================================================

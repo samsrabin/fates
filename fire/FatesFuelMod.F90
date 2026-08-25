@@ -114,7 +114,7 @@ module FatesFuelMod
     !-------------------------------------------------------------------------------------
 
     subroutine UpdateLoading(this, leaf_litter, twig_litter, small_branch_litter,     &
-        large_branch_litter, trunk_litter, live_grass)
+        large_branch_litter, trunk_litter, live_grass, live_moss)
       ! DESCRIPTION:
       !   Updates loading for each fuel type
 
@@ -126,6 +126,7 @@ module FatesFuelMod
       real(r8),         intent(in)    :: large_branch_litter ! input leaf litter [kgC/m2]
       real(r8),         intent(in)    :: trunk_litter        ! input leaf litter [kgC/m2]
       real(r8),         intent(in)    :: live_grass          ! input live grass [kgC/m2]
+      real(r8),         intent(in)    :: live_moss           ! input live moss [kgC/m2]
 
       this%loading(fuel_classes%dead_leaves()) = leaf_litter
       this%loading(fuel_classes%twigs()) = twig_litter
@@ -133,6 +134,16 @@ module FatesFuelMod
       this%loading(fuel_classes%large_branches()) = large_branch_litter
       this%loading(fuel_classes%live_grass()) = live_grass
       this%loading(fuel_classes%trunks()) = trunk_litter
+
+      ! Special handling for moss because its fuel classes are only allocated if hlm_use_moss true
+      if (live_moss > 0._r8) then
+         if (.not. fuel_classes%moss_classes_present()) then
+            write(fates_log(), *) 'Live moss biomass > 0: ', live_moss
+            write(fates_log(), *) 'but moss fuel classes not present.'
+            call endrun(msg=errMsg( __FILE__, __LINE__))
+         end if
+         this%loading(fuel_classes%live_moss()) = live_moss
+      end if
 
     end subroutine UpdateLoading
 

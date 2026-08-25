@@ -28,6 +28,7 @@ module SFMainMod
   use EDtypesMod,             only : AREA
   use FatesLitterMod,         only : litter_type
   use FatesInterfaceTypesMod, only : num_fuel_classes
+  use FatesInterfaceTypesMod, only : hlm_use_moss
   use PRTGenericMod,          only : carbon12_element
   use FatesInterfaceTypesMod, only : numpft
   use FatesAllometryMod,      only : CrownDepth
@@ -163,14 +164,14 @@ contains
 
       if (currentPatch%nocomp_pft_label /= nocomp_bareground) then
 
-        ! calculate live grass [kgC/m2]
-        call currentPatch%UpdateLiveGrass()
+        ! calculate live grass and moss [kgC/m2]
+        call currentPatch%UpdateLiveNonwoody()
 
         ! update fuel loading [kgC/m2]
         litter => currentPatch%litter(element_pos(carbon12_element))
         call currentPatch%fuel%UpdateLoading(sum(litter%leaf_fines(:)),                  &
           litter%ag_cwd(1), litter%ag_cwd(2), litter%ag_cwd(3), litter%ag_cwd(4),        &
-          currentPatch%livegrass)
+          currentPatch%livegrass, currentPatch%livemoss)
             
         ! sum up fuel classes and calculate fractional loading for each
         call currentPatch%fuel%SumLoading()

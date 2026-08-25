@@ -36,17 +36,12 @@ program FatesTestFuel
   character(len=100),                allocatable :: fuel_names(:)        ! names of fuel models
   character(len=2),                  allocatable :: carriers(:)          ! carriers of fuel models
   integer                                        :: i, f                 ! looping indices
+  integer, dimension(3)                          :: fuel_models          ! fuel models to test
   integer                                        :: num_fuel_models      ! number of fuel models to test
   
   ! CONSTANTS:
   integer,          parameter :: n_days = 365             ! number of days to run simulation
   character(len=*), parameter :: out_file = 'fuel_out.nc' ! output file 
-  
-  ! fuel models to test
-  integer, parameter, dimension(3) :: fuel_models = (/102, 183, 164/)
-  
-  ! number of fuel models to test
-  num_fuel_models = size(fuel_models)
 
   ! read in parameter file name and DATM file from command line
   param_file = command_line_arg(1)
@@ -54,6 +49,15 @@ program FatesTestFuel
 
   ! read in parameter file
   call ReadParameters(param_file)
+
+  ! fuel models to test
+  fuel_models = (/102, 183, 108/)  ! 108 instead of 164 for comparison with moss-enabled ones
+  if (num_fuel_classes == 8) then
+     fuel_models = (/108, 1080, 1081/)
+  end if
+
+  ! number of fuel models to test
+  num_fuel_models = size(fuel_models)
   
   ! allocate arrays
   allocate(temp_degC(n_days))

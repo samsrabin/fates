@@ -49,6 +49,7 @@ module FatesHistoryInterfaceMod
   use FatesHistoryVariableType , only : fates_history_variable_type
   use FatesInterfaceTypesMod        , only : hlm_hio_ignore_val
   use FatesInterfaceTypesMod        , only : hlm_use_planthydro
+  use FatesInterfaceTypesMod        , only : hlm_use_moss
   use FatesInterfaceTypesMod        , only : hlm_use_ed_st3
   use FatesInterfaceTypesMod        , only : hlm_use_cohort_age_tracking
   use FatesInterfaceTypesMod        , only : hlm_use_tree_damage
@@ -480,6 +481,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_fire_fuel_sav_si
   integer :: ih_fire_fuel_mef_si
   integer :: ih_sum_fuel_si
+  integer :: ih_livemoss_fuel_si
   integer :: ih_rx_burn_window_si
   integer :: ih_rx_intensity_si
   integer :: ih_rx_fracarea_si
@@ -2762,6 +2764,11 @@ contains
             hio_fire_fuel_sav_si(io_si)        = hio_fire_fuel_sav_si(io_si) + cpatch%fuel%SAV_notrunks * cpatch%area * AREA_INV / m_per_cm
             hio_fire_fuel_mef_si(io_si)        = hio_fire_fuel_mef_si(io_si) + cpatch%fuel%MEF_notrunks * cpatch%area * AREA_INV
             hio_sum_fuel_si(io_si)             = hio_sum_fuel_si(io_si) + cpatch%fuel%non_trunk_loading * cpatch%area * AREA_INV
+
+            if (hlm_use_moss == itrue) then
+               this%hvars(ih_livemoss_fuel_si)%r81d(io_si) = this%hvars(ih_livemoss_fuel_si)%r81d(io_si) + &
+                    cpatch%livemoss * cpatch%area * AREA_INV
+            end if
 
             hio_nonrx_intensity_fracarea_product_si(io_si) = hio_nonrx_intensity_fracarea_product_si(io_si) + &
                  cpatch%nonrx_FI * cpatch%nonrx_frac_burnt * cpatch%area * AREA_INV * J_per_kJ
@@ -6820,6 +6827,15 @@ contains
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM',     &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,                 &
             index = ih_sum_fuel_si)
+
+       moss_fuel_if: if (hlm_use_moss == itrue) then
+          call this%set_history_var(vname='FATES_LIVEMOSS_FUEL', units='kg m-2',    &
+               long='live moss fuel loading in kg carbon per m2 land area',        &
+               use_default='inactive', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+               upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+               index = ih_livemoss_fuel_si)
+       end if moss_fuel_if
+
        ! Litter Variables
 
        call this%set_history_var(vname='FATES_LITTER_IN', units='kg m-2 s-1',     &

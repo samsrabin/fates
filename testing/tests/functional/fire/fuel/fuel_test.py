@@ -91,6 +91,8 @@ class FuelTest(FunctionalTest):
             "dead leaves",
             "live grass",
         ]
+        if fuel_dat.sizes["litter_class"] == 8:
+            litter_classes += ["live_moss", "dead_moss"]
         colors = [
             "darksalmon",
             "peru",
@@ -99,6 +101,8 @@ class FuelTest(FunctionalTest):
             "moccasin",
             "yellowgreen",
         ]
+        if fuel_dat.sizes["litter_class"] == 8:
+            colors += ["aquamarine", "lightseagreen"]
         fuel_models = [str(f) for f in fuel_dat.fuel_model.values]
 
         if by_litter_type:

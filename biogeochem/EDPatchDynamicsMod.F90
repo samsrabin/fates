@@ -31,6 +31,7 @@ module EDPatchDynamicsMod
   use EDTypesMod           , only : min_patch_area_forced
   use FatesInterfaceTypesMod, only : hlm_regeneration_model
   use FatesInterfaceTypesMod, only : numpft
+  use FatesInterfaceTypesMod, only : hlm_use_moss
   use FatesConstantsMod     , only : dtype_ifall
   use FatesConstantsMod     , only : dtype_ilog
   use FatesConstantsMod     , only : dtype_ifire
@@ -1097,9 +1098,13 @@ contains
                                      leaf_burn_frac = currentCohort%fraction_crown_burned
                                   else
 
-                                     ! Grasses determine their fraction of leaves burned here
+                                     ! Grasses and moss determine their fraction of leaves burned here
 
-                                     leaf_burn_frac = currentPatch%fuel%frac_burnt(fuel_classes%live_grass())
+                                     if (hlm_use_moss == itrue .and. prt_params%vascular(currentCohort%pft) == ifalse) then
+                                        leaf_burn_frac = currentPatch%fuel%frac_burnt(fuel_classes%live_moss())
+                                     else
+                                        leaf_burn_frac = currentPatch%fuel%frac_burnt(fuel_classes%live_grass())
+                                     end if
                                   endif
 
                                   ! Perform a check to make sure that spitfire gave
@@ -3268,6 +3273,7 @@ contains
     call rp%tveg_longterm%FuseRMean(dp%tveg_longterm,rp%area*inv_sum_area)
 
     rp%livegrass               = (dp%livegrass*dp%area + rp%livegrass*rp%area) * inv_sum_area
+    rp%livemoss                = (dp%livemoss*dp%area + rp%livemoss*rp%area) * inv_sum_area
     rp%ros_front               = (dp%ros_front*dp%area + rp%ros_front*rp%area) * inv_sum_area
     rp%tau_l                   = (dp%tau_l*dp%area + rp%tau_l*rp%area) * inv_sum_area
     rp%tfc_ros              = (dp%tfc_ros*dp%area + rp%tfc_ros*rp%area) * inv_sum_area
