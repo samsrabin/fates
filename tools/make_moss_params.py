@@ -256,9 +256,84 @@ MOSS_PFT_OVERRIDES = {
 DEAD_LEAVES_INDEX = 4  # 0-based index of "dead leaves" in fates_litterclass
 # All ten litterclass-dimensioned parameters grow by copying the
 # "dead leaves" values into both new (7th, 8th) slots, except:
+
 LITTERCLASS_OVERRIDE = {
     "fates_frag_maxdecomp": [999.0, 1.0],  # index 6 unread; index 7 read
     "fates_litterclass_name": ["live moss", "dead moss"],
+}
+
+# ---------------------------------------------------------------------
+# DEFERRED overrides (Sam's call, 2026-08-24)
+#
+# Every key below is a genuine moss value and stays in
+# MOSS_PFT_OVERRIDES above with its rationale intact -- it is simply NOT
+# applied yet. Moss keeps the arctic_c3_grass value it was seeded from
+# until the task that needs the moss value lands.
+#
+# Why: until Task 10 gives moss its own CO2 path, moss still goes
+# through FATES's ordinary stomatal solve. With intercept and both
+# slopes at 0, gs collapses to the gsmin0 floor
+# (biogeophys/LeafBiophysicsMod.F90:2001-2005) and moss GPP is ~0 -- a
+# carbon sink with no source. In SP mode that is mostly inert because
+# structure is prescribed, but the nocomp full-FATES 2-year test has
+# moss on 50% of the gridcell surviving two years on its own carbon
+# balance. Starvation mortality or a fatal conservation-check failure
+# there would be an artefact of task ordering, and it would mask real
+# bugs: a conservation check firing has to mean something.
+#
+# phen_leaf_habit and the reproduction threshold are here for the same
+# reason, not just the stomatal three -- evergreen moss holds its
+# thallus through the arctic winter, and the 0.001 threshold puts moss
+# on the mature reproductive branch where seed_alloc_mature = 0.25
+# applies. Both make the carbon drain worse.
+#
+# The radiation group is deferred for the same reason, added after
+# review caught that an earlier version of this comment claimed it did
+# not affect carbon balance. It does: fates_rad_leaf_clumping_index
+# multiplies the light-extinction coefficient directly
+# (radiation/TwoStreamMLPEMod.F90:689,966 and
+# biogeophys/FatesNormanRadMod.F90), so it changes absorbed PAR and
+# therefore GPP -- in the very test this deferral exists to protect.
+# Moss carries 10.0 against a parameter documented as "clumping index
+# 0-1" (TwoStreamMLPEMod.F90:93) with no range check anywhere in FATES.
+# The tau/xl overrides go with it rather than separately: they are one
+# coherent radiative description of a dark, near-opaque, randomly
+# oriented thallus, and applying half of it would be worse than
+# applying none. This does NOT revisit the 10.0 value itself, which is
+# a settled decision -- only when it starts taking effect.
+#
+# Deliberately NOT deferred: the moss-scale structural overrides
+# (recruit_height_min, allom_fnrt_prof_a). Neither enters the carbon
+# or radiation budget -- one sets recruit size, the other the vertical
+# shape of the fine-root profile -- so the spec-3 corrections stand.
+#
+# Net effect while all thirteen are deferred: moss differs from
+# arctic_c3_grass in five parameters -- fates_pftname, fates_vascular,
+# fates_hlm_pft_map, fates_recruit_height_min, fates_allom_fnrt_prof_a.
+# Moss is grass with an identity flag. That is the intent: Tasks 5-9
+# test plumbing, and Task 10 is the first task whose tests can detect a
+# physiology or radiation regression.
+#
+# Restoration is a one-line delete from this set. Each key names the
+# task that owns it:
+DEFERRED_PFT_OVERRIDES = {
+    # Task 10 -- moss physiology (no stomatal solve, wetness-limited vcmax)
+    "fates_leaf_vcmax25top",
+    "fates_leaf_stomatal_intercept",
+    "fates_leaf_stomatal_slope_ballberry",
+    "fates_leaf_stomatal_slope_medlyn",
+    "fates_leaf_agross_btran_model",
+    "fates_phen_leaf_habit",
+    # Task 10 as well -- the radiation group, restored together
+    "fates_rad_leaf_clumping_index",
+    "fates_rad_leaf_taunir",
+    "fates_rad_leaf_tauvis",
+    "fates_rad_stem_taunir",
+    "fates_rad_stem_tauvis",
+    "fates_rad_leaf_xl",
+    # Task 11 -- mat-thickness allometry, where moss dimensions are settled
+    # and a moss-scale dbh threshold starts to mean something
+    "fates_recruit_seed_dbh_repro_threshold",
 }
 
 MOSS_ATTRIBUTE_KEY = "moss_pft_caveat"
@@ -441,8 +516,17 @@ def do_make_moss(args):
     missing = sorted(set(MOSS_PFT_OVERRIDES) - set(params))
     if missing:
         raise SystemExit(f"Base file is missing override targets: {missing}")
+    unknown = sorted(DEFERRED_PFT_OVERRIDES - set(MOSS_PFT_OVERRIDES))
+    if unknown:
+        raise SystemExit(f"DEFERRED_PFT_OVERRIDES names non-overrides: {unknown}")
     for key, value in MOSS_PFT_OVERRIDES.items():
+        if key in DEFERRED_PFT_OVERRIDES:
+            continue
         _set_last_element(params[key]["data"], value)
+    if DEFERRED_PFT_OVERRIDES and not args.silent:
+        print("Deferred (moss keeps the arctic_c3_grass value for now):")
+        for key in sorted(DEFERRED_PFT_OVERRIDES):
+            print(f"    {key} -- would have been {MOSS_PFT_OVERRIDES[key]!r}")
 
     # --- 3. fates_hlm_pft_map: the new column starts at 0 for every row,
     #        then HLM PFT 4 (row index 3) is fully remapped to moss.

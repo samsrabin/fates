@@ -1,5 +1,5 @@
 {
-  "attributes": {"history": "tools/make_moss_params.py --mode make-moss --fin parameter_files/fates_params_default.json --fout parameter_files/fates_params_moss.json; do not edit by hand.", "moss_pft_caveat": "fates_hlm_pft_map row 4 (HLM natpft index 4) is remapped entirely to FATES PFT 15 (non_vascular_phototroph) in this file. This parameter file is therefore only sensible for surface datasets where HLM PFT 4 (broadleaf_evergreen_tropical_tree) carries no real area -- e.g. at a tropical site it would silently turn broadleaf evergreen tropical tree area into moss."},
+  "attributes": {"history": "tools/make_moss_params.py --mode make-moss --fin parameter_files/fates_params_default.json --fout parameter_files/fates_params_moss.json", "moss_pft_caveat": "fates_hlm_pft_map row 4 (HLM natpft index 4) is remapped entirely to FATES PFT 15 (non_vascular_phototroph) in this file. This parameter file is therefore only sensible for surface datasets where HLM PFT 4 (broadleaf_evergreen_tropical_tree) carries no real area -- e.g. at a tropical site it would silently turn broadleaf evergreen tropical tree area into moss."},
   "dimensions": {
     "fates_NCWD": 4,
     "fates_history_age_bins": 7,
@@ -833,7 +833,7 @@
       "dims": ["fates_pft"],
       "long_name": "model switch for how gross assimilation affects conductance. See LeafBiophysicsMod.F90, integer constants  btran_on_",
       "units": "index",
-      "data": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+      "data": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     },
     "fates_leaf_c3psn": {
       "dtype": "integer",
@@ -896,28 +896,28 @@
       "dims": ["fates_pft"],
       "long_name": "Minimum unstressed stomatal conductance for Ball-Berry model and Medlyn model",
       "units": "umol H2O/m**2/s",
-      "data": [10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 40000.0, 0.0]
+      "data": [10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 40000.0, 10000.0]
     },
     "fates_leaf_stomatal_slope_ballberry": {
       "dtype": "float",
       "dims": ["fates_pft"],
       "long_name": "stomatal slope parameter, as per Ball-Berry",
       "units": "unitless",
-      "data": [8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 0.0]
+      "data": [8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
     },
     "fates_leaf_stomatal_slope_medlyn": {
       "dtype": "float",
       "dims": ["fates_pft"],
       "long_name": "stomatal slope parameter, as per Medlyn",
       "units": "KPa**0.5",
-      "data": [4.1, 2.3, 2.3, 4.1, 4.4, 4.4, 4.7, 4.7, 4.7, 4.7, 4.7, 2.2, 5.3, 1.6, 0.0]
+      "data": [4.1, 2.3, 2.3, 4.1, 4.4, 4.4, 4.7, 4.7, 4.7, 4.7, 4.7, 2.2, 5.3, 1.6, 2.2]
     },
     "fates_leaf_vcmax25top": {
       "dtype": "float",
       "dims": ["fates_leafage_class", "fates_pft"],
       "long_name": "maximum carboxylation rate of Rub. at 25C, canopy top",
       "units": "umol CO2/m^2/s",
-      "data": [[50.0, 62.0, 39.0, 61.0, 58.0, 58.0, 62.0, 54.0, 54.0, 38.0, 54.0, 86.0, 78.0, 78.0, 30.0]]
+      "data": [[50.0, 62.0, 39.0, 61.0, 58.0, 58.0, 62.0, 54.0, 54.0, 38.0, 54.0, 86.0, 78.0, 78.0, 86.0]]
     },
     "fates_leaf_vcmaxha": {
       "dtype": "float",
@@ -1148,7 +1148,7 @@
       "dims": ["fates_pft"],
       "long_name": "Flag for leaf phenology habit. 1 - evergreen 2 - season (cold) deciduous 3 - stress (hydro) deciduous 4 - stress (hydro) semi-deciduous",
       "units": "flag",
-      "data": [1, 1, 2, 1, 3, 2, 1, 3, 2, 1, 2, 2, 3, 3, 1]
+      "data": [1, 1, 2, 1, 3, 2, 1, 3, 2, 1, 2, 2, 3, 3, 2]
     },
     "fates_phen_mindaysoff": {
       "dtype": "float",
@@ -1190,7 +1190,7 @@
       "dims": ["fates_pft"],
       "long_name": "factor describing how much self-occlusion of leaf scattering elements decreases light interception",
       "units": "fraction (0-1)",
-      "data": [0.85, 0.85, 0.8, 0.85, 0.85, 0.9, 0.85, 0.9, 0.9, 0.85, 0.9, 0.75, 0.75, 0.75, 10.0]
+      "data": [0.85, 0.85, 0.8, 0.85, 0.85, 0.9, 0.85, 0.9, 0.9, 0.85, 0.9, 0.75, 0.75, 0.75, 0.75]
     },
     "fates_rad_leaf_rhonir": {
       "dtype": "float",
@@ -1211,21 +1211,21 @@
       "dims": ["fates_pft"],
       "long_name": "Leaf transmittance  near-IR",
       "units": "fraction",
-      "data": [0.33, 0.32, 0.42, 0.33, 0.43, 0.43, 0.33, 0.43, 0.43, 0.33, 0.43, 0.4, 0.4, 0.4, 0.01]
+      "data": [0.33, 0.32, 0.42, 0.33, 0.43, 0.43, 0.33, 0.43, 0.43, 0.33, 0.43, 0.4, 0.4, 0.4, 0.4]
     },
     "fates_rad_leaf_tauvis": {
       "dtype": "float",
       "dims": ["fates_pft"],
       "long_name": "Leaf transmittance  visible",
       "units": "fraction",
-      "data": [0.06, 0.04, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.05, 0.05, 0.05, 0.01]
+      "data": [0.06, 0.04, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.05, 0.05, 0.05, 0.05]
     },
     "fates_rad_leaf_xl": {
       "dtype": "float",
       "dims": ["fates_pft"],
       "long_name": "Leaf/stem orientation index",
       "units": "unitless",
-      "data": [0.32, 0.01, 0.01, 0.32, 0.2, 0.59, 0.32, 0.59, 0.59, 0.32, 0.59, -0.23, -0.23, -0.23, 0.0]
+      "data": [0.32, 0.01, 0.01, 0.32, 0.2, 0.59, 0.32, 0.59, 0.59, 0.32, 0.59, -0.23, -0.23, -0.23, -0.23]
     },
     "fates_rad_stem_rhonir": {
       "dtype": "float",
@@ -1246,14 +1246,14 @@
       "dims": ["fates_pft"],
       "long_name": "Stem transmittance  near-IR",
       "units": "fraction",
-      "data": [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.25, 0.25, 0.25, 0.01]
+      "data": [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.25, 0.25, 0.25, 0.25]
     },
     "fates_rad_stem_tauvis": {
       "dtype": "float",
       "dims": ["fates_pft"],
       "long_name": "Stem transmittance  visible",
       "units": "fraction",
-      "data": [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.12, 0.12, 0.12, 0.01]
+      "data": [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.12, 0.12, 0.12, 0.12]
     },
     "fates_recruit_height_min": {
       "dtype": "float",
@@ -1302,7 +1302,7 @@
       "dims": ["fates_pft"],
       "long_name": "the diameter where the plant will increase allocation to the seed pool by fraction  fates_recruit_seed_alloc_mature",
       "units": "cm",
-      "data": [90.0, 80.0, 80.0, 80.0, 90.0, 80.0, 3.0, 3.0, 2.0, 2.4, 1.9, 3.0, 3.0, 3.0, 0.001]
+      "data": [90.0, 80.0, 80.0, 80.0, 90.0, 80.0, 3.0, 3.0, 2.0, 2.4, 1.9, 3.0, 3.0, 3.0, 3.0]
     },
     "fates_recruit_seed_germination_rate": {
       "dtype": "float",
