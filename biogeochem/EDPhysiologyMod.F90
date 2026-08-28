@@ -364,7 +364,7 @@ contains
 
                 do dcmpy=1,ndcmpy
                    dcmpy_frac = GetDecompyFrac(ipft,leaf_organ,dcmpy)
-                   if (hlm_use_moss == itrue .and. prt_params%vascular(ipft) == ifalse) then
+                   if (prt_params%vascular(ipft) == ifalse) then
                       litt%moss_fines_in(dcmpy) = litt%moss_fines_in(dcmpy) + &
                            (store_loss+leaf_loss+repro_loss) * &
                            ndcohort%n * dcmpy_frac / cpatch%area
@@ -2962,7 +2962,7 @@ contains
 
        do dcmpy=1,ndcmpy
           dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-          if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+          if (prt_params%vascular(pft) == ifalse) then
              litt%moss_fines_in(dcmpy) = litt%moss_fines_in(dcmpy) + &
                   (leaf_m_turnover+repro_m_turnover + &
                   leaf_herbivory * herbivory_element_use_efficiency) * &
@@ -3062,7 +3062,7 @@ contains
        do dcmpy=1,ndcmpy
 
           dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-          if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+          if (prt_params%vascular(pft) == ifalse) then
              litt%moss_fines_in(dcmpy) = litt%moss_fines_in(dcmpy) + &
                   (leaf_m+repro_m) * dead_n * dcmpy_frac
           else

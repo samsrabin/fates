@@ -840,7 +840,7 @@ module FatesPatchMod
               currentCohort%prt%GetState(sapw_organ, carbon12_element) +   &
               currentCohort%prt%GetState(struct_organ, carbon12_element))* &
               currentCohort%n/this%area
-            if (hlm_use_moss == itrue .and. prt_params%vascular(currentCohort%pft) == ifalse) then
+            if (prt_params%vascular(currentCohort%pft) == ifalse) then
               live_moss = live_moss + biomass
             else
               live_grass = live_grass + biomass

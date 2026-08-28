@@ -56,7 +56,6 @@ module EDLoggingMortalityMod
    use FatesInterfaceTypesMod , only : hlm_use_lu_harvest
    use FatesInterfaceTypesMod , only : hlm_num_lu_harvest_cats
    use FatesInterfaceTypesMod , only : hlm_use_logging 
-   use FatesInterfaceTypesMod , only : hlm_use_moss
    use FatesInterfaceTypesMod , only : hlm_use_planthydro
    use FatesInterfaceTypesMod , only : hlm_use_luh
    use FatesConstantsMod , only : itrue,ifalse
@@ -1095,7 +1094,7 @@ contains
 
                dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
 
-               if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+               if (prt_params%vascular(pft) == ifalse) then
                   new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
                        leaf_litter * donate_m2 * dcmpy_frac
 

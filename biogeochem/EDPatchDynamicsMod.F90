@@ -1101,7 +1101,7 @@ contains
 
                                      ! Grasses and moss determine their fraction of leaves burned here
 
-                                     if (hlm_use_moss == itrue .and. prt_params%vascular(currentCohort%pft) == ifalse) then
+                                     if (prt_params%vascular(currentCohort%pft) == ifalse) then
                                         leaf_burn_frac = currentPatch%fuel%frac_burnt(fuel_classes%live_moss())
                                      else
                                         leaf_burn_frac = currentPatch%fuel%frac_burnt(fuel_classes%live_grass())
@@ -2332,7 +2332,7 @@ contains
 
              do dcmpy=1,ndcmpy
                  dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-                 if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+                 if (prt_params%vascular(pft) == ifalse) then
                     new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
                                                  donatable_mass*donate_m2*dcmpy_frac
                     curr_litt%moss_fines(dcmpy) = curr_litt%moss_fines(dcmpy) + &
@@ -2563,7 +2563,7 @@ contains
           ! Transfer leaves of dying trees to leaf litter (includes seeds too)
           do dcmpy=1,ndcmpy
               dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-              if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+              if (prt_params%vascular(pft) == ifalse) then
                  new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
                        num_dead*(leaf_m+repro_m)*donate_m2*dcmpy_frac
 
@@ -2814,7 +2814,7 @@ contains
 
              do dcmpy=1,ndcmpy
                 dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-                if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+                if (prt_params%vascular(pft) == ifalse) then
                    new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
                         donatable_mass*donate_m2*dcmpy_frac
                    curr_litt%moss_fines(dcmpy) = curr_litt%moss_fines(dcmpy) + &
