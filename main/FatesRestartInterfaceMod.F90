@@ -3169,7 +3169,7 @@ contains
              ! and transfering in mass
              do el=1,num_elements
                 call newp%litter(el)%InitConditions(init_leaf_fines=fates_unset_r8, &
-                     init_moss_fines=0._r8, &
+                     init_moss_fines=fates_unset_r8, &
                      init_root_fines=fates_unset_r8, &
                      init_ag_cwd=fates_unset_r8, &
                      init_bg_cwd=fates_unset_r8, &
@@ -3928,6 +3928,9 @@ contains
                       if (hlm_use_moss == itrue) then
                          litt%moss_fines(i) = this%rvars(ir_moss_litt+el)%r81d(io_idx_pa_dc)
                          litt%moss_fines_frag(i) = this%rvars(ir_mfines_frag_litt+el)%r81d(io_idx_pa_dc)
+                      else
+                         litt%moss_fines(i) = 0._r8
+                         litt%moss_fines_frag(i) = 0._r8
                       end if
                       io_idx_pa_dc       = io_idx_pa_dc + 1
                       do ilyr=1,nlevsoil

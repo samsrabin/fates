@@ -709,7 +709,7 @@ module FatesPatchMod
         call this%litter(el)%InitAllocate(num_pft, num_levsoil, element_list(el))
         call this%litter(el)%ZeroFlux()
         call this%litter(el)%InitConditions(init_leaf_fines=fates_unset_r8,  &
-          init_moss_fines=0._r8,                                             &
+          init_moss_fines=fates_unset_r8,                                    &
           init_root_fines=fates_unset_r8, init_ag_cwd=fates_unset_r8,        &
           init_bg_cwd=fates_unset_r8, init_seed=fates_unset_r8,              &
           init_seed_germ=fates_unset_r8)

@@ -869,7 +869,7 @@ contains
                 end if
                 do el=1,num_elements
                    call newp%litter(el)%InitConditions(init_leaf_fines=litt_init, &
-                        init_moss_fines=0._r8, &
+                        init_moss_fines=litt_init, &
                         init_root_fines=litt_init, &
                         init_ag_cwd=litt_init, &
                         init_bg_cwd=litt_init, &
@@ -991,7 +991,7 @@ contains
                             end if
 
                             call newp%litter(el)%InitConditions(init_leaf_fines=litt_init, &
-                                    init_moss_fines=0._r8, &
+                                    init_moss_fines=litt_init, &
                                     init_root_fines=litt_init, &
                                     init_ag_cwd=litt_init, &
                                     init_bg_cwd=litt_init, &
