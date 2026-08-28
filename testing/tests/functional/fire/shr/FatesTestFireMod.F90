@@ -46,7 +46,8 @@ module FatesTestFireMod
       real(r8) :: small_branch_litter ! small branch litter [kg/m2]
       real(r8) :: large_branch_litter ! large branch litter [kg/m2]
       real(r8) :: grass_litter        ! grass litter [kg/m2]
-      real(r8) :: moss_litter         ! moss litter [kg/m2]
+      real(r8) :: moss_litter         ! live moss litter [kg/m2]
+      real(r8) :: dead_moss_litter    ! dead moss litter [kg/m2]
       
 
       ! get fuel model position in array
@@ -64,12 +65,13 @@ module FatesTestFireMod
         
       grass_litter = fuel_model_array%fuel_models(i)%live_herb_loading
       moss_litter = fuel_model_array%fuel_models(i)%live_moss_loading
+      dead_moss_litter = fuel_model_array%fuel_models(i)%dead_moss_loading
       
       fuel_name = fuel_model_array%fuel_models(i)%fuel_model_name
       fuel_carrier = fuel_model_array%fuel_models(i)%carrier
       
       call fuel%UpdateLoading(leaf_litter, twig_litter, small_branch_litter,    &
-        large_branch_litter, 0.0_r8, grass_litter, moss_litter)
+        large_branch_litter, 0.0_r8, grass_litter, moss_litter, dead_moss_litter)
       
 
     end subroutine SetUpFuel

@@ -64,7 +64,7 @@ module test_FireFuel
       call this%fuel%Init()
       if (fuel_classes%moss_classes_present()) then
          this%live_moss = dummy_litter
-         this%dead_moss = 0.0_r8  ! TEMPORARY until I handle dead moss in the code
+         this%dead_moss = dummy_litter
       else
          this%live_moss = 0._r8
          this%dead_moss = 0._r8
@@ -89,10 +89,11 @@ module test_FireFuel
       ! Replace dummy moss with "real"
       if (fuel_classes%moss_classes_present()) then
          this%live_moss = 0.5_r8
+         this%dead_moss = 0.6_r8
       end if
 
       call this%fuel%UpdateLoading(leaf_litter, twig_litter, sm_br_litter,            &
-        lg_br_litter, trunk_litter, live_grass, this%live_moss)
+        lg_br_litter, trunk_litter, live_grass, this%live_moss, this%dead_moss)
 
       @assertEqual(this%fuel%loading(fuel_classes%dead_leaves()), leaf_litter, tolerance=tol)
       @assertEqual(this%fuel%loading(fuel_classes%twigs()), twig_litter, tolerance=tol)
@@ -102,8 +103,7 @@ module test_FireFuel
       @assertEqual(this%fuel%loading(fuel_classes%live_grass()), live_grass, tolerance=tol)
       if (fuel_classes%moss_classes_present()) then
          @assertEqual(this%fuel%loading(fuel_classes%live_moss()), this%live_moss, tolerance=tol)
-         ! TEMPORARY until I handle dead moss in the code
-         @assertEqual(this%fuel%loading(fuel_classes%dead_moss()), 0._r8, tolerance=tol)
+         @assertEqual(this%fuel%loading(fuel_classes%dead_moss()), this%dead_moss, tolerance=tol)
       end if
 
     end subroutine UpdateLoading_CorrectInputOrder
@@ -117,14 +117,9 @@ module test_FireFuel
       
       non_trunk_loading = dummy_litter*float(num_fuel_classes - 1)
 
-      ! TEMPORARY until I handle dead moss in the code
-      if (num_fuel_classes == 8) then
-         non_trunk_loading = non_trunk_loading - dummy_litter
-      end if
-
       call this%fuel%UpdateLoading(dummy_litter, dummy_litter, dummy_litter,          &
-        dummy_litter, trunk_litter, dummy_litter, this%live_moss)
-      
+        dummy_litter, trunk_litter, dummy_litter, this%live_moss, this%dead_moss)
+
       call this%fuel%SumLoading()
 
       @assertEqual(this%fuel%non_trunk_loading, non_trunk_loading, tolerance=tol)
@@ -142,27 +137,15 @@ module test_FireFuel
       
       non_trunk_loading = dummy_litter*float(num_fuel_classes - 1)
 
-      ! TEMPORARY until I handle dead moss in the code
-      if (num_fuel_classes == 8) then
-         non_trunk_loading = non_trunk_loading - dummy_litter
-      end if
-
       frac_loading = dummy_litter/non_trunk_loading
 
       call this%fuel%UpdateLoading(dummy_litter, dummy_litter, dummy_litter,          &
-        dummy_litter, trunk_litter, dummy_litter, this%live_moss)
-      
+        dummy_litter, trunk_litter, dummy_litter, this%live_moss, this%dead_moss)
+
       call this%fuel%SumLoading()
       call this%fuel%CalculateFractionalLoading()
 
       do i = 1, num_fuel_classes 
-
-        ! TEMPORARY until I handle dead moss in the code
-        if (num_fuel_classes == 8) then
-           if (i == fuel_classes%dead_moss()) then
-              cycle
-           end if
-        end if
 
         if (i /= fuel_classes%trunks()) then 
           @assertEqual(this%fuel%frac_loading(i), frac_loading, tolerance=tol)

@@ -482,6 +482,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_fire_fuel_mef_si
   integer :: ih_sum_fuel_si
   integer :: ih_livemoss_fuel_si
+  integer :: ih_moss_fines_si
   integer :: ih_rx_burn_window_si
   integer :: ih_rx_intensity_si
   integer :: ih_rx_fracarea_si
@@ -2786,12 +2787,19 @@ contains
             ! Sum up all output fluxes (fragmentation) kgC/m2/day -> kgC/m2/s
             hio_litter_out_si(io_si) = hio_litter_out_si(io_si) + &
                  (sum(litt%leaf_fines_frag(:)) + &
+                 sum(litt%moss_fines_frag(:)) + &
                  sum(litt%root_fines_frag(:,:)) + &
                  sum(litt%ag_cwd_frag(:)) + &
                  sum(litt%bg_cwd_frag(:,:)) + &
                  sum(litt%seed_decay(:)) + &
                  sum(litt%seed_germ_decay(:))) * &
                  patch_fracarea * days_per_sec
+
+            ! Sum up the dead moss (duff) litter pool [kgC/m2]
+            if (hlm_use_moss == itrue) then
+               this%hvars(ih_moss_fines_si)%r81d(io_si) = this%hvars(ih_moss_fines_si)%r81d(io_si) + &
+                    sum(litt%moss_fines(:)) * patch_fracarea
+            end if
 
             ! Sum up total seed bank (germinated and ungerminated)
             hio_seed_bank_si(io_si) = hio_seed_bank_si(io_si) + &
@@ -4577,6 +4585,7 @@ contains
                    ! Sum up all output fluxes (fragmentation)
                    hio_litter_out_elem(io_si,el) = hio_litter_out_elem(io_si,el) + &
                         (sum(litt%leaf_fines_frag(:)) + &
+                        sum(litt%moss_fines_frag(:)) + &
                         sum(litt%root_fines_frag(:,:)) + &
                         sum(litt%ag_cwd_frag(:)) + &
                         sum(litt%bg_cwd_frag(:,:)) + &
@@ -4607,7 +4616,7 @@ contains
                         sum(litt%bg_cwd(:,:)) * cpatch%area / m2_per_ha
 
                    hio_fines_ag_elem(io_si,el) = hio_fines_ag_elem(io_si,el) + &
-                        sum(litt%leaf_fines(:)) * cpatch%area / m2_per_ha
+                        (sum(litt%leaf_fines(:)) + sum(litt%moss_fines(:))) * cpatch%area / m2_per_ha
 
                    hio_fines_bg_elem(io_si,el) = hio_fines_bg_elem(io_si,el) + &
                         sum(litt%root_fines(:,:)) * cpatch%area / m2_per_ha
@@ -6834,6 +6843,12 @@ contains
                use_default='inactive', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
                upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
                index = ih_livemoss_fuel_si)
+
+          call this%set_history_var(vname='FATES_MOSS_FINES', units='kg m-2',       &
+               long='dead moss (duff) litter in kg carbon per m2 land area',       &
+               use_default='inactive', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+               upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+               index = ih_moss_fines_si)
        end if moss_fuel_if
 
        ! Litter Variables

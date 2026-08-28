@@ -9,6 +9,7 @@ Module EDCohortDynamicsMod
   use FatesGlobals          , only : fates_log
   use FatesInterfaceTypesMod     , only : bc_in_type
   use FatesInterfaceTypesMod     , only : hlm_use_planthydro
+  use FatesInterfaceTypesMod     , only : hlm_use_moss
   use FatesInterfaceTypesMod     , only : hlm_use_cohort_age_tracking
   use FatesConstantsMod     , only : r8 => fates_r8
   use FatesConstantsMod     , only : itrue,ifalse
@@ -619,8 +620,13 @@ contains
        do dcmpy=1,ndcmpy
            dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
 
-           litt%leaf_fines(dcmpy) = litt%leaf_fines(dcmpy) + &
-                 plant_dens * (leaf_m+repro_m) * dcmpy_frac
+           if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+              litt%moss_fines(dcmpy) = litt%moss_fines(dcmpy) + &
+                    plant_dens * (leaf_m+repro_m) * dcmpy_frac
+           else
+              litt%leaf_fines(dcmpy) = litt%leaf_fines(dcmpy) + &
+                    plant_dens * (leaf_m+repro_m) * dcmpy_frac
+           end if
 
            dcmpy_frac = GetDecompyFrac(pft,fnrt_organ,dcmpy)
            do sl=1,csite%nlevsoil

@@ -23,6 +23,7 @@ module FatesRestartInterfaceMod
   use FatesInterfaceTypesMod,  only : bc_in_type
   use FatesInterfaceTypesMod,  only : bc_out_type
   use FatesInterfaceTypesMod,  only : hlm_use_planthydro
+  use FatesInterfaceTypesMod,  only : hlm_use_moss
   use FatesInterfaceTypesMod,  only : hlm_parteh_mode
   use FatesInterfaceTypesMod,  only : hlm_use_sp
   use FatesInterfaceTypesMod,  only : hlm_use_nocomp, hlm_use_fixed_biogeog
@@ -206,6 +207,7 @@ module FatesRestartInterfaceMod
   integer :: ir_agcwd_litt
   integer :: ir_bgcwd_litt
   integer :: ir_leaf_litt
+  integer :: ir_moss_litt
   integer :: ir_fnrt_litt
   integer :: ir_seed_litt
   integer :: ir_seedgerm_litt
@@ -225,6 +227,7 @@ module FatesRestartInterfaceMod
   integer :: ir_agcwd_frag_litt
   integer :: ir_bgcwd_frag_litt
   integer :: ir_lfines_frag_litt
+  integer :: ir_mfines_frag_litt
   integer :: ir_rfines_frag_litt
 
   integer :: ir_scorch_ht_pa_pft
@@ -1121,6 +1124,13 @@ contains
             units='kg/m2', veclength=num_elements, flushval = flushzero, &
             hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_leaf_litt)
 
+       if (hlm_use_moss == itrue) then
+          call this%RegisterCohortVector(symbol_base='fates_moss_fines', vtype=cohort_r8, &
+               long_name_base='above ground dead moss litter',  &
+               units='kg/m2', veclength=num_elements, flushval = flushzero, &
+               hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_moss_litt)
+       end if
+
        call this%RegisterCohortVector(symbol_base='fates_fnrt_fines', vtype=cohort_r8, &
             long_name_base='fine root litter',  &
             units='kg/m2', veclength=num_elements, flushval = flushzero, &
@@ -1161,6 +1171,13 @@ contains
             long_name_base='frag flux from leaf fines',  &
             units='kg/m2/day', veclength=num_elements, flushval = flushzero, &
             hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_lfines_frag_litt)
+
+       if (hlm_use_moss == itrue) then
+          call this%RegisterCohortVector(symbol_base='fates_mfines_frag', vtype=cohort_r8, &
+               long_name_base='frag flux from dead moss fines',  &
+               units='kg/m2/day', veclength=num_elements, flushval = flushzero, &
+               hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_mfines_frag_litt)
+       end if
 
        call this%RegisterCohortVector(symbol_base='fates_rfines_frag', vtype=cohort_r8, &
             long_name_base='frag flux from froot fines',  &
@@ -2859,6 +2876,10 @@ contains
                    do i = 1,ndcmpy
                       this%rvars(ir_leaf_litt+el)%r81d(io_idx_pa_dc) = litt%leaf_fines(i)
                       this%rvars(ir_lfines_frag_litt+el)%r81d(io_idx_pa_dc) = litt%leaf_fines_frag(i)
+                      if (hlm_use_moss == itrue) then
+                         this%rvars(ir_moss_litt+el)%r81d(io_idx_pa_dc) = litt%moss_fines(i)
+                         this%rvars(ir_mfines_frag_litt+el)%r81d(io_idx_pa_dc) = litt%moss_fines_frag(i)
+                      end if
                       io_idx_pa_dc = io_idx_pa_dc + 1
                       do ilyr=1,sites(s)%nlevsoil
                          this%rvars(ir_fnrt_litt+el)%r81d(io_idx_pa_dcsl) = litt%root_fines(i,ilyr)
@@ -3148,6 +3169,7 @@ contains
              ! and transfering in mass
              do el=1,num_elements
                 call newp%litter(el)%InitConditions(init_leaf_fines=fates_unset_r8, &
+                     init_moss_fines=0._r8, &
                      init_root_fines=fates_unset_r8, &
                      init_ag_cwd=fates_unset_r8, &
                      init_bg_cwd=fates_unset_r8, &
@@ -3903,6 +3925,10 @@ contains
                    do i = 1,ndcmpy
                       litt%leaf_fines(i) = this%rvars(ir_leaf_litt+el)%r81d(io_idx_pa_dc)
                       litt%leaf_fines_frag(i) = this%rvars(ir_lfines_frag_litt+el)%r81d(io_idx_pa_dc)
+                      if (hlm_use_moss == itrue) then
+                         litt%moss_fines(i) = this%rvars(ir_moss_litt+el)%r81d(io_idx_pa_dc)
+                         litt%moss_fines_frag(i) = this%rvars(ir_mfines_frag_litt+el)%r81d(io_idx_pa_dc)
+                      end if
                       io_idx_pa_dc       = io_idx_pa_dc + 1
                       do ilyr=1,nlevsoil
                          litt%root_fines(i,ilyr)      = this%rvars(ir_fnrt_litt+el)%r81d(io_idx_pa_dcsl)

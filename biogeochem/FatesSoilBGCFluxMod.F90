@@ -792,13 +792,13 @@ contains
           do id = 1,nlev_eff_decomp
 
              flux_lab_si(id) = flux_lab_si(id) + &
-                  litt%leaf_fines_frag(ilabile) * area_frac* surface_prof(id)
+                  (litt%leaf_fines_frag(ilabile) + litt%moss_fines_frag(ilabile)) * area_frac* surface_prof(id)
 
              flux_cel_si(id) = flux_cel_si(id) + &
-                  litt%leaf_fines_frag(icellulose) * area_frac* surface_prof(id)
+                  (litt%leaf_fines_frag(icellulose) + litt%moss_fines_frag(icellulose)) * area_frac* surface_prof(id)
 
              flux_lig_si(id) = flux_lig_si(id) + &
-                  litt%leaf_fines_frag(ilignin) * area_frac* surface_prof(id)
+                  (litt%leaf_fines_frag(ilignin) + litt%moss_fines_frag(ilignin)) * area_frac* surface_prof(id)
 
           end do
 
@@ -912,6 +912,7 @@ contains
              end if
              if(tot_leaf_c>nearzero)then
                 sum_N = sum_N + area_frac*sum(litt%leaf_fines_frag)*(tot_leaf_n / tot_leaf_c)
+                sum_N = sum_N + area_frac*sum(litt%moss_fines_frag)*(tot_leaf_n / tot_leaf_c)
              end if
              if(tot_fnrt_c>nearzero)then
                 sum_N = sum_N + area_frac*sum(litt%root_fines_frag)*(tot_fnrt_n / tot_fnrt_c)

@@ -748,6 +748,7 @@ contains
          litt => newpatch%litter(el)
 
          call litt%InitConditions(init_leaf_fines=0._r8, &
+              init_moss_fines=0._r8, &
               init_root_fines=0._r8, &
               init_ag_cwd=0._r8,     &
               init_bg_cwd=0._r8,     &

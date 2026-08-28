@@ -10,7 +10,9 @@ module ChecksBalancesMod
    use PRTGenericMod,     only : num_elements
    use PRTGenericMod,     only : element_list
    use FatesInterfaceTypesMod, only : numpft
+   use FatesInterfaceTypesMod, only : hlm_use_moss
    use FatesConstantsMod, only : g_per_kg
+   use FatesConstantsMod, only : itrue
    use FatesInterfaceTypesMod, only : bc_in_type
    use FatesLitterMod,    only : litter_type
    use FatesLitterMod,    only : ncwd
@@ -102,6 +104,7 @@ contains
             (sum(litt%ag_cwd)                  + &
             sum(litt%bg_cwd) + &
             sum(litt%leaf_fines)              + &
+            sum(litt%moss_fines)              + &
             sum(litt%root_fines))
       
         ! Total mass of viable seeds in [kg]
@@ -224,6 +227,14 @@ contains
                 call endrun(msg=errMsg(sourcefile, __LINE__))
              end if
              
+             if(hlm_use_moss == itrue .and. litt%moss_fines(dcmpy)<0._r8)then
+                write(fates_log(),*) 'For PFT: ',pft
+                write(fates_log(),*) 'Element id: ',element_id
+                write(fates_log(),*) 'Negative moss fine litter: ',litt%moss_fines(dcmpy)
+                write(fates_log(),*) 'lat/lon: ',currentSite%lat,currentSite%lon
+                call endrun(msg=errMsg(sourcefile, __LINE__))
+             end if
+
              do ilyr = 1,numlevsoil
                 if(litt%root_fines(dcmpy,ilyr)<0._r8)then
                    write(fates_log(),*) 'For PFT: ',dcmpy

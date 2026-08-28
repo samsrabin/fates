@@ -15,6 +15,7 @@ module EDMainMod
   use FatesInterfaceTypesMod        , only : hlm_current_month
   use FatesInterfaceTypesMod        , only : hlm_current_day
   use FatesInterfaceTypesMod        , only : hlm_use_planthydro
+  use FatesInterfaceTypesMod        , only : hlm_use_moss
   use FatesInterfaceTypesMod        , only : hlm_parteh_mode
   use FatesInterfaceTypesMod        , only : hlm_use_cohort_age_tracking
   use FatesInterfaceTypesMod        , only : hlm_reference_date
@@ -1070,6 +1071,7 @@ contains
                 write(fates_log(),*) 'AG CWD: ', sum(litt%ag_cwd)
                 write(fates_log(),*) 'BG CWD (by layer): ', sum(litt%bg_cwd,dim=1)
                 write(fates_log(),*) 'leaf litter:',sum(litt%leaf_fines)
+                if (hlm_use_moss == itrue) write(fates_log(),*) 'moss litter:',sum(litt%moss_fines)
                 write(fates_log(),*) 'root litter (by layer): ',sum(litt%root_fines,dim=1)
                 write(fates_log(),*) 'land_use_label: ',currentPatch%land_use_label
                 write(fates_log(),*) 'use_this_pft: ', currentSite%use_this_pft(:)

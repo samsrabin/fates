@@ -73,6 +73,7 @@ module FatesLitterMod
       real(r8)             :: ag_cwd(ncwd)          ! above ground coarse wood debris (cwd)         [kg/m2]
       real(r8),allocatable :: bg_cwd(:,:)           ! below ground coarse wood debris (cwd x soil)  [kg/m2]
       real(r8),allocatable :: leaf_fines(:)         ! above ground leaf litter (dcmpy)              [kg/m2]
+      real(r8),allocatable :: moss_fines(:)         ! above ground dead moss litter (dcmpy)         [kg/m2]
       real(r8),allocatable :: root_fines(:,:)       ! below ground fine root litter (dcmpy x soil)  [kg/m2]
       
       real(r8),allocatable :: seed(:)               ! the seed pool (viable)    (pft) [kg/m2]
@@ -86,6 +87,7 @@ module FatesLitterMod
       real(r8)             ::  ag_cwd_in(ncwd)      ! (cwd)        [kg/m2/day]
       real(r8),allocatable ::  bg_cwd_in(:,:)       ! (cwd x soil) [kg/m2/day]
       real(r8),allocatable ::  leaf_fines_in(:)     ! (dcmpy)       [kg/m2/day]
+      real(r8),allocatable ::  moss_fines_in(:)     ! (dcmpy)       [kg/m2/day]
       real(r8),allocatable ::  root_fines_in(:,:)   ! (dcmpy x soil [kg/m2/day]
 
       real(r8),allocatable ::  seed_in_local(:)     ! (pft)        [kg/m2/day] (from local sources)
@@ -99,6 +101,7 @@ module FatesLitterMod
       real(r8)             ::  ag_cwd_frag(ncwd)    ! above ground cwd fragmentation flux   [kg/m2/day]
       real(r8),allocatable ::  bg_cwd_frag(:,:)     ! below ground cwd fragmentation flux   [kg/m2/day]
       real(r8),allocatable ::  leaf_fines_frag(:)   ! above ground fines fragmentation flux [kg/m2/day]
+      real(r8),allocatable ::  moss_fines_frag(:)   ! above ground dead moss fragmentation flux [kg/m2/day]
       real(r8),allocatable ::  root_fines_frag(:,:) ! kg/m2/day
 
       real(r8), allocatable :: seed_decay(:)      ! decay of viable seeds to litter     [kg/m2/day]
@@ -206,6 +209,13 @@ contains
        this%leaf_fines_frag(dcmpy) = this%leaf_fines_frag(dcmpy) * self_weight + &
                                    donor_litt%leaf_fines_frag(dcmpy) * donor_weight
 
+       this%moss_fines(dcmpy)      = this%moss_fines(dcmpy) * self_weight + &
+                                   donor_litt%moss_fines(dcmpy) * donor_weight
+       this%moss_fines_in(dcmpy)   = this%moss_fines_in(dcmpy) * self_weight + &
+                                   donor_litt%moss_fines_in(dcmpy) * donor_weight
+       this%moss_fines_frag(dcmpy) = this%moss_fines_frag(dcmpy) * self_weight + &
+                                   donor_litt%moss_fines_frag(dcmpy) * donor_weight
+
        do ilyr=1,nlevsoil
            this%root_fines(dcmpy,ilyr)     = this%root_fines(dcmpy,ilyr) * self_weight + &
                                             donor_litt%root_fines(dcmpy,ilyr) * donor_weight
@@ -240,13 +250,16 @@ contains
     this%bg_cwd_frag(:,:) = donor_litt%bg_cwd_frag(:,:)
 
     this%leaf_fines(:)    = donor_litt%leaf_fines(:)
+    this%moss_fines(:)    = donor_litt%moss_fines(:)
     this%seed(:)          = donor_litt%seed(:)
     this%seed_germ(:)     = donor_litt%seed_germ(:)
     this%leaf_fines_in(:) = donor_litt%leaf_fines_in(:)
+    this%moss_fines_in(:) = donor_litt%moss_fines_in(:)
     this%seed_in_local(:) = donor_litt%seed_in_local(:)
     
     this%seed_in_extern(:)    = donor_litt%seed_in_extern(:)
     this%leaf_fines_frag(:)   = donor_litt%leaf_fines_frag(:)
+    this%moss_fines_frag(:)   = donor_litt%moss_fines_frag(:)
     
     this%seed_decay(:)        = donor_litt%seed_decay(:)
     this%seed_germ_decay(:)   = donor_litt%seed_germ_decay(:)
@@ -274,10 +287,13 @@ contains
     allocate(this%bg_cwd_frag(ncwd,numlevsoil))
 
     allocate(this%leaf_fines(ndcmpy))
+    allocate(this%moss_fines(ndcmpy))
     allocate(this%root_fines(ndcmpy,numlevsoil))
     allocate(this%leaf_fines_in(ndcmpy))
+    allocate(this%moss_fines_in(ndcmpy))
     allocate(this%root_fines_in(ndcmpy,numlevsoil))
     allocate(this%leaf_fines_frag(ndcmpy))
+    allocate(this%moss_fines_frag(ndcmpy))
     allocate(this%root_fines_frag(ndcmpy,numlevsoil))
 
     allocate(this%seed_in_local(numpft))
@@ -292,6 +308,7 @@ contains
     this%ag_cwd(:)            = fates_unset_r8
     this%bg_cwd(:,:)          = fates_unset_r8
     this%leaf_fines(:)        = fates_unset_r8
+    this%moss_fines(:)        = fates_unset_r8
     this%root_fines(:,:)      = fates_unset_r8
     this%seed(:)              = fates_unset_r8
     this%seed_germ(:)         = fates_unset_r8
@@ -299,6 +316,7 @@ contains
     this%ag_cwd_in(:)         = fates_unset_r8
     this%bg_cwd_in(:,:)       = fates_unset_r8
     this%leaf_fines_in(:)     = fates_unset_r8
+    this%moss_fines_in(:)     = fates_unset_r8
     this%root_fines_in(:,:)   = fates_unset_r8
     this%seed_in_local(:)     = fates_unset_r8
     this%seed_in_extern(:)    = fates_unset_r8
@@ -306,6 +324,7 @@ contains
     this%ag_cwd_frag(:)       = fates_unset_r8
     this%bg_cwd_frag(:,:)     = fates_unset_r8
     this%leaf_fines_frag(:)   = fates_unset_r8
+    this%moss_fines_frag(:)   = fates_unset_r8
     this%root_fines_frag(:,:) = fates_unset_r8
 
     this%seed_decay(:)        = fates_unset_r8
@@ -319,6 +338,7 @@ contains
 
   subroutine InitConditions(this, &
                             init_leaf_fines, &
+                            init_moss_fines, &
                             init_root_fines, &
                             init_ag_cwd,     &
                             init_bg_cwd,     &
@@ -335,6 +355,7 @@ contains
 
     class(litter_type) :: this
     real(r8),intent(in) :: init_leaf_fines
+    real(r8),intent(in) :: init_moss_fines
     real(r8),intent(in) :: init_root_fines
     real(r8),intent(in) :: init_ag_cwd
     real(r8),intent(in) :: init_bg_cwd
@@ -353,6 +374,7 @@ contains
     this%ag_cwd(:)              = init_ag_cwd
     this%bg_cwd(:,:)            = init_bg_cwd
     this%leaf_fines(:)          = init_leaf_fines
+    this%moss_fines(:)          = init_moss_fines
     this%root_fines(:,:)        = init_root_fines
     if(present(init_seed))then
        this%seed(:)             = init_seed
@@ -372,18 +394,21 @@ contains
 
     deallocate(this%bg_cwd)
     deallocate(this%leaf_fines)
+    deallocate(this%moss_fines)
     deallocate(this%root_fines)
     deallocate(this%seed)
     deallocate(this%seed_germ)
 
     deallocate(this%bg_cwd_in)
     deallocate(this%leaf_fines_in)
+    deallocate(this%moss_fines_in)
     deallocate(this%root_fines_in)
     deallocate(this%seed_in_local)
     deallocate(this%seed_in_extern)
     
     deallocate(this%bg_cwd_frag)
     deallocate(this%leaf_fines_frag)
+    deallocate(this%moss_fines_frag)
     deallocate(this%root_fines_frag)
    
     deallocate(this%seed_decay)
@@ -402,6 +427,7 @@ contains
     this%ag_cwd_in(:)         = 0._r8
     this%bg_cwd_in(:,:)       = 0._r8
     this%leaf_fines_in(:)     = 0._r8
+    this%moss_fines_in(:)     = 0._r8
     this%root_fines_in(:,:)   = 0._r8
     this%seed_in_local(:)     = 0._r8
     this%seed_in_extern(:)    = 0._r8
@@ -409,6 +435,7 @@ contains
     this%ag_cwd_frag(:)       = 0._r8
     this%bg_cwd_frag(:,:)     = 0._r8
     this%leaf_fines_frag(:)   = 0._r8
+    this%moss_fines_frag(:)   = 0._r8
     this%root_fines_frag(:,:) = 0._r8
     
     this%seed_germ_in(:)      = 0._r8
@@ -430,6 +457,7 @@ contains
                  sum(this%bg_cwd) + &
                  sum(this%root_fines) + &
                  sum(this%leaf_fines) + & 
+                 sum(this%moss_fines) + &
                  sum(this%seed) + & 
                  sum(this%seed_germ)
     

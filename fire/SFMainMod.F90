@@ -171,7 +171,7 @@ contains
         litter => currentPatch%litter(element_pos(carbon12_element))
         call currentPatch%fuel%UpdateLoading(sum(litter%leaf_fines(:)),                  &
           litter%ag_cwd(1), litter%ag_cwd(2), litter%ag_cwd(3), litter%ag_cwd(4),        &
-          currentPatch%livegrass, currentPatch%livemoss)
+          currentPatch%livegrass, currentPatch%livemoss, sum(litter%moss_fines(:)))
             
         ! sum up fuel classes and calculate fractional loading for each
         call currentPatch%fuel%SumLoading()

@@ -18,6 +18,7 @@ module EDPhysiologyMod
   use FatesInterfaceTypesMod, only    : hlm_parteh_mode
   use FatesInterfaceTypesMod, only    : hlm_use_fixed_biogeog
   use FatesInterfaceTypesMod, only    : hlm_use_nocomp
+  use FatesInterfaceTypesMod, only    : hlm_use_moss
   use EDParamsMod           , only    : crop_lu_pft_vector
   use EDParamsMod           , only    : GetNVegLayers
   use FatesInterfaceTypesMod, only    : hlm_use_tree_damage
@@ -363,9 +364,15 @@ contains
 
                 do dcmpy=1,ndcmpy
                    dcmpy_frac = GetDecompyFrac(ipft,leaf_organ,dcmpy)
-                   litt%leaf_fines_in(dcmpy) = litt%leaf_fines_in(dcmpy) + &
-                        (store_loss+leaf_loss+repro_loss) * &
-                        ndcohort%n * dcmpy_frac / cpatch%area
+                   if (hlm_use_moss == itrue .and. prt_params%vascular(ipft) == ifalse) then
+                      litt%moss_fines_in(dcmpy) = litt%moss_fines_in(dcmpy) + &
+                           (store_loss+leaf_loss+repro_loss) * &
+                           ndcohort%n * dcmpy_frac / cpatch%area
+                   else
+                      litt%leaf_fines_in(dcmpy) = litt%leaf_fines_in(dcmpy) + &
+                           (store_loss+leaf_loss+repro_loss) * &
+                           ndcohort%n * dcmpy_frac / cpatch%area
+                   end if
                 end do
 
                 elflux_diags%surf_fine_litter_input(ipft) = &
@@ -487,7 +494,7 @@ contains
          ! Fragmentation flux to soil decomposition model [kg/site/day]
          site_mass%frag_out = site_mass%frag_out + currentPatch%area * &
               ( sum(litt%ag_cwd_frag) + sum(litt%bg_cwd_frag) + &
-              sum(litt%leaf_fines_frag) + sum(litt%root_fines_frag) + &
+              sum(litt%leaf_fines_frag) + sum(litt%moss_fines_frag) + sum(litt%root_fines_frag) + &
               sum(litt%seed_decay) + sum(litt%seed_germ_decay))
 
          ! Track total seed decay diagnostic in [kg/m2/day]
@@ -578,6 +585,11 @@ contains
           litt%leaf_fines(dcmpy) = litt%leaf_fines(dcmpy) &
                + litt%leaf_fines_in(dcmpy)              &
                - litt%leaf_fines_frag(dcmpy)
+          if (hlm_use_moss == itrue) then
+             litt%moss_fines(dcmpy) = litt%moss_fines(dcmpy) &
+                  + litt%moss_fines_in(dcmpy)              &
+                  - litt%moss_fines_frag(dcmpy)
+          end if
           do ilyr=1,nlevsoil
              litt%root_fines(dcmpy,ilyr) = litt%root_fines(dcmpy,ilyr) &
                   + litt%root_fines_in(dcmpy,ilyr)      &
@@ -2950,10 +2962,17 @@ contains
 
        do dcmpy=1,ndcmpy
           dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-          litt%leaf_fines_in(dcmpy) = litt%leaf_fines_in(dcmpy) + &
-               (leaf_m_turnover+repro_m_turnover + &
-               leaf_herbivory * herbivory_element_use_efficiency) * &
-               plant_dens * dcmpy_frac
+          if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+             litt%moss_fines_in(dcmpy) = litt%moss_fines_in(dcmpy) + &
+                  (leaf_m_turnover+repro_m_turnover + &
+                  leaf_herbivory * herbivory_element_use_efficiency) * &
+                  plant_dens * dcmpy_frac
+          else
+             litt%leaf_fines_in(dcmpy) = litt%leaf_fines_in(dcmpy) + &
+                  (leaf_m_turnover+repro_m_turnover + &
+                  leaf_herbivory * herbivory_element_use_efficiency) * &
+                  plant_dens * dcmpy_frac
+          end if
 
           dcmpy_frac = GetDecompyFrac(pft,fnrt_organ,dcmpy)
           do ilyr = 1, numlevsoil
@@ -3043,8 +3062,13 @@ contains
        do dcmpy=1,ndcmpy
 
           dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-          litt%leaf_fines_in(dcmpy) = litt%leaf_fines_in(dcmpy) + &
-               (leaf_m+repro_m) * dead_n * dcmpy_frac
+          if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+             litt%moss_fines_in(dcmpy) = litt%moss_fines_in(dcmpy) + &
+                  (leaf_m+repro_m) * dead_n * dcmpy_frac
+          else
+             litt%leaf_fines_in(dcmpy) = litt%leaf_fines_in(dcmpy) + &
+                  (leaf_m+repro_m) * dead_n * dcmpy_frac
+          end if
 
           dcmpy_frac = GetDecompyFrac(pft,fnrt_organ,dcmpy)
           do ilyr = 1, numlevsoil
@@ -3296,6 +3320,11 @@ contains
 
        litt%leaf_fines_frag(dcmpy) = litt%leaf_fines(dcmpy) * &
              years_per_day * SF_val_max_decomp(fuel_classes%dead_leaves()) * fragmentation_scaler(soil_layer_index)
+
+       if (hlm_use_moss == itrue) then
+          litt%moss_fines_frag(dcmpy) = litt%moss_fines(dcmpy) * &
+                years_per_day * SF_val_max_decomp(fuel_classes%dead_moss()) * fragmentation_scaler(soil_layer_index)
+       end if
 
        do ilyr = 1,nlev_eff_decomp
            litt%root_fines_frag(dcmpy,ilyr) = litt%root_fines(dcmpy,ilyr) * &

@@ -692,6 +692,7 @@ contains
                    ! and transfering in mass
                    do el=1,num_elements
                       call newPatch%litter(el)%InitConditions(init_leaf_fines=0._r8, &
+                           init_moss_fines=0._r8, &
                            init_root_fines=0._r8, &
                            init_ag_cwd=0._r8, &
                            init_bg_cwd=0._r8, &
@@ -1456,6 +1457,7 @@ contains
                 ! Initialize the litter pools to zero
                 do el=1,num_elements
                    call buffer_patch%litter(el)%InitConditions(init_leaf_fines=0._r8, &
+                        init_moss_fines=0._r8, &
                         init_root_fines=0._r8, &
                         init_ag_cwd=0._r8, &
                         init_bg_cwd=0._r8, &
@@ -1750,6 +1752,7 @@ contains
     ! pools will be populated shortly
     do el=1,num_elements
        call new_patch%litter(el)%InitConditions(init_leaf_fines=0._r8, &
+            init_moss_fines=0._r8, &
             init_root_fines=0._r8, &
             init_ag_cwd=0._r8, &
             init_bg_cwd=0._r8, &
@@ -1998,6 +2001,9 @@ contains
           new_litt%leaf_fines_frag(dcmpy) = new_litt%leaf_fines_frag(dcmpy) + &
                curr_litt%leaf_fines_frag(dcmpy) * patch_site_areadis/newPatch%area
           
+          new_litt%moss_fines_frag(dcmpy) = new_litt%moss_fines_frag(dcmpy) + &
+               curr_litt%moss_fines_frag(dcmpy) * patch_site_areadis/newPatch%area
+
           do sl=1,currentSite%nlevsoil
              new_litt%root_fines_frag(dcmpy,sl) = new_litt%root_fines_frag(dcmpy,sl) + &
                    curr_litt%root_fines_frag(dcmpy,sl) * patch_site_areadis/newPatch%area
@@ -2099,6 +2105,22 @@ contains
 
            new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + donatable_mass*donate_m2
            curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + donatable_mass*retain_m2
+
+           ! Transfer dead moss fines
+           if (hlm_use_moss == itrue) then
+              frac_burnt = 0.0_r8
+              if (dist_type == dtype_ifire .and. currentPatch%fire == 1) then
+                 frac_burnt = currentPatch%fuel%frac_burnt(fuel_classes%dead_moss())
+                 burned_mass = curr_litt%moss_fines(dcmpy) * patch_site_areadis * frac_burnt
+                 site_mass%burn_flux_to_atm(dist_type) = site_mass%burn_flux_to_atm(dist_type) + burned_mass
+              end if
+
+              donatable_mass              = curr_litt%moss_fines(dcmpy) * patch_site_areadis * &
+                                            (1._r8 - frac_burnt)
+
+              new_litt%moss_fines(dcmpy)  = new_litt%moss_fines(dcmpy) + donatable_mass*donate_m2
+              curr_litt%moss_fines(dcmpy) = curr_litt%moss_fines(dcmpy) + donatable_mass*retain_m2
+           end if
 
            ! Transfer root fines (none burns)
            do sl = 1,currentSite%nlevsoil
@@ -2310,10 +2332,17 @@ contains
 
              do dcmpy=1,ndcmpy
                  dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-                 new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + &
-                                              donatable_mass*donate_m2*dcmpy_frac
-                 curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + &
-                                               donatable_mass*retain_m2*dcmpy_frac
+                 if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+                    new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
+                                                 donatable_mass*donate_m2*dcmpy_frac
+                    curr_litt%moss_fines(dcmpy) = curr_litt%moss_fines(dcmpy) + &
+                                                  donatable_mass*retain_m2*dcmpy_frac
+                 else
+                    new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + &
+                                                 donatable_mass*donate_m2*dcmpy_frac
+                    curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + &
+                                                  donatable_mass*retain_m2*dcmpy_frac
+                 end if
              end do
 
              site_mass%burn_flux_to_atm(dtype_ifire) = site_mass%burn_flux_to_atm(dtype_ifire) + burned_mass
@@ -2534,11 +2563,19 @@ contains
           ! Transfer leaves of dying trees to leaf litter (includes seeds too)
           do dcmpy=1,ndcmpy
               dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-              new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + &
-                    num_dead*(leaf_m+repro_m)*donate_m2*dcmpy_frac
-              
-              curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + &
-                    num_dead*(leaf_m+repro_m)*retain_m2*dcmpy_frac
+              if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+                 new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
+                       num_dead*(leaf_m+repro_m)*donate_m2*dcmpy_frac
+
+                 curr_litt%moss_fines(dcmpy) = curr_litt%moss_fines(dcmpy) + &
+                       num_dead*(leaf_m+repro_m)*retain_m2*dcmpy_frac
+              else
+                 new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + &
+                       num_dead*(leaf_m+repro_m)*donate_m2*dcmpy_frac
+
+                 curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + &
+                       num_dead*(leaf_m+repro_m)*retain_m2*dcmpy_frac
+              end if
           end do
                  
           ! Pre-calculate Structural and sapwood, below and above ground, total mass [kg]
@@ -2777,10 +2814,17 @@ contains
 
              do dcmpy=1,ndcmpy
                 dcmpy_frac = GetDecompyFrac(pft,leaf_organ,dcmpy)
-                new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + &
-                     donatable_mass*donate_m2*dcmpy_frac
-                curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + &
-                     donatable_mass*retain_m2*dcmpy_frac
+                if (hlm_use_moss == itrue .and. prt_params%vascular(pft) == ifalse) then
+                   new_litt%moss_fines(dcmpy) = new_litt%moss_fines(dcmpy) + &
+                        donatable_mass*donate_m2*dcmpy_frac
+                   curr_litt%moss_fines(dcmpy) = curr_litt%moss_fines(dcmpy) + &
+                        donatable_mass*retain_m2*dcmpy_frac
+                else
+                   new_litt%leaf_fines(dcmpy) = new_litt%leaf_fines(dcmpy) + &
+                        donatable_mass*donate_m2*dcmpy_frac
+                   curr_litt%leaf_fines(dcmpy) = curr_litt%leaf_fines(dcmpy) + &
+                        donatable_mass*retain_m2*dcmpy_frac
+                end if
              end do
 
              site_mass%burn_flux_to_atm(dtype_ilandusechange) = &
