@@ -6837,19 +6837,19 @@ contains
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,                 &
             index = ih_sum_fuel_si)
 
-       moss_fuel_if: if (hlm_use_moss == itrue) then
-          call this%set_history_var(vname='FATES_LIVEMOSS_FUEL', units='kg m-2',    &
-               long='live moss fuel loading in kg carbon per m2 land area',        &
-               use_default='inactive', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
-               upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
-               index = ih_livemoss_fuel_si)
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_LIVEMOSS_FUEL', units='kg m-2',    &
+            long='live moss fuel loading in kg carbon per m2 land area',        &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_livemoss_fuel_si)
 
-          call this%set_history_var(vname='FATES_MOSS_FINES', units='kg m-2',       &
-               long='dead moss (duff) litter in kg carbon per m2 land area',       &
-               use_default='inactive', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
-               upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
-               index = ih_moss_fines_si)
-       end if moss_fuel_if
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FINES', units='kg m-2',       &
+            long='dead moss (duff) litter in kg carbon per m2 land area',       &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fines_si)
 
        ! Litter Variables
 
