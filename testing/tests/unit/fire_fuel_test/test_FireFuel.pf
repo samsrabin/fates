@@ -5,8 +5,18 @@ module test_FireFuel
   !
   use FatesConstantsMod,   only : r8 => fates_r8
   use FatesFuelMod,        only : fuel_type
+  use FatesFuelMod,        only : MoistureOfExtinction
+  use FatesFuelMod,        only : max_grass_frac
   use FatesFuelClassesMod, only : fuel_classes
   use FatesInterfaceTypesMod, only : num_fuel_classes
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_live_intercept
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_live_slope
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_dead_intercept
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_dead_slope
+  use FatesInterfaceTypesMod, only : hlm_moss_max_burn_frac
+  use SFFireWeatherMod,    only : fire_weather
+  use SFNesterovMod,       only : nesterov_index
+  use SFParamsMod,         only : SpitFireParamsInitForTesting
   use funit
 
   implicit none
@@ -33,6 +43,31 @@ module test_FireFuel
 
   real(r8), parameter :: tol = 1.e-13_r8
   real(r8), parameter :: dummy_litter = 5.0_r8   ! dummy litter value [kgC/m2]
+
+  ! inputs used by the fuel moisture tests
+  real(r8), parameter :: drying_ratio = 66000.0_r8 ! drying ratio
+  real(r8), parameter :: sav_base = 40.0_r8        ! offset of the test surface area to volume ratios [/cm]
+  real(r8), parameter :: sav_step = 10.0_r8        ! per-class increment of the test surface area to volume ratios [/cm]
+  real(r8), parameter :: test_tempC = 25.0_r8      ! temperature driving the fire weather index [degC]
+  real(r8), parameter :: test_precip = 0.0_r8      ! precipitation driving the fire weather index [mm]
+  real(r8), parameter :: test_rh = 10.0_r8         ! relative humidity driving the fire weather index [%]
+  real(r8), parameter :: test_wind = 0.0_r8        ! wind speed driving the fire weather index [m/s]
+
+  ! moss fuel moisture coefficients used by the tests; deliberately not the namelist
+  ! defaults, so that the tests do not depend on them
+  real(r8), parameter :: test_live_intercept = 0.20_r8 ! live moss fuel moisture at fwet_moss = 0 [m3/m3]
+  real(r8), parameter :: test_live_slope = 0.60_r8     ! live moss fuel moisture per unit fwet_moss [m3/m3]
+  real(r8), parameter :: test_dead_intercept = 0.10_r8 ! dead moss fuel moisture at fwet_moss = 0 [m3/m3]
+  real(r8), parameter :: test_dead_slope = 0.50_r8     ! dead moss fuel moisture per unit fwet_moss [m3/m3]
+
+  ! moss wetness proxy values the moisture tests are run at
+  real(r8), parameter :: fwet_dry = 0.0_r8  ! driest attainable moss wetness proxy [0-1]
+  real(r8), parameter :: fwet_half = 0.5_r8 ! midpoint moss wetness proxy [0-1]
+  real(r8), parameter :: fwet_wet = 1.0_r8  ! wettest attainable moss wetness proxy [0-1]
+
+  ! inputs used by the fuel burnt test
+  real(r8), parameter :: test_moss_cap = 0.5_r8      ! test value for hlm_moss_max_burn_frac [0-1]
+  real(r8), parameter :: test_miner_total = 0.055_r8 ! test total mineral content of the fuel [0-1]
 
   contains
 
@@ -62,6 +97,10 @@ module test_FireFuel
       class(TestFireFuel), intent(inout) :: this
       num_fuel_classes = this%param_num_fuel_classes
       call this%fuel%Init()
+      ! the hlm_moss_* module scalars persist across tests, so reset them here rather than
+      ! relying on each test to set them
+      call SetTestMossCoefficients()
+      call SetSpitFireParamsAllFuelVeryDry()
       if (fuel_classes%moss_classes_present()) then
          this%live_moss = dummy_litter
          this%dead_moss = dummy_litter
@@ -74,6 +113,85 @@ module test_FireFuel
       class(TestFireFuel), intent(inout) :: this
       call this%fuel%Deallocate()
     end subroutine tearDown
+
+    ! surface area to volume ratios for the fuel moisture tests; distinct per class so that
+    ! each class gets its own moisture of extinction
+    function TestSAV() result(sav_fuel)
+      real(r8), allocatable :: sav_fuel(:) ! surface area to volume ratio of all fuel types [/cm]
+      integer               :: i           ! looping index
+      allocate(sav_fuel(num_fuel_classes))
+      do i = 1, num_fuel_classes
+        sav_fuel(i) = sav_base + sav_step*real(i, r8)
+      end do
+    end function TestSAV
+
+    ! moss namelist scalars, set here so the tests do not depend on the namelist defaults
+    subroutine SetTestMossCoefficients()
+      hlm_moss_fuel_moisture_live_intercept = test_live_intercept
+      hlm_moss_fuel_moisture_live_slope = test_live_slope
+      hlm_moss_fuel_moisture_dead_intercept = test_dead_intercept
+      hlm_moss_fuel_moisture_dead_slope = test_dead_slope
+      hlm_moss_max_burn_frac = 1.0_r8
+    end subroutine SetTestMossCoefficients
+
+    ! SPITFIRE parameters that make every fuel class bone dry. A min_moisture above any
+    ! attainable relative moisture puts every class in the "very dry litter" branch of
+    ! CalculateFuelBurnt, so frac_burnt is 1 before any cap is applied and the remaining
+    ! coefficients are never reached. Called from setUp so the SF_val_* arrays are always
+    ! allocated at the current num_fuel_classes, whichever way tests are ordered.
+    subroutine SetSpitFireParamsAllFuelVeryDry()
+      real(r8) :: very_dry(num_fuel_classes) ! threshold placing every class in the driest branch
+      real(r8) :: unused(num_fuel_classes)   ! coefficients the driest branch never reaches
+
+      very_dry(:) = huge(1.0_r8)
+      unused(:) = 0.0_r8
+      call SpitFireParamsInitForTesting(min_moisture=very_dry, mid_moisture=very_dry,   &
+        low_moisture_Coeff=unused, low_moisture_Slope=unused,                           &
+        mid_moisture_Coeff=unused, mid_moisture_Slope=unused,                           &
+        miner_total=test_miner_total)
+
+    end subroutine SetSpitFireParamsAllFuelVeryDry
+
+    ! load the fuel object and update its moisture at the given moss wetness proxy
+    subroutine RunFuelMoisture(this, fwet_moss, sav_fuel)
+      class(TestFireFuel), intent(inout) :: this                       ! fuel test object
+      real(r8),            intent(in)    :: fwet_moss                  ! moss wetness proxy [0-1]
+      real(r8),            intent(in)    :: sav_fuel(num_fuel_classes) ! surface area to volume ratio of all fuel types [/cm]
+      class(fire_weather), allocatable   :: fireWeather                ! fire weather object
+
+      allocate(nesterov_index :: fireWeather)
+      call fireWeather%Init()
+      call fireWeather%UpdateIndex(test_tempC, test_precip, test_rh, test_wind)
+
+      call this%fuel%UpdateLoading(dummy_litter, dummy_litter, dummy_litter,            &
+        dummy_litter, dummy_litter, dummy_litter, this%live_moss, this%dead_moss)
+      call this%fuel%SumLoading()
+      call this%fuel%CalculateFractionalLoading()
+      call this%fuel%UpdateFuelMoisture(sav_fuel, drying_ratio, fwet_moss, fireWeather)
+
+      deallocate(fireWeather)
+
+    end subroutine RunFuelMoisture
+
+    ! run the fuel moisture update at one proxy value and return what the two moss classes'
+    ! effective moisture should then be. Shared by the fwet cases below so that each of them
+    ! is only its own assertions.
+    subroutine RunMossMoisture(this, fwet_moss, expect_live, expect_dead)
+      class(TestFireFuel), intent(inout) :: this        ! fuel test object
+      real(r8),            intent(in)    :: fwet_moss   ! moss wetness proxy [0-1]
+      real(r8),            intent(out)   :: expect_live ! expected live moss effective moisture [m3/m3]
+      real(r8),            intent(out)   :: expect_dead ! expected dead moss effective moisture [m3/m3]
+      real(r8), allocatable              :: sav_fuel(:) ! surface area to volume ratio of all fuel types [/cm]
+
+      sav_fuel = TestSAV()
+      call RunFuelMoisture(this, fwet_moss, sav_fuel)
+
+      expect_live = (test_live_intercept + test_live_slope*fwet_moss)/                  &
+        MoistureOfExtinction(sav_fuel(fuel_classes%live_moss()))
+      expect_dead = (test_dead_intercept + test_dead_slope*fwet_moss)/                  &
+        MoistureOfExtinction(sav_fuel(fuel_classes%dead_moss()))
+
+    end subroutine RunMossMoisture
 
     @Test 
     subroutine UpdateLoading_CorrectInputOrder(this)
@@ -155,5 +273,175 @@ module test_FireFuel
       end do 
 
     end subroutine CalculateFractionalLoading_CorrectValues
+
+    @Test
+    subroutine UpdateFuelMoisture_MossTracksFwet_Dry(this)
+      ! moss effective moisture is the linear map normalized by MEF, at the dry end
+      class(TestFireFuel), intent(inout) :: this        ! fuel test object
+      real(r8)                           :: expect_live ! expected live moss effective moisture [m3/m3]
+      real(r8)                           :: expect_dead ! expected dead moss effective moisture [m3/m3]
+
+      if (fuel_classes%moss_classes_present()) then
+        call RunMossMoisture(this, fwet_dry, expect_live, expect_dead)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%live_moss()), expect_live, tolerance=tol)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%dead_moss()), expect_dead, tolerance=tol)
+      end if
+
+    end subroutine UpdateFuelMoisture_MossTracksFwet_Dry
+
+    @Test
+    subroutine UpdateFuelMoisture_MossTracksFwet_Half(this)
+      ! moss effective moisture is the linear map normalized by MEF, midway
+      class(TestFireFuel), intent(inout) :: this        ! fuel test object
+      real(r8)                           :: expect_live ! expected live moss effective moisture [m3/m3]
+      real(r8)                           :: expect_dead ! expected dead moss effective moisture [m3/m3]
+
+      if (fuel_classes%moss_classes_present()) then
+        call RunMossMoisture(this, fwet_half, expect_live, expect_dead)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%live_moss()), expect_live, tolerance=tol)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%dead_moss()), expect_dead, tolerance=tol)
+      end if
+
+    end subroutine UpdateFuelMoisture_MossTracksFwet_Half
+
+    @Test
+    subroutine UpdateFuelMoisture_MossTracksFwet_Saturated(this)
+      ! moss effective moisture is the linear map normalized by MEF, at the wet end
+      class(TestFireFuel), intent(inout) :: this        ! fuel test object
+      real(r8)                           :: expect_live ! expected live moss effective moisture [m3/m3]
+      real(r8)                           :: expect_dead ! expected dead moss effective moisture [m3/m3]
+
+      if (fuel_classes%moss_classes_present()) then
+        call RunMossMoisture(this, fwet_wet, expect_live, expect_dead)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%live_moss()), expect_live, tolerance=tol)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%dead_moss()), expect_dead, tolerance=tol)
+      end if
+
+    end subroutine UpdateFuelMoisture_MossTracksFwet_Saturated
+
+    @Test
+    subroutine UpdateFuelMoisture_MossEntersNonTrunkAverage(this)
+      ! test that the moss classes are included in average_moisture_notrunks, the
+      ! loading-weighted mean that UpdateFuelMoisture accumulates and FATES_FUEL_EFF_MOIST
+      ! reports. Excluding moss from that accumulation the way trunks are excluded would
+      ! leave every per-class assertion above passing while the site diagnostic silently
+      ! stopped seeing moss. Each class carries the same positive loading here and moss
+      ! moisture rises with fwet_moss, so the average must rise with it, at both ends and
+      ! across the middle.
+      class(TestFireFuel), intent(inout) :: this        ! fuel test object
+      real(r8), allocatable              :: sav_fuel(:) ! surface area to volume ratio of all fuel types [/cm]
+      real(r8)                           :: avg_dry     ! non-trunk average moisture at fwet_dry [m3/m3]
+      real(r8)                           :: avg_half    ! non-trunk average moisture at fwet_half [m3/m3]
+      real(r8)                           :: avg_wet     ! non-trunk average moisture at fwet_wet [m3/m3]
+
+      if (fuel_classes%moss_classes_present()) then
+        sav_fuel = TestSAV()
+
+        call RunFuelMoisture(this, fwet_dry, sav_fuel)
+        avg_dry = this%fuel%average_moisture_notrunks
+
+        call RunFuelMoisture(this, fwet_half, sav_fuel)
+        avg_half = this%fuel%average_moisture_notrunks
+
+        call RunFuelMoisture(this, fwet_wet, sav_fuel)
+        avg_wet = this%fuel%average_moisture_notrunks
+
+        @assertGreaterThan(avg_half, avg_dry)
+        @assertGreaterThan(avg_wet, avg_half)
+      end if
+
+    end subroutine UpdateFuelMoisture_MossEntersNonTrunkAverage
+
+    @Test
+    subroutine UpdateFuelMoisture_FwetLeavesNonMossAlone(this)
+      ! test that the moss wetness proxy does not disturb the non-moss fuel classes
+      class(TestFireFuel), intent(inout) :: this            ! fuel test object
+      real(r8), allocatable              :: sav_fuel(:)     ! surface area to volume ratio of all fuel types [/cm]
+      real(r8)                           :: twigs_dry       ! twig effective moisture at fwet_moss = 0 [m3/m3]
+      real(r8)                           :: dead_leaves_dry ! dead leaf effective moisture at fwet_moss = 0 [m3/m3]
+      real(r8)                           :: live_grass_dry  ! live grass effective moisture at fwet_moss = 0 [m3/m3]
+
+      sav_fuel = TestSAV()
+
+      call RunFuelMoisture(this, fwet_dry, sav_fuel)
+      twigs_dry = this%fuel%effective_moisture(fuel_classes%twigs())
+      dead_leaves_dry = this%fuel%effective_moisture(fuel_classes%dead_leaves())
+      live_grass_dry = this%fuel%effective_moisture(fuel_classes%live_grass())
+
+      call RunFuelMoisture(this, fwet_wet, sav_fuel)
+
+      @assertEqual(this%fuel%effective_moisture(fuel_classes%twigs()), twigs_dry, tolerance=tol)
+      @assertEqual(this%fuel%effective_moisture(fuel_classes%dead_leaves()), dead_leaves_dry, tolerance=tol)
+      @assertEqual(this%fuel%effective_moisture(fuel_classes%live_grass()), live_grass_dry, tolerance=tol)
+
+    end subroutine UpdateFuelMoisture_FwetLeavesNonMossAlone
+
+    @Test
+    subroutine UpdateFuelMoisture_NegativeMossMap_FlooredAtZero(this)
+      ! test that the linear moss map cannot drive moss fuel moisture negative
+      class(TestFireFuel), intent(inout) :: this        ! fuel test object
+      real(r8), allocatable              :: sav_fuel(:) ! surface area to volume ratio of all fuel types [/cm]
+
+      if (fuel_classes%moss_classes_present()) then
+
+        ! coefficients that would give -0.5 m3/m3 at fwet_moss = 1
+        hlm_moss_fuel_moisture_live_intercept = 0.5_r8
+        hlm_moss_fuel_moisture_live_slope = -1.0_r8
+        hlm_moss_fuel_moisture_dead_intercept = 0.5_r8
+        hlm_moss_fuel_moisture_dead_slope = -1.0_r8
+
+        sav_fuel = TestSAV()
+        call RunFuelMoisture(this, fwet_wet, sav_fuel)
+
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%live_moss()), 0.0_r8, tolerance=tol)
+        @assertEqual(this%fuel%effective_moisture(fuel_classes%dead_moss()), 0.0_r8, tolerance=tol)
+      end if
+
+    end subroutine UpdateFuelMoisture_NegativeMossMap_FlooredAtZero
+
+    @Test
+    subroutine CalculateFuelBurnt_MossUsesItsOwnCap(this)
+      ! test that live moss is capped by hlm_moss_max_burn_frac, that live grass keeps its
+      ! own hardcoded cap, and that no other class is capped at all
+      class(TestFireFuel), intent(inout) :: this             ! fuel test object
+      real(r8), allocatable              :: sav_fuel(:)      ! surface area to volume ratio of all fuel types [/cm]
+      real(r8), allocatable              :: fuel_consumed(:) ! fuel consumed [kgC/m2]
+      real(r8)                           :: uncapped         ! expected frac_burnt where no cap applies [0-1]
+      real(r8)                           :: expected_grass   ! expected live grass frac_burnt [0-1]
+      real(r8)                           :: expected_moss    ! expected live moss frac_burnt [0-1]
+
+      allocate(fuel_consumed(num_fuel_classes))
+
+      hlm_moss_max_burn_frac = test_moss_cap
+      uncapped = 1.0_r8 - test_miner_total
+      expected_grass = max_grass_frac*uncapped
+      expected_moss = test_moss_cap*uncapped
+
+      ! if the two caps were ever set equal, the grass and moss assertions below would pass
+      ! even if one class took the other's cap
+      @assertGreaterThan(abs(expected_grass - expected_moss), tol)
+
+      sav_fuel = TestSAV()
+      call RunFuelMoisture(this, fwet_dry, sav_fuel)
+      call this%fuel%CalculateFuelBurnt(fuel_consumed)
+
+      ! an uncapped class burns entirely, less the mineral content
+      @assertEqual(this%fuel%frac_burnt(fuel_classes%twigs()), uncapped, tolerance=tol)
+      @assertEqual(this%fuel%frac_burnt(fuel_classes%dead_leaves()), uncapped, tolerance=tol)
+      @assertEqual(fuel_consumed(fuel_classes%twigs()), uncapped*dummy_litter, tolerance=tol)
+
+      ! grass keeps its own cap, which moss must not have disturbed
+      @assertEqual(this%fuel%frac_burnt(fuel_classes%live_grass()), expected_grass, tolerance=tol)
+
+      if (fuel_classes%moss_classes_present()) then
+        ! live moss takes the namelist cap instead of the grass one
+        @assertEqual(this%fuel%frac_burnt(fuel_classes%live_moss()), expected_moss, tolerance=tol)
+        @assertEqual(fuel_consumed(fuel_classes%live_moss()), expected_moss*dummy_litter, tolerance=tol)
+
+        ! dead moss is a litter class like any other and is not capped
+        @assertEqual(this%fuel%frac_burnt(fuel_classes%dead_moss()), uncapped, tolerance=tol)
+      end if
+
+    end subroutine CalculateFuelBurnt_MossUsesItsOwnCap
 
 end module test_FireFuel

@@ -10,6 +10,10 @@ program FatesTestFuel
   use SFNesterovMod,               only : nesterov_index
   use FatesFuelMod,                only : fuel_type
   use FatesInterfaceTypesMod,      only : num_fuel_classes
+  use FatesInterfaceTypesMod,      only : hlm_moss_fuel_moisture_live_intercept
+  use FatesInterfaceTypesMod,      only : hlm_moss_fuel_moisture_live_slope
+  use FatesInterfaceTypesMod,      only : hlm_moss_fuel_moisture_dead_intercept
+  use FatesInterfaceTypesMod,      only : hlm_moss_fuel_moisture_dead_slope
   use SFParamsMod,                 only : SF_val_SAV, SF_val_drying_ratio
   use SFParamsMod,                 only : SF_val_FBD
   
@@ -42,6 +46,20 @@ program FatesTestFuel
   ! CONSTANTS:
   integer,          parameter :: n_days = 365             ! number of days to run simulation
   character(len=*), parameter :: out_file = 'fuel_out.nc' ! output file 
+  ! Moss fuel moisture is diagnosed from the moss wetness proxy rather than from the Nesterov
+  ! index. This test only records the loading-weighted non-trunk average moisture, so holding
+  ! the proxy fixed simply contributes a constant moss term to that average, leaving the
+  ! plotted signal driven by the NI-dependent classes. The sweep over the proxy, and the
+  ! assertions on it, live in the fire_fuel unit test.
+  real(r8),         parameter :: test_fwet_moss = 0.5_r8  ! moss wetness proxy for the functional test [0-1]
+  ! The moss fuel moisture coefficients normally arrive from the CTSM namelist, which no
+  ! standalone driver reads, so they must be set by hand here. These are the CTSM namelist
+  ! defaults (bld/namelist_files/namelist_defaults_ctsm.xml). hlm_moss_max_burn_frac is not
+  ! set because this driver never calls CalculateFuelBurnt.
+  real(r8),         parameter :: test_live_intercept = 0.0_r8 ! live moss fuel moisture at fwet_moss = 0 [m3/m3]
+  real(r8),         parameter :: test_live_slope = 0.7_r8      ! live moss fuel moisture per unit fwet_moss [m3/m3]
+  real(r8),         parameter :: test_dead_intercept = 0.0_r8  ! dead moss fuel moisture at fwet_moss = 0 [m3/m3]
+  real(r8),         parameter :: test_dead_slope = 0.7_r8      ! dead moss fuel moisture per unit fwet_moss [m3/m3]
 
   ! read in parameter file name and DATM file from command line
   param_file = command_line_arg(1)
@@ -49,6 +67,12 @@ program FatesTestFuel
 
   ! read in parameter file
   call ReadParameters(param_file)
+
+  ! set the moss fuel moisture coefficients that would otherwise come from the CTSM namelist
+  hlm_moss_fuel_moisture_live_intercept = test_live_intercept
+  hlm_moss_fuel_moisture_live_slope = test_live_slope
+  hlm_moss_fuel_moisture_dead_intercept = test_dead_intercept
+  hlm_moss_fuel_moisture_dead_slope = test_dead_slope
 
   ! fuel models to test
   fuel_models = (/102, 183, 108/)  ! 108 instead of 164 for comparison with moss-enabled ones
@@ -115,7 +139,8 @@ program FatesTestFuel
     
     ! calculate fuel moisture [m3/m3]
     do f = 1, num_fuel_models
-      call fuel(f)%UpdateFuelMoisture(SF_val_SAV, SF_val_drying_ratio, fireWeather)
+      call fuel(f)%UpdateFuelMoisture(SF_val_SAV, SF_val_drying_ratio, test_fwet_moss,   &
+        fireWeather)
       fuel_moisture(i, f) = fuel(f)%average_moisture_notrunks
       fuel_MEF(i, f) = fuel(f)%MEF_notrunks
     end do

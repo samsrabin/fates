@@ -2,6 +2,10 @@ module FatesFuelMod
 
   use FatesFuelClassesMod, only : fuel_classes
   use FatesInterfaceTypesMod, only : num_fuel_classes
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_live_intercept
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_live_slope
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_dead_intercept
+  use FatesInterfaceTypesMod, only : hlm_moss_fuel_moisture_dead_slope
   use FatesConstantsMod,   only : r8 => fates_r8
   use FatesConstantsMod,   only : nearzero
   use SFNesterovMod,       only : nesterov_index
@@ -40,7 +44,16 @@ module FatesFuelMod
       procedure :: Deallocate
 
   end type fuel_type
-  
+
+  ! CONSTANTS:
+  ! Public so that unit tests can assert against it rather than restating its value.
+  real(r8), parameter, public :: max_grass_frac = 0.8_r8 ! maximum fraction burnt for live grass fuels
+
+  ! Public for the same reason: unit tests need the moisture of extinction that
+  ! UpdateFuelMoisture normalizes by, and reimplementing it in the test would let the two
+  ! drift apart silently.
+  public :: MoistureOfExtinction
+
   contains 
 
     subroutine Init(this)
@@ -208,7 +221,7 @@ module FatesFuelMod
 
     !-------------------------------------------------------------------------------------
     
-    subroutine UpdateFuelMoisture(this, sav_fuel, drying_ratio, fireWeatherClass)
+    subroutine UpdateFuelMoisture(this, sav_fuel, drying_ratio, fwet_moss, fireWeatherClass)
       ! DESCRIPTION:
       !   Updates fuel moisture depending on what fire weather class is in use
       
@@ -216,6 +229,7 @@ module FatesFuelMod
       class(fuel_type),    intent(inout) :: this                       ! fuel class
       real(r8),            intent(in)    :: sav_fuel(num_fuel_classes) ! surface area to volume ratio of all fuel types [/cm]
       real(r8),            intent(in)    :: drying_ratio               ! drying ratio
+      real(r8),            intent(in)    :: fwet_moss                  ! moss wetness proxy; ignored if moss fuel classes absent [0-1]
       class(fire_weather), intent(in)    :: fireWeatherClass           ! fireWeatherClass
       
       real(r8) :: moisture(num_fuel_classes)               ! fuel moisture [m3/m3]
@@ -235,6 +249,34 @@ module FatesFuelMod
             call endrun(msg=errMsg( __FILE__, __LINE__))
         end select
         
+        ! Moss fuel moisture is diagnosed from the moss wetness proxy rather than from the
+        ! fire weather index, so the two moss classes are overwritten here. This sits ahead
+        ! of the loop below so that moss gets moisture-of-extinction-normalized like every
+        ! other fuel class.
+        !
+        ! The intercepts are constrained, and the constraint is easy to violate by
+        ! accident. Every other fuel class takes its moisture from
+        ! CalculateFuelMoistureNesterov, which decays toward zero without a floor and so
+        ! crosses its moisture of extinction eventually, however wet it starts. This linear
+        ! map is instead floored at its intercept. An intercept at or above the class's MEF
+        ! therefore makes that class permanently non-flammable rather than merely hard to
+        ! ignite: effective_moisture never falls below 1, and CalculateFuelBurnt's "very
+        ! wet litter" branch zeroes frac_burnt at every value of fwet_moss.
+        !
+        ! MEF is MEF_a - MEF_b*log(sav_fuel) (MoistureOfExtinction, below), so for moss it
+        ! is fixed by the moss entries of fates_fire_SAV on the FATES parameter file and by
+        ! nothing else, rising as SAV falls: at the shipped SAV of 66 /cm it is 0.2475
+        ! m3/m3. A moss class burns while fwet_moss is under
+        ! (MEF - hlm_moss_fuel_moisture_*_intercept)/hlm_moss_fuel_moisture_*_slope, set
+        ! from the CTSM namelist as fates_moss_fuel_moisture_*; at the shipped intercept of
+        ! 0 and slope of 0.7 that puts both moss classes' extinction at fwet_moss = 0.354.
+        if (fuel_classes%moss_classes_present()) then
+          moisture(fuel_classes%live_moss()) = max(0.0_r8,                              &
+            hlm_moss_fuel_moisture_live_intercept + hlm_moss_fuel_moisture_live_slope*fwet_moss)
+          moisture(fuel_classes%dead_moss()) = max(0.0_r8,                              &
+            hlm_moss_fuel_moisture_dead_intercept + hlm_moss_fuel_moisture_dead_slope*fwet_moss)
+        end if
+
         this%average_moisture_notrunks = 0.0_r8
         this%MEF_notrunks = 0.0_r8
         do i = 1, num_fuel_classes
@@ -409,6 +451,7 @@ module FatesFuelMod
       use SFParamsMod, only : SF_val_mid_moisture_Slope, SF_val_min_moisture
       use SFParamsMod, only : SF_val_low_moisture_Coeff, SF_val_low_moisture_Slope
       use SFParamsMod, only : SF_val_miner_total
+      use FatesInterfaceTypesMod, only : hlm_moss_max_burn_frac
 
       ! ARGUMENTS:
       class(fuel_type), intent(inout) :: this                            ! fuel class
@@ -417,10 +460,14 @@ module FatesFuelMod
       ! LOCALS:
       real(r8) :: rel_moisture  ! relative moisture of fuel (moist/moisture of extinction) [unitless]
       integer  :: i             ! looping index
+      integer  :: live_moss_i   ! index of the live moss fuel class; 0 if the moss classes are absent
       
-      ! CONSTANTS:
-      real(r8), parameter :: max_grass_frac = 0.8_r8 ! maximum fraction burnt for live grass fuels
-      
+      ! Resolve the live moss class index once. It is looked up here rather than inside the
+      ! loop because fuel_classes%live_moss() aborts when the moss fuel classes are absent,
+      ! and Fortran does not guarantee short-circuit evaluation of .and.
+      live_moss_i = 0
+      if (fuel_classes%moss_classes_present()) live_moss_i = fuel_classes%live_moss()
+
       this%frac_burnt(:) = 1.0_r8
         
       ! Calculate fraction of litter is burnt for all classes. 
@@ -448,6 +495,15 @@ module FatesFuelMod
         ! we can't ever kill all of the grass
         if (i == fuel_classes%live_grass()) then
           this%frac_burnt(i) = min(max_grass_frac, this%frac_burnt(i))
+        else if (i == live_moss_i) then
+          ! Moss does not inherit the grass cap above, which exists because we can't ever
+          ! kill all of the grass; moss carries no such assumption, as a moss mat can burn
+          ! off completely. Live moss gets its own limit instead, which defaults to 1.0, at
+          ! which this min is a no-op; the knob exists so that the cap can be tightened
+          ! during tuning without a code change. Note the capped value is still scaled by
+          ! (1 - SF_val_miner_total) below, exactly as grass's cap is, so a cap dialed in
+          ! during tuning is not the fraction that finally reaches leaf_burn_frac.
+          this%frac_burnt(i) = min(hlm_moss_max_burn_frac, this%frac_burnt(i))
         end if
         
         ! reduce fraction burnt based on mineral content

@@ -58,6 +58,7 @@ module SFParamsMod
 
    public :: TransferParamsSpitFire
    public :: SpitFireCheckParams
+   public :: SpitFireParamsInitForTesting
    
 contains
 
@@ -190,6 +191,68 @@ contains
     SF_val_rxfire_min_frac = nan
 
   end subroutine SpitFireParamsInit
+
+  ! ======================================================================
+
+  subroutine SpitFireParamsInitForTesting(min_moisture, mid_moisture,                   &
+       low_moisture_Coeff, low_moisture_Slope, mid_moisture_Coeff, mid_moisture_Slope,  &
+       miner_total)
+    !
+    ! DESCRIPTION:
+    !   Allocates and sets the SPITFIRE parameters that CalculateFuelBurnt reads, taking
+    !   them directly as arguments instead of from a parameter file.
+    !
+    !   FOR UNIT TESTS ONLY. Nothing in the model calls this and nothing in the model
+    !   should: the SF_val_* variables are protected so that the parameter file is their
+    !   only source in a real run, and this routine is the one sanctioned exception. It
+    !   exists because CalculateFuelBurnt is otherwise untestable from pFUnit, which left
+    !   the live-moss maximum burn fraction with no coverage at all.
+    !
+    !   Reading a parameter file instead would not work, and not merely for want of
+    !   plumbing: ReadParameters leads to SpitFireParamsInit, which takes num_fuel_classes
+    !   from the file. That would override the fuel class count in any test that sweeps
+    !   over it -- which the fire_fuel test does, running every case at both 6 and 8
+    !   classes. (FatesUnitTestParamReaderMod is linked into the unit-test binaries, so the
+    !   route is available; it is simply the wrong one here.)
+    !
+    !   Covers only what CalculateFuelBurnt reads. Widen it as more of SFParamsMod becomes
+    !   testable, but do not widen where it is called from.
+    !
+    !   num_fuel_classes must already be set by the caller. Any prior allocation is
+    !   discarded, so a test may call this repeatedly with different fuel class counts.
+
+    ! ARGUMENTS:
+    real(r8), intent(in) :: min_moisture(num_fuel_classes)       ! litter moisture threshold to be considered very dry
+    real(r8), intent(in) :: mid_moisture(num_fuel_classes)       ! litter moisture threshold to be considered medium dry
+    real(r8), intent(in) :: low_moisture_Coeff(num_fuel_classes) ! spitfire parameter, equation B1 Thonicke et al 2010
+    real(r8), intent(in) :: low_moisture_Slope(num_fuel_classes) ! spitfire parameter, equation B1 Thonicke et al 2010
+    real(r8), intent(in) :: mid_moisture_Coeff(num_fuel_classes) ! spitfire parameter, equation B1 Thonicke et al 2010
+    real(r8), intent(in) :: mid_moisture_Slope(num_fuel_classes) ! spitfire parameter, equation B1 Thonicke et al 2010
+    real(r8), intent(in) :: miner_total                          ! total mineral content of the fuel
+
+    if (allocated(SF_val_min_moisture)) deallocate(SF_val_min_moisture)
+    if (allocated(SF_val_mid_moisture)) deallocate(SF_val_mid_moisture)
+    if (allocated(SF_val_low_moisture_Coeff)) deallocate(SF_val_low_moisture_Coeff)
+    if (allocated(SF_val_low_moisture_Slope)) deallocate(SF_val_low_moisture_Slope)
+    if (allocated(SF_val_mid_moisture_Coeff)) deallocate(SF_val_mid_moisture_Coeff)
+    if (allocated(SF_val_mid_moisture_Slope)) deallocate(SF_val_mid_moisture_Slope)
+
+    allocate(SF_val_min_moisture(num_fuel_classes))
+    allocate(SF_val_mid_moisture(num_fuel_classes))
+    allocate(SF_val_low_moisture_Coeff(num_fuel_classes))
+    allocate(SF_val_low_moisture_Slope(num_fuel_classes))
+    allocate(SF_val_mid_moisture_Coeff(num_fuel_classes))
+    allocate(SF_val_mid_moisture_Slope(num_fuel_classes))
+
+    SF_val_min_moisture(:) = min_moisture(:)
+    SF_val_mid_moisture(:) = mid_moisture(:)
+    SF_val_low_moisture_Coeff(:) = low_moisture_Coeff(:)
+    SF_val_low_moisture_Slope(:) = low_moisture_Slope(:)
+    SF_val_mid_moisture_Coeff(:) = mid_moisture_Coeff(:)
+    SF_val_mid_moisture_Slope(:) = mid_moisture_Slope(:)
+    SF_val_miner_total = miner_total
+
+  end subroutine SpitFireParamsInitForTesting
 
   ! ======================================================================
 
