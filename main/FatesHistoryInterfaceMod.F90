@@ -483,6 +483,9 @@ module FatesHistoryInterfaceMod
   integer :: ih_sum_fuel_si
   integer :: ih_livemoss_fuel_si
   integer :: ih_moss_fines_si
+  integer :: ih_moss_fwet_si
+  integer :: ih_moss_fwet_soil_si
+  integer :: ih_moss_fwet_canopy_si
   integer :: ih_rx_burn_window_si
   integer :: ih_rx_intensity_si
   integer :: ih_rx_fracarea_si
@@ -2769,6 +2772,16 @@ contains
             if (hlm_use_moss == itrue) then
                this%hvars(ih_livemoss_fuel_si)%r81d(io_si) = this%hvars(ih_livemoss_fuel_si)%r81d(io_si) + &
                     cpatch%livemoss * cpatch%area * AREA_INV
+
+               ! Area-weighted like every other patch-level diagnostic in this loop, so
+               ! bareground patch area -- where the proxy is not diagnosed and stays 0 --
+               ! dilutes the site mean.
+               this%hvars(ih_moss_fwet_si)%r81d(io_si) = this%hvars(ih_moss_fwet_si)%r81d(io_si) + &
+                    cpatch%fwet_moss * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_soil_si)%r81d(io_si) = this%hvars(ih_moss_fwet_soil_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_soil * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_canopy * cpatch%area * AREA_INV
             end if
 
             hio_nonrx_intensity_fracarea_product_si(io_si) = hio_nonrx_intensity_fracarea_product_si(io_si) + &
@@ -6850,6 +6863,27 @@ contains
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fines_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FWET', units='1',       &
+            long='moss wetness proxy, the wetter of top soil layer saturation and canopy wetted fraction', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fwet_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FWET_SOIL', units='1',       &
+            long='top soil layer saturation ingredient of the moss wetness proxy', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fwet_soil_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY', units='1',       &
+            long='canopy wetted fraction ingredient of the moss wetness proxy', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fwet_canopy_si)
 
        ! Litter Variables
 

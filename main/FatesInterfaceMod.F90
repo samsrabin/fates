@@ -300,6 +300,7 @@ contains
     fates%bc_in(s)%tempk_sl(:)         = 0.0_r8
     fates%bc_in(s)%h2o_liqvol_sl(:)    = 0.0_r8
     fates%bc_in(s)%fcansno_pa(:)       = 0.0_r8
+    fates%bc_in(s)%fwet_veg_pa(:)      = 0.0_r8
     fates%bc_in(s)%albgr_dir_rb(:)     = 0.0_r8
     fates%bc_in(s)%albgr_dif_rb(:)     = 0.0_r8
     fates%bc_in(s)%max_rooting_depth_index_col = 0
@@ -556,6 +557,7 @@ contains
       ! Canopy Radiation
       bc_in%coszen = nan
       allocate(bc_in%fcansno_pa(maxpatch_total))
+      allocate(bc_in%fwet_veg_pa(maxpatch_total))
       allocate(bc_in%albgr_dir_rb(num_swb))
       allocate(bc_in%albgr_dif_rb(num_swb))
 

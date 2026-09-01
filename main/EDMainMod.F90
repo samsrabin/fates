@@ -213,6 +213,30 @@ contains
     end if
 
 
+    ! Diagnose the moss wetness proxy. This deliberately does not follow the SPITFIRE
+    ! convention, where grass's equivalent quantities (livegrass via UpdateLiveNonwoody, fuel
+    ! moisture via UpdateFuelMoisture) are computed inside UpdateFuelCharacteristics, and
+    ! therefore run only when SPITFIRE is active (hlm_spitfire_mode > hlm_sf_nofire_def). The
+    ! moss proxy is meant to be consumed both by the fire model's fuel moisture calculation and
+    ! by moss physiology in the sub-daily photosynthesis step. Because the latter runs even when
+    ! fire is off and in satellite-phenology (SP) mode, the proxy cannot be updated inside the
+    ! fire path; it must instead be updated here, outside the ST3/SP gate and ahead of
+    ! DailyFireModel, regardless of whether fire is active. This is deliberately the *only*
+    ! writer: a bc_in field's contents can depend on which host routine last wrote it --
+    ! h2o_liqvol_sl is the case in point, holding total soil water at this point in the daily
+    ! sequence but liquid-only water during the sub-daily canopy flux steps -- so a second,
+    ! sub-daily writer of this proxy would silently change what it means.
+    if (hlm_use_moss == itrue) then
+       currentPatch => currentSite%oldest_patch
+       do while(associated(currentPatch))
+          if (currentPatch%nocomp_pft_label /= nocomp_bareground) then
+             call currentPatch%UpdateMossFwet(bc_in%fwet_veg_pa(currentPatch%patchno), &
+                  bc_in%h2o_liqvol_sl(1), bc_in%watsat_sl(1))
+          end if
+          currentPatch => currentPatch%younger
+       end do
+    end if
+
     if (hlm_use_ed_st3.eq.ifalse.and.hlm_use_sp.eq.ifalse) then   ! Bypass if ST3
        
        ! Check that the site doesn't consist solely of a single bareground patch.

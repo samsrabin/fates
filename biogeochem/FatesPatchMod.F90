@@ -24,6 +24,7 @@ module FatesPatchMod
   use EDParamsMod,            only : nlevleaf, nclmax, maxpft,max_cohort_per_patch
   use FatesConstantsMod,      only : n_dbh_bins, n_dist_types
   use FatesConstantsMod,      only : t_water_freeze_k_1atm
+  use FatesConstantsMod,      only : nearzero
   use FatesRunningMeanMod,    only : ema_24hr, fixed_24hr, ema_lpa, ema_longterm
   use FatesRunningMeanMod,    only : ema_sdlng_emerg_h2o, ema_sdlng_mort_par
   use FatesRunningMeanMod,    only : ema_sdlng2sap_par, ema_sdlng_mdd
@@ -222,6 +223,11 @@ module FatesPatchMod
     real(r8)              :: livegrass               ! total aboveground grass biomass in patch [kgC/m2]
     real(r8)              :: livemoss                ! total aboveground moss biomass in patch [kgC/m2]
 
+    ! moss wetness proxy and its two ingredients (all 0-1); see UpdateMossFwet
+    real(r8)              :: fwet_moss               ! moss wetness proxy [0-1]
+    real(r8)              :: fwet_moss_soil          ! top soil layer saturation ingredient [0-1]
+    real(r8)              :: fwet_moss_canopy        ! canopy wetted fraction ingredient [0-1]
+
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
     real(r8)              :: ros_back                ! rate of backward spread of fire [m/min]
@@ -266,6 +272,7 @@ module FatesPatchMod
       procedure :: SortCohorts
       procedure :: UpdateTreeGrassArea
       procedure :: UpdateLiveNonwoody
+      procedure :: UpdateMossFwet
       procedure :: FreeMemory
       procedure :: Dump
       procedure :: CheckVars
@@ -522,6 +529,9 @@ module FatesPatchMod
       ! FUELS AND FIRE
       this%livegrass                    = nan 
       this%livemoss                     = nan
+      this%fwet_moss                    = nan
+      this%fwet_moss_soil               = nan
+      this%fwet_moss_canopy             = nan
       this%ros_front                    = nan
       this%ros_back                     = nan   
       this%tau_l                        = nan
@@ -614,6 +624,9 @@ module FatesPatchMod
       ! FIRE
       this%livegrass                         = 0.0_r8
       this%livemoss                          = 0.0_r8
+      this%fwet_moss                         = 0.0_r8
+      this%fwet_moss_soil                    = 0.0_r8
+      this%fwet_moss_canopy                  = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
       this%tau_l                             = 0.0_r8
@@ -853,6 +866,64 @@ module FatesPatchMod
       this%livemoss  = live_moss
 
     end subroutine UpdateLiveNonwoody
+
+    !===========================================================================
+
+    subroutine UpdateMossFwet(this, fwet_veg, h2o_vol_top, watsat_top)
+      !
+      ! DESCRIPTION:
+      ! Diagnoses the moss wetness proxy on a patch: the wetter of the top soil layer's
+      ! saturation and the canopy wetted fraction. Moss carries no thallus water state of its
+      ! own in this design, so this proxy stands in for thallus wetness; it is consumed by
+      ! moss fuel moisture and by moss photosynthesis, and it is diagnostic only -- neither
+      ! this routine nor the quantity it produces holds or moves water.
+      !
+      ! That is a statement about moss, not about the model. The host does prognose
+      ! intercepted canopy water (liquid plus snow), and fwet_veg below is derived from it.
+      ! What moss lacks is a pool of its own: that interception bucket is a whole-canopy
+      ! quantity for the patch, shared with any vascular cohorts in it and governed by the
+      ! host's leaf-interception scheme rather than by moss thallus hydrology.
+      !
+      ! Two properties of the inputs are worth knowing, because both constrain where this
+      ! may be called from:
+      !
+      ! (1) h2o_vol_top is TOTAL volumetric water, liquid plus ice, and deliberately so: a
+      !     frozen top soil layer means frozen moss, which damps fire. It comes from
+      !     bc_in%h2o_liqvol_sl(1), whose contents depend on the caller -- the daily
+      !     dynamics driver fills it from h2osoi_vol_col (total water), while wrap_btran
+      !     overwrites it with liquid-only water during the sub-daily canopy flux steps.
+      !     Call this from the daily dynamics sequence only, or the proxy silently changes
+      !     meaning.
+      !
+      ! (2) fwet_veg is CTSM's canopy wetted fraction, which CTSM caps at its
+      !     maximum_leaf_wetted_fraction parameter (0.05 on the standard parameter file).
+      !     The canopy ingredient therefore almost never exceeds the soil one, and
+      !     interception has far less influence on the proxy than the soil moisture does.
+      !     That cap is a single global scalar on the host parameter file rather than a
+      !     per-PFT one, so it cannot be raised for moss without raising it for every PFT.
+      !     This is a known limitation, kept because it is the literal quantity the design
+      !     calls for; FATES_MOSS_FWET_CANOPY reports it so the ceiling is visible.
+
+      ! ARGUMENTS:
+      class(fates_patch_type), intent(inout) :: this         ! patch
+      real(r8),                intent(in)    :: fwet_veg     ! canopy wetted fraction [0-1]
+      real(r8),                intent(in)    :: h2o_vol_top  ! total volumetric water, top soil layer [m3/m3]
+      real(r8),                intent(in)    :: watsat_top   ! porosity of top soil layer [m3/m3]
+
+      ! LOCALS:
+      real(r8) :: soil_saturation ! top soil layer saturation [0-1]
+
+      if (watsat_top > nearzero) then
+        soil_saturation = max(0.0_r8, min(h2o_vol_top/watsat_top, 1.0_r8))
+      else
+        soil_saturation = 0.0_r8
+      end if
+
+      this%fwet_moss_soil   = soil_saturation
+      this%fwet_moss_canopy = fwet_veg
+      this%fwet_moss        = max(soil_saturation, fwet_veg)
+
+    end subroutine UpdateMossFwet
 
     !===========================================================================
 

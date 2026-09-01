@@ -529,6 +529,9 @@ module FatesInterfaceTypesMod
       ! fraction of canopy that is covered in snow
       real(r8), allocatable :: fcansno_pa(:)
        
+      ! fraction of canopy that is wet (0-1)
+      real(r8), allocatable :: fwet_veg_pa(:)
+
       ! Abledo of the ground for direct radiation, by site broadband (0-1)
       real(r8), allocatable :: albgr_dir_rb(:)
 
