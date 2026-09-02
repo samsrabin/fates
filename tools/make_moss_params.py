@@ -157,7 +157,20 @@ MOSS_PFT_OVERRIDES = {
     # Porada et al. (2013)-based moss photosynthetic capacity (grass is
     # 86.0); harvested from NVP.
     "fates_leaf_vcmax25top": 30.0,  # dims include fates_leafage_class too
-    # NVP's value, harvested as-is; no opinion offered about it here.
+    # How much self-shading between leaves reduces the canopy's light
+    # interception. It multiplies the light-extinction coefficient: at
+    # 1 the foliage is randomly dispersed and intercepts everything its
+    # leaf area implies, and below 1 it is clumped, with gaps that light
+    # slips through (grass is 0.75). The parameter file declares it a
+    # fraction on 0-1. Moss's 10.0 is outside that, and FATES neither
+    # range-checks nor clamps it, so the value is not inert: it really
+    # does give moss ten times the extinction of randomly dispersed
+    # foliage, as if the mat had ten times its actual leaf area.
+    # Together with the near-opaque transmittances below, that puts
+    # essentially all the absorption in the mat's top leaf layer and
+    # lets almost nothing reach the ground -- a fair description of a
+    # continuous moss surface, got from a knob not meant to provide it.
+    # A typo here would pass just as silently. Harvested from NVP as-is.
     "fates_rad_leaf_clumping_index": 10.0,
     # fates_leaf_slatop and fates_woody (below) are no-ops: NVP's harvested
     # moss value for each already equals the arctic_c3_grass value the
@@ -270,21 +283,6 @@ LITTERCLASS_OVERRIDE = {
 # applied yet. Moss keeps the arctic_c3_grass value it was seeded from
 # until the task that needs the moss value lands.
 #
-# Why the radiation group is deferred: the nocomp full-FATES 2-year test
-# has moss on 50% of the gridcell surviving two years on its own carbon
-# balance, and these keys change that balance.
-# fates_rad_leaf_clumping_index multiplies the light-extinction
-# coefficient directly (radiation/TwoStreamMLPEMod.F90:689,966 and
-# biogeophys/FatesNormanRadMod.F90), so it changes absorbed PAR and
-# therefore GPP -- in the very test this deferral exists to protect.
-# Moss carries 10.0 against a parameter documented as "clumping index
-# 0-1" (TwoStreamMLPEMod.F90:93) with no range check anywhere in FATES.
-# The tau/xl overrides go with it rather than separately: they are one
-# coherent radiative description of a dark, near-opaque, randomly
-# oriented thallus, and applying half of it would be worse than
-# applying none. Deferring is about when the 10.0 takes effect, not
-# about whether it is right; that value is settled.
-#
 # Deliberately NOT deferred: the moss-scale structural overrides
 # (recruit_height_min, allom_fnrt_prof_a). Neither enters the carbon
 # or radiation budget -- one sets recruit size, the other the vertical
@@ -293,13 +291,6 @@ LITTERCLASS_OVERRIDE = {
 # Restoration is a one-line delete from this set. Each key names the
 # task that owns it:
 DEFERRED_PFT_OVERRIDES = {
-    # Task 10b -- the radiation group, restored together
-    "fates_rad_leaf_clumping_index",
-    "fates_rad_leaf_taunir",
-    "fates_rad_leaf_tauvis",
-    "fates_rad_stem_taunir",
-    "fates_rad_stem_tauvis",
-    "fates_rad_leaf_xl",
     # Task 11 -- mat-thickness allometry, where moss dimensions are settled
     # and a moss-scale dbh threshold starts to mean something
     "fates_recruit_seed_dbh_repro_threshold",
