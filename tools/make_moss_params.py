@@ -246,9 +246,8 @@ MOSS_PFT_OVERRIDES = {
     # height effectively unbounded under grass's power-law allometry --
     # it saturates only around 1.23 m, where a moss-specific 0.1 cm
     # would have capped it near 4.2 cm (moss recruits at 2 cm height,
-    # about 0.032 cm dbh). The mat-thickness height allometry mode is
-    # the principled fix; this is an accepted limitation recorded in
-    # the design spec.
+    # about 0.032 cm dbh). A moss-specific height cap is the principled
+    # fix; this is an accepted limitation recorded in the design spec.
     # A realistic 2 cm moss recruit -- bounds only the recruit's
     # initial size, not the (now grass-inherited, unbounded) maximum
     # size set by fates_allom_dbh_maxheight above. Grass's 0.11 m would
@@ -278,23 +277,17 @@ LITTERCLASS_OVERRIDE = {
 # ---------------------------------------------------------------------
 # DEFERRED overrides
 #
-# Every key below is a genuine moss value and stays in
+# Any key named below is a genuine moss value that stays in
 # MOSS_PFT_OVERRIDES above with its rationale intact -- it is simply NOT
 # applied yet. Moss keeps the arctic_c3_grass value it was seeded from
 # until the task that needs the moss value lands.
 #
-# Deliberately NOT deferred: the moss-scale structural overrides
-# (recruit_height_min, allom_fnrt_prof_a). Neither enters the carbon
-# or radiation budget -- one sets recruit size, the other the vertical
-# shape of the fine-root profile.
-#
-# Restoration is a one-line delete from this set. Each key names the
-# task that owns it:
-DEFERRED_PFT_OVERRIDES = {
-    # Task 11 -- mat-thickness allometry, where moss dimensions are settled
-    # and a moss-scale dbh threshold starts to mean something
-    "fates_recruit_seed_dbh_repro_threshold",
-}
+# The set is now empty: all thirteen originally deferred parameters have
+# been restored (six physiology in Task 10, six radiation in Task 10b,
+# and fates_recruit_seed_dbh_repro_threshold here in Task 11). The
+# machinery is kept because it costs nothing and is the right way to
+# stage any future answer-changing moss parameter.
+DEFERRED_PFT_OVERRIDES = set()
 
 MOSS_ATTRIBUTE_KEY = "moss_pft_caveat"
 MOSS_ATTRIBUTE_TEXT = (

@@ -1576,8 +1576,6 @@ contains
          hlm_use_nocomp = unset_int   
          hlm_use_sp = unset_int
          hlm_use_moss = unset_int
-         hlm_moss_height_allom = unset_int
-         hlm_moss_bulk_density = unset_double
          hlm_moss_fuel_moisture_live_intercept = unset_double
          hlm_moss_fuel_moisture_live_slope = unset_double
          hlm_moss_fuel_moisture_dead_intercept = unset_double
@@ -1861,16 +1859,6 @@ contains
 
          if (hlm_use_moss == itrue) then
 
-            if(hlm_moss_height_allom.eq.unset_int) then
-               write(fates_log(), *) 'moss height allometry mode is unset: hlm_moss_height_allom, exiting'
-               call endrun(msg=errMsg(sourcefile, __LINE__))
-            end if
-
-            if( abs(hlm_moss_bulk_density-unset_double)<1e-10 ) then
-               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_bulk_density, exiting'
-               call endrun(msg=errMsg(sourcefile, __LINE__))
-            end if
-
             if( abs(hlm_moss_fuel_moisture_live_intercept-unset_double)<1e-10 ) then
                write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_fuel_moisture_live_intercept, exiting'
                call endrun(msg=errMsg(sourcefile, __LINE__))
@@ -2120,12 +2108,6 @@ contains
                   write(fates_log(),*) 'Transfering hlm_use_moss= ',ival,' to FATES'
                end if
 
-            case('moss_height_allom')
-               hlm_moss_height_allom = ival
-               if (fates_global_verbose()) then
-                  write(fates_log(),*) 'Transfering hlm_moss_height_allom= ',ival,' to FATES'
-               end if
-
             case('moss_scale_resp_by_fwet')
                hlm_moss_scale_resp_by_fwet = ival
                if (fates_global_verbose()) then
@@ -2302,11 +2284,6 @@ contains
                hlm_hio_ignore_val = rval
                if (fates_global_verbose()) then
                   write(fates_log(),*) 'Transfering hio_ignore_val = ',rval,' to FATES'
-               end if
-            case ('moss_bulk_density')
-               hlm_moss_bulk_density = rval
-               if (fates_global_verbose()) then
-                  write(fates_log(),*) 'Transfering hlm_moss_bulk_density = ',rval,' to FATES'
                end if
             case ('moss_fuel_moisture_live_intercept')
                hlm_moss_fuel_moisture_live_intercept = rval

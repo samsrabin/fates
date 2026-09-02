@@ -487,6 +487,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_moss_fwet_soil_si
   integer :: ih_moss_fwet_canopy_si
   integer :: ih_moss_wetness_scaler_si
+  integer :: ih_moss_height_si
   integer :: ih_rx_burn_window_si
   integer :: ih_rx_intensity_si
   integer :: ih_rx_fracarea_si
@@ -2427,6 +2428,7 @@ contains
     real(r8) :: site_ba            ! Site basal area used for weighting
     real(r8) :: cohort_ba          ! Cohort basal area
     real(r8) :: site_ca            ! Site crown area used for weighting
+    real(r8) :: site_ca_moss       ! Site moss crown area used for weighting
     real(r8) :: store_max          ! Maximum storage capacity for carbon and nutrients
     real(r8) :: sapw_m             ! Sapwood mass (elemental, c,n or p) [kg/plant]
     real(r8) :: struct_m           ! Structural mass ""
@@ -2550,6 +2552,7 @@ contains
 
          site_ba = 0._r8
          site_ca = 0._r8
+         site_ca_moss = 0._r8
 
          call this%zero_site_hvars(sites(s),upfreq_in=group_dyna_simple)
          
@@ -3053,6 +3056,20 @@ contains
                   
                end if notnew
 
+               ! Crown-area weighted mean moss height, normalized below by the moss
+               ! crown area rather than by site area, so that the number stays a height
+               ! instead of a height diluted by everything that is not moss. Accumulated
+               ! outside the notnew block above, unlike FATES_CA_WEIGHTED_HEIGHT, so
+               ! that a moss patch reports a height on the day it is recruited.
+               if (hlm_use_moss == itrue) then
+                  if (prt_params%vascular(ft) == ifalse) then
+                     this%hvars(ih_moss_height_si)%r81d(io_si) = &
+                          this%hvars(ih_moss_height_si)%r81d(io_si) + &
+                          ccohort%height * ccohort%c_area / m2_per_ha
+                     site_ca_moss = site_ca_moss + ccohort%c_area / m2_per_ha
+                  end if
+               end if
+
                if (ccohort%canopy_layer .eq. 1) then
                   hio_canopy_biomass_si(io_si) = hio_canopy_biomass_si(io_si) + n_perm2 * total_m
                else
@@ -3095,6 +3112,12 @@ contains
          if ( site_ba .gt. nearzero ) then
             hio_ba_weighted_height_si(io_si) = hio_ba_weighted_height_si(io_si)/site_ba
          endif
+
+         ! Normalize crown-area weighted moss height
+         if (site_ca_moss > nearzero) then
+            this%hvars(ih_moss_height_si)%r81d(io_si) = &
+                 this%hvars(ih_moss_height_si)%r81d(io_si)/site_ca_moss
+         end if
          
          elloop2: do el = 1, num_elements
             if( element_list(el).eq.carbon12_element )then
@@ -6887,6 +6910,13 @@ contains
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_HEIGHT', units='m',       &
+            long='moss height (crown-area weighted mean over moss cohorts)', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_height_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        ! The long name names all three consumers of the wetness proxy on purpose. The same

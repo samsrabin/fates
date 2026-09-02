@@ -219,12 +219,6 @@ module FatesInterfaceTypesMod
   integer, public ::  hlm_use_moss                                  !  Flag to use the FATES moss PFT
                                                                     !  1 = TRUE, 0 = FALSE
 
-  integer, public ::  hlm_moss_height_allom                         !  Height allometry mode for moss PFTs
-                                                                    !  1 = grass_powerlaw, 2 = mat_thickness
-
-  real(r8), public ::  hlm_moss_bulk_density                        !  Moss mat bulk density (kg m-3) used by
-                                                                    !  the mat_thickness height allometry
-
   real(r8), public ::  hlm_moss_fuel_moisture_live_intercept        !  Intercept of live-moss fuel moisture as
                                                                     !  a function of the moss wetness proxy
 

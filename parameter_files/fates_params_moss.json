@@ -1302,7 +1302,7 @@
       "dims": ["fates_pft"],
       "long_name": "the diameter where the plant will increase allocation to the seed pool by fraction  fates_recruit_seed_alloc_mature",
       "units": "cm",
-      "data": [90.0, 80.0, 80.0, 80.0, 90.0, 80.0, 3.0, 3.0, 2.0, 2.4, 1.9, 3.0, 3.0, 3.0, 3.0]
+      "data": [90.0, 80.0, 80.0, 80.0, 90.0, 80.0, 3.0, 3.0, 2.0, 2.4, 1.9, 3.0, 3.0, 3.0, 0.001]
     },
     "fates_recruit_seed_germination_rate": {
       "dtype": "float",
