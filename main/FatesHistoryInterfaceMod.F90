@@ -486,6 +486,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_moss_fwet_si
   integer :: ih_moss_fwet_soil_si
   integer :: ih_moss_fwet_canopy_si
+  integer :: ih_moss_wetness_scaler_si
   integer :: ih_rx_burn_window_si
   integer :: ih_rx_intensity_si
   integer :: ih_rx_fracarea_si
@@ -2782,6 +2783,8 @@ contains
                     cpatch%fwet_moss_soil * cpatch%area * AREA_INV
                this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) + &
                     cpatch%fwet_moss_canopy * cpatch%area * AREA_INV
+               this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) = this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) + &
+                    cpatch%moss_wetness_scaler * cpatch%area * AREA_INV
             end if
 
             hio_nonrx_intensity_fracarea_product_si(io_si) = hio_nonrx_intensity_fracarea_product_si(io_si) + &
@@ -6884,6 +6887,19 @@ contains
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       ! The long name names all three consumers of the wetness proxy on purpose. The same
+       ! fwet_moss drives moss photosynthesis, moss respiration and moss fuel moisture, and
+       ! nothing else in the history file would tell a reader that THIS scaler governs the
+       ! first two but not the third -- fuel moisture applies its own intercept/slope map.
+       call this%set_history_var(vname='FATES_MOSS_WETNESS_SCALER', units='1',       &
+            long='moss wetness scaler applied to photosynthetic capacity, and to leaf '// &
+                 'maintenance respiration unless hlm_moss_scale_resp_by_fwet is false; '// &
+                 'not applied to moss fuel moisture, which uses its own map', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_wetness_scaler_si)
 
        ! Litter Variables
 

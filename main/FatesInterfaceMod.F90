@@ -1583,6 +1583,11 @@ contains
          hlm_moss_fuel_moisture_dead_intercept = unset_double
          hlm_moss_fuel_moisture_dead_slope = unset_double
          hlm_moss_max_burn_frac = unset_double
+         hlm_moss_vcmax_fwet_thresh = unset_double
+         hlm_moss_scale_resp_by_fwet = unset_int
+         ! On lb_params, not FatesInterfaceTypesMod, so that LeafBiophysicsMod stays
+         ! buildable standalone; see its declaration for why.
+         lb_params%moss_co2_film_min = unset_double
          hlm_use_inventory_init = unset_int
          hlm_inventory_ctrl_file = 'unset'
          hlm_hist_level_dynam = unset_int
@@ -1891,6 +1896,21 @@ contains
                call endrun(msg=errMsg(sourcefile, __LINE__))
             end if
 
+            if( abs(hlm_moss_vcmax_fwet_thresh-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: hlm_moss_vcmax_fwet_thresh, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
+
+            if(hlm_moss_scale_resp_by_fwet.eq.unset_int) then
+               write(fates_log(),*) 'switch for scaling moss respiration unset: hlm_moss_scale_resp_by_fwet, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
+
+            if( abs(lb_params%moss_co2_film_min-unset_double)<1e-10 ) then
+               write(fates_log(),*) 'FATES dimension/parameter unset: lb_params%moss_co2_film_min, exiting'
+               call endrun(msg=errMsg(sourcefile, __LINE__))
+            end if
+
          end if
 
          if(hlm_use_cohort_age_tracking .eq. unset_int) then
@@ -2106,6 +2126,12 @@ contains
                   write(fates_log(),*) 'Transfering hlm_moss_height_allom= ',ival,' to FATES'
                end if
 
+            case('moss_scale_resp_by_fwet')
+               hlm_moss_scale_resp_by_fwet = ival
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_scale_resp_by_fwet= ',ival,' to FATES'
+               end if
+
             case('use_planthydro')
                hlm_use_planthydro = ival
                if (fates_global_verbose()) then
@@ -2306,6 +2332,16 @@ contains
                hlm_moss_max_burn_frac = rval
                if (fates_global_verbose()) then
                   write(fates_log(),*) 'Transfering hlm_moss_max_burn_frac = ',rval,' to FATES'
+               end if
+            case ('moss_vcmax_fwet_thresh')
+               hlm_moss_vcmax_fwet_thresh = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering hlm_moss_vcmax_fwet_thresh = ',rval,' to FATES'
+               end if
+            case ('moss_co2_film_min')
+               lb_params%moss_co2_film_min = rval
+               if (fates_global_verbose()) then
+                  write(fates_log(),*) 'Transfering lb_params%moss_co2_film_min = ',rval,' to FATES'
                end if
             case default
                write(fates_log(),*) 'fates NL tag not recognized:',trim(tag)

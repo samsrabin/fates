@@ -267,9 +267,9 @@ module FatesFuelMod
         ! is fixed by the moss entries of fates_fire_SAV on the FATES parameter file and by
         ! nothing else, rising as SAV falls: at the shipped SAV of 66 /cm it is 0.2475
         ! m3/m3. A moss class burns while fwet_moss is under
-        ! (MEF - hlm_moss_fuel_moisture_*_intercept)/hlm_moss_fuel_moisture_*_slope, set
-        ! from the CTSM namelist as fates_moss_fuel_moisture_*; at the shipped intercept of
-        ! 0 and slope of 0.7 that puts both moss classes' extinction at fwet_moss = 0.354.
+        ! (MEF - hlm_moss_fuel_moisture_*_intercept)/hlm_moss_fuel_moisture_*_slope, both
+        ! set by the host; at the shipped intercept of 0 and slope of 0.7 that puts both
+        ! moss classes' extinction at fwet_moss = 0.354.
         if (fuel_classes%moss_classes_present()) then
           moisture(fuel_classes%live_moss()) = max(0.0_r8,                              &
             hlm_moss_fuel_moisture_live_intercept + hlm_moss_fuel_moisture_live_slope*fwet_moss)

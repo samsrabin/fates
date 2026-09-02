@@ -98,6 +98,14 @@ rdark_scaler_top = 1.0
 # Nitrogen scaler at canopy top
 nscaler_top = 1.0
 
+# LeafLayerBiophysicalRates multiplies vcmax by this, and 1.0 means no moss wetness
+# limitation, which is what every vascular PFT passes. Since this script drives only
+# vascular PFTs, set to 1.0.
+moss_wetness_scaler = 1.0
+
+# Negative value keeps code on the vascular path, which is what this script tests.
+fwet_moss = -1.0
+
 
 # Create aliases for the ctype Fortran objects
 # =======================================================================================
@@ -369,7 +377,7 @@ def main(argv):
                                 iret = f90_biophysrate_sub(ci(1), \
                                                            c8(vcmax25_top), c8(jmax25_top), c8(kp25_top), \
                                                            c8(nscaler_top), c8(leaf_tempk), c8(dayl_factor_full), \
-                                                           c8(t_growth_kum), c8(t_home_kum), c8(btran), \
+                                                           c8(t_growth_kum), c8(t_home_kum), c8(btran), c8(moss_wetness_scaler), \
                                                            byref(vcmax_f), byref(jmax_f), byref(kp_f), byref(gs0_f), byref(gs1_f), byref(gs2_f))
             
                                 for gb in gb_vec:
@@ -404,7 +412,8 @@ def main(argv):
                                                                               byref(anet_f), \
                                                                               byref(c13_f), \
                                                                               byref(co2_interc_f), \
-                                                                              byref(solve_iter_f) )
+                                                                              byref(solve_iter_f), \
+                                                                              c8(fwet_moss) )
                                             except:
                                                 pfails = pfails+1
                                                 printfail=True

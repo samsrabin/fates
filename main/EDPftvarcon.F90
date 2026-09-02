@@ -1000,19 +1000,19 @@ contains
         end if
      end do
 
-     ! Check that the use_fates_moss namelist switch and the parameter file
-     ! agree on whether a non-vascular (moss) PFT is present.  If use_fates_moss
+     ! Check that the host's moss switch and the parameter file
+     ! agree on whether a non-vascular (moss) PFT is present.  If hlm_use_moss
      ! is on, the parameter file must define at least one PFT with
      ! fates_vascular = 0; if it is off, no PFT may set fates_vascular = 0.
      if ( (hlm_use_moss == itrue) .neqv. any(prt_params%vascular(1:npft) == ifalse) ) then
-        write(fates_log(),*) 'use_fates_moss and fates_vascular are set inconsistently.'
-        write(fates_log(),*) 'use_fates_moss: ',hlm_use_moss
+        write(fates_log(),*) 'hlm_use_moss and fates_vascular are set inconsistently.'
+        write(fates_log(),*) 'hlm_use_moss: ',hlm_use_moss
         if (hlm_use_moss == itrue) then
-           write(fates_log(),*) 'use_fates_moss is on, so the parameter file must define at'
+           write(fates_log(),*) 'hlm_use_moss is on, so the parameter file must define at'
            write(fates_log(),*) 'least one PFT with fates_vascular = 0 (a moss PFT).'
            write(fates_log(),*) 'No such PFT was found in the parameter file.'
         else
-           write(fates_log(),*) 'use_fates_moss is off, so no PFT in the parameter file may'
+           write(fates_log(),*) 'hlm_use_moss is off, so no PFT in the parameter file may'
            write(fates_log(),*) 'set fates_vascular = 0.'
            write(fates_log(),*) 'At least one such PFT was found in the parameter file.'
         end if

@@ -105,6 +105,25 @@ module LeafBiophysicsMod
   integer, parameter :: medlyn_model = 2
   integer, parameter :: ballberry_model = 1
 
+  ! Constants shaping the moss (non-vascular) water-film resistance to CO2 diffusion,
+  ! after Porada et al. (2013). They are the interior shape of that relation and are
+  ! deliberately NOT settable by the host; only the outer floor
+  ! (lb_params%moss_co2_film_min) is.
+  integer,  parameter :: co2_film_exponent = 12          ! exponent on the dry (film-free) fraction
+  real(r8), parameter :: co2_film_dryfrac_min = 0.1_r8   ! floor on the dry fraction, pre-exponent
+
+  ! Sentinel value of the fwet_moss argument threaded through LeafLayerPhotosynthesis,
+  ! CiFunc and CiBisection, marking a VASCULAR cohort: one that has stomata and must take
+  ! the ordinary stomatal-conductance path. A real moss wetness proxy is a fraction in
+  ! [0,1], so any negative value is unambiguous. Callers test fwet_moss >= 0 to mean
+  ! "this is moss". Public so the one caller that decides moss-ness can name it rather
+  ! than write a bare negative literal.
+  !
+  ! One weakness of a sign test versus an optional argument: NaN >= 0 is false, so a NaN
+  ! proxy would read as vascular and run the wrong physics silently. The caller checks for
+  ! that explicitly before assigning; see the NaN tripwire in FatesPlantRespPhotosynthMod.
+  real(r8), public, parameter :: fwet_moss_vascular = -1.0_r8
+
   ! Alternatively, Gross Assimilation can be used to estimate
   ! leaf co2 partial pressure and therefore conductance. The default
   ! is to use anet
@@ -213,6 +232,20 @@ module LeafBiophysicsMod
      integer              :: electron_transport_model             ! index for electron transport model
                                                                   ! 1: Farquhar von Caemmerer and Berry (FvCB 1980)
                                                                   ! 2: Johnson and Berry (2021)
+     real(r8)             :: moss_co2_film_min                    ! Floor on the moss water-film factor that scales
+                                                                  ! boundary-layer CO2 diffusion (see CiFunc). From the
+                                                                  ! host. It lives here, rather
+                                                                  ! than being read from
+                                                                  ! FatesInterfaceTypesMod as hlm_moss_co2_film_min,
+                                                                  ! for the same reason stomatal_model and
+                                                                  ! electron_transport_model do: this module is built
+                                                                  ! standalone by
+                                                                  ! functional_unit_testing/leaf_biophys, against only
+                                                                  ! FatesConstantsMod, FatesUtilsMod and the shr/
+                                                                  ! FatesGlobals stubs in WrapShrMod.F90. A
+                                                                  ! use-association on FatesInterfaceTypesMod would
+                                                                  ! break that build. Only read on the moss path, so
+                                                                  ! the standalone harness never touches it.
      integer,allocatable :: stomatal_btran_model(:)               ! index for how btran effects conductance
                                                                   ! 0: btran does not scale the stomatal slope or intercept
                                                                   ! 1: btran scales the stomatal intercept only
@@ -898,13 +931,90 @@ contains
   
   ! =======================================================================================
 
+  function MossCO2FilmFactor(fwet_moss) result(co2_film_factor)
+
+    ! -----------------------------------------------------------------------------------
+    ! Thins the CO2 supply reaching a moss (non-vascular) thallus, by shrinking its
+    ! effective boundary-layer conductance as the surface water film thickens. Returns a
+    ! fraction in (0,1]: 1 for bone-dry moss, falling steeply as the moss wets. Here gb is
+    ! the leaf boundary-layer conductance to H2O [umol/m2/s], and this factor multiplies it
+    ! wherever moss CO2 supply is computed.
+    !
+    ! PROVENANCE: harvested from the NVP branch's implementation, not written from the
+    ! literature. The relation is Porada et al. (2013)-based, and the exponent (12) and
+    ! both clamp values (0.1 and 1e-6) are as NVP coded them. Two things here are ours:
+    ! NVP hardcoded the outer floor as a literal, and we expose it to the host as a
+    ! setting; and this routine factors the expression out of CiFunc so its two uses
+    ! cannot drift apart. Other divergences from NVP in the moss path are named at their
+    ! own sites.
+    !
+    ! Used by CiFunc (the moss ci residual) and by CiBisection (sizing the wide fallback
+    ! bracket).
+    !
+    ! WHICH CLAMP DOES WHAT, at the default outer floor of 1e-6:
+    !
+    !   - The OUTER floor (lb_params%moss_co2_film_min) is the operative one at every
+    !     setting the host permits, because it is validated as > 0.
+    !     (1-fwet)**12 drops below 1e-6 once fwet exceeds about 0.684 (1 - 10**-0.5), so
+    !     from roughly two-thirds saturation upward the factor sits on this floor. It does
+    !     not wait for saturation to engage.
+    !
+    !   - The INNER floor (co2_film_dryfrac_min = 0.1) never binds at the default, because
+    !     0.1**12 = 1e-12 is far below the outer floor. It is NOT a division-by-zero guard
+    !     -- at any permitted setting the outer floor already precludes that. What it
+    !     actually does is bound the power term below at 1e-12, so if the outer floor is
+    !     set BELOW 1e-12 this clamp silently raises the effective floor back to 1e-12 for
+    !     fwet > 0.9, overriding that setting in the wettest tenth of the range. That is
+    !     the only regime in which it has any effect at all.
+    !
+    ! Either clamp on its own would keep the result strictly positive; which one does the
+    ! work depends on the setting, and at the default it is the outer one.
+    !
+    ! This factor caps NET assimilation, not gross: it is net assimilation that crosses
+    ! the boundary layer in the moss ci residual in CiFunc. Where the factor is small, net
+    ! uptake is driven toward zero and gross assimilation settles back toward leaf
+    ! maintenance respiration. Wet moss therefore stalls -- neither gaining nor losing leaf
+    ! carbon, and contributing nothing to NPP -- rather than running its leaf carbon down.
+    !
+    ! Because the dry fraction is raised to a large power, this supply cap collapses with
+    ! wetness far faster than the separate moss wetness scaler on photosynthetic capacity
+    ! climbs to its plateau. At the default settings the cap has already pushed net uptake
+    ! below any rate a moss could respire at by the wetness where that plateau begins, so
+    ! the plateau is unreachable in any state with meaningful net uptake and the combined
+    ! moss response to wetness is humped rather than saturating. That is a consequence of
+    ! the default settings, not of the relation itself.
+    ! -----------------------------------------------------------------------------------
+
+    real(r8), intent(in) :: fwet_moss        ! moss wetness proxy [0-1]
+    real(r8)             :: co2_film_factor  ! scaling on boundary layer conductance [0-1]
+
+    co2_film_factor = max( max(1.0_r8 - fwet_moss, co2_film_dryfrac_min)**co2_film_exponent, &
+         lb_params%moss_co2_film_min )
+
+  end function MossCO2FilmFactor
+
+  ! =======================================================================================
+
   subroutine CiFunc(ci, &
        ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
        can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
        gs0, gs1, gs2, &
-       anet,agross,gs,fval)
+       anet,agross,gs,fval,fwet_moss)
 
     ! -----------------------------------------------------------------------------------
+    ! *** THE PHYSICS HERE IS SELECTED BY THE SIGN OF fwet_moss ***
+    ! fwet_moss >= 0 means "this is a moss (non-vascular) cohort" and selects a
+    ! stomata-free CO2 pathway instead of the stomatal-conductance solve. The named constant
+    ! fwet_moss_vascular, which is negative, means "vascular" and takes the ordinary path.
+    !
+    ! This module is kept free of any notion of which PFT is moss -- it has no access to
+    ! prt_params -- and it should stay that way. Moss-ness is decided once, by the caller
+    ! in FatesPlantRespPhotosynthMod, and that decision arrives here encoded in the sign
+    ! of this one argument. Do not add a PFT-based moss test here, and do not pass a
+    ! non-negative fwet_moss for a vascular PFT: either would silently change vascular
+    ! photosynthesis.
+    ! -----------------------------------------------------------------------------------
+    !
     ! DESCRIPTION:
     ! The photosynthesis solver must solve 3 equations simultaneously,
     ! Anet, Stomatal Conductance and the update to Ci.  To solve this,
@@ -948,7 +1058,13 @@ contains
     real(r8), intent(out) :: agross         ! gross leaf photosynthesis (umol CO2/m**2/s)
     real(r8), intent(out) :: gs             ! stomatal conductance (umol h2o/m2/s)
     real(r8), intent(out) :: fval           ! ci_input - ci_updated  (Pa)
+    ! The moss wetness proxy for a moss (non-vascular) cohort, or fwet_moss_vascular
+    ! (negative) for a vascular one. Its SIGN selects the CO2 pathway below. See the
+    ! banner at the top of this routine.
+    real(r8), intent(in) :: fwet_moss  ! moss wetness proxy [0-1], or fwet_moss_vascular
+
     
+    real(r8) :: co2_film_factor   ! moss water-film scaling of boundary layer CO2 diffusion [0-1]
     !real(r8) :: veg_esat          ! Saturation vapor pressure at leaf-surface [Pa]
     real(r8) :: veg_qs            ! DUMMY, specific humidity at leaf-surface [kg/kg]
     real(r8) :: a_gs              ! The assimilation (a) for calculating conductance (gs)
@@ -1060,7 +1176,15 @@ contains
     ! Determine saturation vapor pressure at the leaf surface, from temp and atm-pressure
     !call QSat(veg_tempk, can_press, veg_qs, veg_esat)
     
-    if ( lb_params%stomatal_model == medlyn_model ) then
+    if ( fwet_moss >= 0.0_r8 ) then
+       ! Moss has no stomata, so there is no stomatal solve. gs is reported as the
+       ! existing minimum conductance (gs0), which LeafLayerBiophysicalRates floors at
+       ! gsmin0 (the conductance reciprocal of rsmax0) even when the stomatal intercept
+       ! parameter is zero, as it is for moss. That keeps the host's rssun/rssha finite.
+       ! gs plays no part in the moss ci prediction below, so veg_esat and can_vpress do
+       ! not enter the moss path at all.
+       gs = gs0
+    else if ( lb_params%stomatal_model == medlyn_model ) then
        call StomatalCondMedlyn(anet,veg_esat,can_vpress,gs0,gs1,gs2, &
             leaf_co2_ppress,can_press,gb,gs)
     else
@@ -1073,8 +1197,31 @@ contains
     ! (h2o_co2_bl_diffuse_ratio/gb + h2o_co2_stoma_diffuse_ratio/gs_out)
     
     ! fval = ci_input - ci_predicted
-    fval = ci - (can_co2_ppress - anet * can_press * &
-         (h2o_co2_bl_diffuse_ratio*gs + h2o_co2_stoma_diffuse_ratio*gb)/(gb*gs))
+    if ( fwet_moss >= 0.0_r8 ) then
+
+       ! Moss ci prediction: CO2 crosses the leaf boundary layer only (no stomatal
+       ! resistance term), with the boundary layer conductance scaled down by a water
+       ! film that thickens as the moss wets. MossCO2FilmFactor cannot return zero, so
+       ! gb*co2_film_factor is safe to divide by.
+       !
+       ! PROVENANCE: this residual, and the gs = gs0 above, are harvested from the NVP
+       ! branch's stomata-free path, not written from a paper. One divergence in this
+       ! routine's neighbourhood: the moss bisection bracket in CiBisection is widened
+       ! (NVP kept the vascular 2000 Pa upper end, which does not always bracket the moss
+       ! root). See MossCO2FilmFactor for the water-film relation's provenance, and the
+       ! caller for the capacity and respiration scalers.
+       !
+       ! Note that leaf_co2_ppress, computed above, is NOT valid on this path: it uses the
+       ! unscaled gb and is only consumed by the two stomatal routines. Do not reach for
+       ! it here.
+       co2_film_factor = MossCO2FilmFactor(fwet_moss)
+
+       fval = ci - (can_co2_ppress - anet * can_press * h2o_co2_bl_diffuse_ratio / &
+            (gb * co2_film_factor))
+    else
+       fval = ci - (can_co2_ppress - anet * can_press * &
+            (h2o_co2_bl_diffuse_ratio*gs + h2o_co2_stoma_diffuse_ratio*gb)/(gb*gs))
+    end if
 
   end subroutine CiFunc
 
@@ -1083,13 +1230,20 @@ contains
   subroutine CiBisection(ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
        can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
        gs0,gs1,gs2,ci_tol, &
-       anet,agross,gs,ci,solve_iter)
+       anet,agross,gs,ci,solve_iter,fwet_moss)
 
     ! -----------------------------------------------------------------------------------
     !
     ! Co-solve for photosynthesis and stomatal conductance via a bisectional search for
     ! intracellular CO2. This is an inefficient yet robust search method that we resort
     ! to if the recursive solver cannot find an answer within its convergence criteria.
+    !
+    ! *** ONE BRANCH HERE IS SELECTED BY THE SIGN OF fwet_moss ***
+    ! This routine forwards fwet_moss unchanged to every CiFunc call, where
+    ! fwet_moss >= 0 selects the moss (stomata-free) CO2 pathway. It also has one moss
+    ! branch of its own, sizing the wide fallback bracket -- see it below. A vascular
+    ! cohort carries the negative value fwet_moss_vascular and so takes neither, which
+    ! is what keeps vascular bisection unchanged. See the banner on CiFunc.
     ! -----------------------------------------------------------------------------------
     
     integer, intent(in)    :: ft             ! plant functional type index
@@ -1115,6 +1269,10 @@ contains
     real(r8), intent(out)  :: gs             ! stomatal conductance (umol h2o/m2/s)
     real(r8), intent(out)  :: ci             ! Input (trial) intracellular leaf CO2 (Pa)
     integer, intent(inout) :: solve_iter     ! number of bisections required
+    ! The moss wetness proxy for a moss (non-vascular) cohort, or fwet_moss_vascular
+    ! (negative) for a vascular one. Forwarded verbatim to CiFunc, whose sign test
+    ! selects the CO2 pathway. See the banner above.
+    real(r8), intent(in) :: fwet_moss  ! moss wetness proxy [0-1], or fwet_moss_vascular
 
     ! With bisection, we need to keep track of three different ci values at any given time
     ! The high, the low and the bisection.
@@ -1139,13 +1297,13 @@ contains
          ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
          can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
          gs0,gs1,gs2, &
-         anet,agross,gs,fval_h)
+         anet,agross,gs,fval_h,fwet_moss)
     
     call CiFunc(ci_l, &
          ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
          can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
          gs0,gs1,gs2, &
-         anet,agross,gs,fval_l)
+         anet,agross,gs,fval_l,fwet_moss)
 
     ! It is necessary that our starting points are on opposite sides of the root
     if( nint(fval_h/abs(fval_h)) .eq. nint(fval_l/abs(fval_l)) ) then
@@ -1157,14 +1315,45 @@ contains
             ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
             can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
             gs0,gs1,gs2, &
-            anet,agross,gs,fval_h)
+            anet,agross,gs,fval_h,fwet_moss)
 
-       ci_l = 2000._r8
+       ! The 2000 Pa upper end is a vascular-scale number that predates any stomata-free
+       ! PFT, and it does not always enclose the moss solution, so moss gets its own bound.
+       !
+       ! Why the ci range CiMinMax computed can fail to contain the moss solution, though
+       ! it usually does contain it: CiMinMax sizes that range from the stomatal
+       ! resistance, and moss has no stomatal resistance -- its CO2 path is the boundary
+       ! layer alone, thinned by the water film. The moss resistance is always above the
+       ! low end of that range, and it stays under the high end only because a moss PFT's
+       ! zeroed stomatal parameters leave the stomatal term large. Saturated moss in very
+       ! calm, strongly stable air exceeds even that; the first bisection then fails and
+       ! we land here.
+       !
+       ! This second-chance block is upstream FATES and predates any stomata-free PFT --
+       ! it exists because CiMinMax's bracket can fail for vascular PFTs too. All this
+       ! change does is make its ci_l endpoint moss-aware. (Note ci_l is the HIGH-ci end
+       ! despite the name: l and h here refer to conductance, not to ci.)
+       !
+       ! The bound below encloses the moss solution for any inputs, not merely usually.
+       ! The moss ci prediction is largest when gross assimilation is zero, and gross
+       ! assimilation is never negative on the C3 path moss uses -- see the numerator
+       ! clamps in AgrossRubiscoC3 and AgrossRuBPC3 -- so that largest value bounds it,
+       ! and the 1.25 factor puts the endpoint clear of the bound. The low end, ci_h,
+       ! needs no change and holds for the same reason from the other side.
+       !
+       ! Cost: starting from a wider upper end costs a few extra halvings. Even a
+       ! deliberately adverse case finishes well inside max_iters.
+       if ( fwet_moss >= 0.0_r8 ) then
+          ci_l = max(2000._r8, 1.25_r8*(can_co2_ppress + lmr*can_press* &
+               h2o_co2_bl_diffuse_ratio/(gb*MossCO2FilmFactor(fwet_moss))))
+       else
+          ci_l = 2000._r8
+       end if
        call CiFunc(ci_l, &
          ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
          can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk, veg_esat, &
          gs0,gs1,gs2, &
-         anet,agross,gs,fval_l)
+         anet,agross,gs,fval_l,fwet_moss)
        
        ! It is necessary that our starting points are on opposite sides of the root
        if( nint(fval_h/abs(fval_h)) .eq. nint(fval_l/abs(fval_l)) ) then
@@ -1193,7 +1382,7 @@ contains
             ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
             can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
             gs0,gs1,gs2, &
-            anet,agross,gs,fval_b)
+            anet,agross,gs,fval_b,fwet_moss)
 
        if(abs(fval_b)<ci_tol) then
           !loop_continue = .false.
@@ -1255,7 +1444,8 @@ contains
        anet,              &  ! out
        c13disc,           &  ! out
        ci,                &  ! out
-       solve_iter)           ! out
+       solve_iter,        &  ! out
+       fwet_moss)            ! in (sign selects the moss CO2 pathway)
 
 
     ! ------------------------------------------------------------------------------------
@@ -1265,6 +1455,13 @@ contains
     ! leaf-sublayer, many of the arguments are specific to that "leaf sub layer"
     ! (LSL), those variables are given a dimension tag "_lsl"
     ! Other arguments or variables may be indicative of scales broader than the LSL.
+    !
+    ! *** THE PHYSICS HERE IS SELECTED BY THE SIGN OF fwet_moss ***
+    ! This routine does not itself branch on fwet_moss; it forwards it to CiFunc and
+    ! CiBisection, where fwet_moss >= 0 selects the moss (stomata-free) CO2 pathway.
+    ! Only the caller in FatesPlantRespPhotosynthMod decides moss-ness; it passes the
+    ! patch's moss wetness proxy for a non-vascular PFT and the negative value
+    ! fwet_moss_vascular otherwise. See the banner on CiFunc.
     ! ------------------------------------------------------------------------------------
 
     ! Arguments
@@ -1296,6 +1493,10 @@ contains
     real(r8), intent(out) :: c13disc          ! carbon 13 in newly assimilated carbon
     real(r8), intent(out) :: ci               ! intracellular leaf CO2 (Pa)
     integer,  intent(out) :: solve_iter       ! Number of iterations required for the solve
+    ! The moss wetness proxy for a moss (non-vascular) cohort, or fwet_moss_vascular
+    ! (negative) for a vascular one. Forwarded to CiFunc/CiBisection, whose sign test
+    ! selects the CO2 pathway. See the banner above.
+    real(r8), intent(in) :: fwet_moss  ! moss wetness proxy [0-1], or fwet_moss_vascular
     
     ! Important Note on the gas pressures as input arguments.  This photosynthesis scheme will iteratively
     ! solve for the co2 partial pressure at the leaf surface (ie in the stomata). The reference
@@ -1368,7 +1569,7 @@ contains
                ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
                can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
                gs0,gs1,gs2, &
-               anet,agross,gs,fval)
+               anet,agross,gs,fval,fwet_moss)
           
           ! fval = ci_input - ci_predicted
           ! ci_predicted = ci_input - fval
@@ -1391,7 +1592,7 @@ contains
                ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
                can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
                gs0,gs1,gs2,ci_tol, &
-               anet,agross,gs,ci,solve_iter)
+               anet,agross,gs,ci,solve_iter,fwet_moss)
           loop_continue = .false.
           exit iter_loop
        end if
@@ -1833,6 +2034,7 @@ contains
        t_growth,   &
        t_home,     &
        btran, &
+       moss_wetness_scaler, &
        vcmax, &
        jmax, &
        kp, &
@@ -1870,6 +2072,10 @@ contains
     real(r8), intent(in) :: t_growth                  ! T_growth (short-term running mean temperature) (K)
     real(r8), intent(in) :: t_home                    ! T_home (long-term running mean temperature) (K)
     real(r8), intent(in) :: btran                     ! transpiration wetness factor (0 to 1)
+    real(r8), intent(in) :: moss_wetness_scaler       ! moss wetness limitation on photosynthetic
+                                                      ! capacity (0 to 1); 1 for vascular PFTs, which
+                                                      ! makes it an exact no-op for them -- see where
+                                                      ! it is applied below
     real(r8), intent(out) :: vcmax                    ! maximum rate of carboxylation (umol co2/m**2/s)
     real(r8), intent(out) :: jmax                     ! maximum electron transport rate
                                                       ! (umol electrons/m**2/s)
@@ -1991,6 +2197,29 @@ contains
        jmax = max(min_jmax_frac*jmax25top_ft,jmax)
        
     end if
+
+    ! Moss wetness limitation on photosynthetic capacity. Harvested from the NVP branch,
+    ! which scales vcmax by min(1, fwet/threshold); see the caller for the threshold and
+    ! for the three ways this project diverges from NVP.
+    !
+    ! ORDERING IS THE CONSTRAINT HERE: this must come AFTER the do_mincap_vcjmax floor
+    ! above, not before it. A dry-moss scaler has to be able to drive capacity towards
+    ! zero, and the floor would clamp it back up to min_vcmax_frac*vcmax25top_ft. That
+    ! flag is .false. today, so the two orderings are numerically identical right now --
+    ! but the requirement must not depend on that.
+    !
+    ! No branch guards this, and none is needed: vascular callers pass exactly 1.0_r8, and
+    ! multiplication by 1.0 is the identity in IEEE-754 for every finite value and also
+    ! preserves NaN and Inf, so the vascular path is bit-for-bit unchanged. (Checkable
+    ! claim: IEEE-754 multiplication is exact whenever the true product is representable,
+    ! and x*1 is always representable as x.)
+    !
+    ! jmax is deliberately NOT scaled -- again following NVP. The consequence is worth
+    ! knowing rather than re-deriving: because the C3 solve takes agross = min(ac, aj),
+    ! and only ac carries this scaler, dry moss under low light can still assimilate at
+    ! the unscaled RuBP-limited rate. The wetness limitation therefore binds only where
+    ! the solve is Rubisco-limited.
+    vcmax = vcmax * moss_wetness_scaler
 
     ! Apply water limitations to stomatal intercept (hypothesis dependent)
 

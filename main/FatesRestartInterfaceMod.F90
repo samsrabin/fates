@@ -3876,10 +3876,17 @@ contains
                 cpatch%fwet_moss        = this%rvars(ir_fwet_moss_pa)%r81d(io_idx_co_1st)
                 cpatch%fwet_moss_soil   = this%rvars(ir_fwet_moss_soil_pa)%r81d(io_idx_co_1st)
                 cpatch%fwet_moss_canopy = this%rvars(ir_fwet_moss_canopy_pa)%r81d(io_idx_co_1st)
+                ! The moss wetness scaler is deliberately NOT a restart field: it is a
+                ! pure function of fwet_moss, which is one. Recompute it here rather than
+                ! wait for the next daily UpdateMossFwet, or the first partial day after a
+                ! restart would run moss photosynthesis with a zeroed scaler and would not
+                ! reproduce a straight-through run.
+                call cpatch%UpdateMossWetnessScaler()
              else
-                cpatch%fwet_moss        = 0.0_r8
-                cpatch%fwet_moss_soil   = 0.0_r8
-                cpatch%fwet_moss_canopy = 0.0_r8
+                cpatch%fwet_moss           = 0.0_r8
+                cpatch%fwet_moss_soil      = 0.0_r8
+                cpatch%fwet_moss_canopy    = 0.0_r8
+                cpatch%moss_wetness_scaler = 0.0_r8
              end if
              cpatch%age                = rio_age_pa(io_idx_co_1st)
              cpatch%land_use_label       = rio_patchdistturbcat_pa(io_idx_co_1st)

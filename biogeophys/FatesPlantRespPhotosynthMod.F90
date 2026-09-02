@@ -25,6 +25,7 @@ module FATESPlantRespPhotosynthMod
   use FatesGlobals,      only : FatesWarn,N2S,A2S,I2S
   use FatesConstantsMod, only : r8 => fates_r8
   use FatesConstantsMod, only : itrue
+  use FatesConstantsMod, only : ifalse
   use FatesConstantsMod, only : nearzero
   use FatesConstantsMod, only : fates_unset_r8
   use FatesConstantsMod, only : tfrz => t_water_freeze_k_1atm
@@ -63,12 +64,14 @@ module FATESPlantRespPhotosynthMod
   use FatesAllometryMod     , only : VegAreaLayer
   use FatesInterfaceTypesMod, only : hlm_radiation_model
   use FatesInterfaceTypesMod, only : hlm_maintresp_leaf_model
+  use FatesInterfaceTypesMod, only : hlm_moss_scale_resp_by_fwet
   use LeafBiophysicsMod, only : LeafLayerPhotosynthesis
   use LeafBiophysicsMod, only : LeafHumidityStomaResis
   use LeafBiophysicsMod, only : GetCanopyGasParameters
   use LeafBiophysicsMod, only : LeafLayerMaintenanceRespiration_Ryan_1991
   use LeafBiophysicsMod, only : LeafLayerMaintenanceRespiration_Atkin_etal_2017
   use LeafBiophysicsMod, only : LeafLayerBiophysicalRates
+  use LeafBiophysicsMod, only : fwet_moss_vascular
   use LeafBiophysicsMod, only : LowstorageMainRespReduction
   use LeafBiophysicsMod, only : rsmax0
   use LeafBiophysicsMod, only : DecayCoeffVcmax
@@ -181,6 +184,11 @@ contains
     real(r8) :: mm_ko2                           ! Michaelis-Menten constant for O2 (Pa)
     real(r8) :: co2_cpoint                       ! CO2 compensation point (Pa)
     real(r8) :: btran_eff                        ! effective transpiration wetness factor (0 to 1)
+    real(r8) :: fwet_moss_arg                    ! moss wetness proxy passed into the photosynthesis
+                                                 ! solve, or fwet_moss_vascular for a vascular PFT
+    real(r8) :: moss_wetness_scaler_arg          ! moss capacity limitation passed to
+                                                 ! LeafLayerBiophysicalRates; 1 for a vascular PFT
+    logical  :: is_moss                          ! is this cohort's PFT non-vascular (moss)?
     real(r8) :: kn                               ! leaf nitrogen decay coefficient
     real(r8) :: gb_mol                           ! leaf boundary layer conductance (molar form: [umol /m**2/s])
     real(r8) :: nscaler                          ! leaf nitrogen scaling coefficient
@@ -423,6 +431,34 @@ contains
                         ft = currentCohort%pft
                         cl = currentCohort%canopy_layer
                         
+                        ! Moss-ness is decided once, here, and that decision travels
+                        ! downstream encoded in the SIGN of fwet_moss: non-negative for
+                        ! moss, the negative value fwet_moss_vascular otherwise.
+                        ! LeafBiophysicsMod has no access to prt_params and therefore no
+                        ! notion of which PFT is moss; keep it that way.
+                        is_moss = (prt_params%vascular(ft) == ifalse)
+                        if (is_moss) then
+                           ! NaN tripwire, restoring one the sign encoding would otherwise
+                           ! remove. fwet_moss is NaN-initialised in FatesPatchMod's
+                           ! NanValues, and every comparison against NaN is false, so a NaN
+                           ! proxy would test as fwet_moss < 0 and quietly select the
+                           ! VASCULAR path -- running stomatal physics on moss whose zeroed
+                           ! stomatal parameters collapse gs to gsmin0, with no signal at
+                           ! all.
+                           if (currentPatch%fwet_moss /= currentPatch%fwet_moss) then
+                              write(fates_log(),*) 'currentPatch%fwet_moss is NaN for a moss cohort.'
+                              write(fates_log(),*) 'It should have been set by UpdateMossFwet,'
+                              write(fates_log(),*) 'or zeroed by ZeroValues or the restart read.'
+                              write(fates_log(),*) 'pft: ',ft
+                              call endrun(msg=errMsg(sourcefile, __LINE__))
+                           end if
+                           fwet_moss_arg = currentPatch%fwet_moss
+                           moss_wetness_scaler_arg = currentPatch%moss_wetness_scaler
+                        else
+                           fwet_moss_arg = fwet_moss_vascular
+                           moss_wetness_scaler_arg = 1.0_r8
+                        end if
+
                         ! Calculate the cohort specific elai profile
                         ! And the top and bottom edges of the veg area index
                         ! of each layer bin are. Note, if the layers
@@ -627,6 +663,31 @@ contains
 
                                  end select
                                  
+                                 ! Moss: scale leaf maintenance respiration by the moss
+                                 ! wetness scaler -- the same factor that limits capacity
+                                 ! inside LeafLayerBiophysicalRates.
+                                 !
+                                 ! THIS IS A DELIBERATE DIVERGENCE FROM THE NVP BRANCH,
+                                 ! which scales photosynthetic capacity only. Neither
+                                 ! LeafLayerMaintenanceRespiration_Ryan_1991 nor
+                                 ! _Atkin_etal_2017 carries any wetness term -- they depend
+                                 ! only on leaf nitrogen and temperature -- so capacity-only
+                                 ! scaling would leave desiccated moss respiring at its full
+                                 ! rate against near-zero gross photosynthesis, a permanent
+                                 ! dry-period carbon drain. Turn hlm_moss_scale_resp_by_fwet
+                                 ! off from the host to recover the NVP behaviour without a
+                                 ! code change.
+                                 !
+                                 ! This is the single site where lmr_z is scaled, and it is
+                                 ! deliberately placed immediately after lmr_z is filled: the
+                                 ! same array element feeds both CiFunc's anet = agross - lmr
+                                 ! and, via ScaleLeafLayerFluxToCohort below,
+                                 ! currentCohort%rdark in the carbon budget. Scaling here
+                                 ! keeps the solve and the budget consistent.
+                                 if (is_moss .and. hlm_moss_scale_resp_by_fwet == itrue) then
+                                    lmr_z(iv,ft,cl) = lmr_z(iv,ft,cl) * currentPatch%moss_wetness_scaler
+                                 end if
+                                 
                                  ! Pre-process PAR absorbed per unit leaf area for different schemes
                                  ! par_per_sunla = [W absorbed beam+diffuse radiation / m2 of sunlit leaves]
                                  ! par_per_shala = [W absorbed diffuse radiation / m2 of shaded leaves]
@@ -737,6 +798,7 @@ contains
                                          currentPatch%tveg_lpa%GetMean(),     &  ! in
                                          currentPatch%tveg_longterm%GetMean(),&  ! in
                                          btran_eff,                           &  ! in
+                                         moss_wetness_scaler_arg,             &  ! in
                                          vcmax_z,                             &  ! out
                                          jmax_z,                              &  ! out
                                          kp_z,                                &  ! out
@@ -744,6 +806,25 @@ contains
                                          gs1,                                 &  ! out
                                          gs2 )                                   ! out
 
+                                    ! The moss wetness limitation on photosynthetic capacity is applied INSIDE
+                                    ! LeafLayerBiophysicalRates, via moss_wetness_scaler_arg above, because it has to
+                                    ! land after that routine's do_mincap_vcjmax floor. Vascular PFTs pass 1.0 and are
+                                    ! unaffected.
+                                    !
+                                    ! PROVENANCE: the scaler's form, min(1, fwet/threshold), and its 0.6 default
+                                    ! threshold are both harvested from the NVP branch. Three things diverge from
+                                    ! NVP, each documented where it happens:
+                                    !   (1) leaf maintenance respiration is scaled by the same factor (above; NVP
+                                    !       scales capacity only),
+                                    !   (2) NVP's btran_eff = 1.0 override is deliberately NOT ported -- NVP needed
+                                    !       it because its moss had no fine roots at all and so btran_ft = 0, while
+                                    !       ours has a shallow rooting profile and a meaningful btran,
+                                    !   (3) the moss bisection bracket is widened (see CiBisection).
+                                    !
+                                    ! btran does not also multiply moss vcmax, and that is what makes (2) safe: the
+                                    ! moss parameter file sets fates_leaf_agross_btran_model = 0 (btran_on_ag_none),
+                                    ! so the wetness scaler is the only water limitation on moss capacity and water
+                                    ! limitation is not double-counted.
 
                                     if ( (hlm_use_planthydro.eq.itrue .and. EDPftvarcon_inst%hydr_k_lwp(ft)>nearzero) ) then
                                        hydr_k_lwp = EDPftvarcon_inst%hydr_k_lwp(ft)
@@ -751,6 +832,12 @@ contains
                                        hydr_k_lwp = 1._r8
                                     end if
 
+                                    ! ONE call, with the moss decision carried in the sign of fwet_moss_arg: the patch
+                                    ! moss wetness proxy for a moss cohort, the negative value fwet_moss_vascular
+                                    ! for a vascular one. That sign is what makes LeafBiophysicsMod take the moss
+                                    ! pathway -- no stomatal solve, and a ci residual in which CO2 crosses the leaf
+                                    ! boundary layer only, damped by a water film. Both are harvested from the NVP
+                                    ! branch; see MossCO2FilmFactor and CiFunc for what was taken and what diverges.
                                     call LeafLayerPhotosynthesis(            & !
                                          par_abs,                            &  ! in
                                          ft,                                 &  ! in
@@ -777,7 +864,8 @@ contains
                                          anet_ll,                            &  ! out
                                          c13disc_ll,                         &  ! out
                                          co2_inter_c_utest,                  &  ! out (unit tests)
-                                         solve_iter)                            ! out performance tracking
+                                         solve_iter,                         &  ! out performance tracking
+                                         fwet_moss_arg)                         ! in (sign selects the moss CO2 pathway)
 
                                     ! Average output quantities across sunlit and shaded leaves
                                     ! Convert from molar to velocity (umol /m**2/s) to (m/s)

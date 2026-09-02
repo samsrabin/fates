@@ -34,6 +34,7 @@ module FatesPatchMod
   use FatesInterfaceTypesMod, only : hlm_hio_ignore_val
   use FatesInterfaceTypesMod, only : numpft
   use FatesInterfaceTypesMod, only : hlm_use_moss
+  use FatesInterfaceTypesMod, only : hlm_moss_vcmax_fwet_thresh
   use shr_infnan_mod,         only : nan => shr_infnan_nan, assignment(=)
   use shr_log_mod,            only : errMsg => shr_log_errMsg
 
@@ -228,6 +229,11 @@ module FatesPatchMod
     real(r8)              :: fwet_moss_soil          ! top soil layer saturation ingredient [0-1]
     real(r8)              :: fwet_moss_canopy        ! canopy wetted fraction ingredient [0-1]
 
+    ! Moss wetness scaler applied to photosynthetic capacity and (optionally) to leaf
+    ! maintenance respiration. A pure function of fwet_moss, so it needs no restart
+    ! field of its own -- fwet_moss is restarted and this is recomputed from it.
+    real(r8)              :: moss_wetness_scaler     ! min(1, fwet_moss/thresh) [0-1]
+
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
     real(r8)              :: ros_back                ! rate of backward spread of fire [m/min]
@@ -273,6 +279,7 @@ module FatesPatchMod
       procedure :: UpdateTreeGrassArea
       procedure :: UpdateLiveNonwoody
       procedure :: UpdateMossFwet
+      procedure :: UpdateMossWetnessScaler
       procedure :: FreeMemory
       procedure :: Dump
       procedure :: CheckVars
@@ -532,6 +539,7 @@ module FatesPatchMod
       this%fwet_moss                    = nan
       this%fwet_moss_soil               = nan
       this%fwet_moss_canopy             = nan
+      this%moss_wetness_scaler          = nan
       this%ros_front                    = nan
       this%ros_back                     = nan   
       this%tau_l                        = nan
@@ -627,6 +635,7 @@ module FatesPatchMod
       this%fwet_moss                         = 0.0_r8
       this%fwet_moss_soil                    = 0.0_r8
       this%fwet_moss_canopy                  = 0.0_r8
+      this%moss_wetness_scaler               = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
       this%tau_l                             = 0.0_r8
@@ -923,7 +932,49 @@ module FatesPatchMod
       this%fwet_moss_canopy = fwet_veg
       this%fwet_moss        = max(soil_saturation, fwet_veg)
 
+      ! The scaler is a pure function of the proxy just set, so it is refreshed here,
+      ! immediately, and inherits the proxy's daily frequency -- which is exactly the
+      ! frequency at which it is meaningful.
+      call this%UpdateMossWetnessScaler()
+
     end subroutine UpdateMossFwet
+
+    !===========================================================================
+
+    subroutine UpdateMossWetnessScaler(this)
+      !
+      ! DESCRIPTION:
+      ! Diagnoses the moss wetness scaler from the moss wetness proxy: the factor by which
+      ! moss photosynthetic capacity -- and, unless hlm_moss_scale_resp_by_fwet is off,
+      ! moss leaf maintenance respiration -- is reduced when the moss is drier than the
+      ! threshold at which it performs fully.
+      !
+      ! This is the ONE definition of that factor. It is called from three places, and
+      ! each matters:
+      !
+      !   (1) UpdateMossFwet above, every time the proxy is refreshed, which is once per
+      !       day in the dynamics sequence.
+      !   (2) the restart read (main/FatesRestartInterfaceMod.F90), immediately after
+      !       fwet_moss is restored.
+      !   (3) patch fusion (biogeochem/EDPatchDynamicsMod.F90), immediately after
+      !       fwet_moss is fused.
+      !
+      ! (2) is why this quantity needs no restart field of its own: it is recomputed from
+      ! fwet_moss, which IS restarted. Without (2) a restarted run would photosynthesize
+      ! with a zeroed scaler until the first daily update and would not match a
+      ! straight-through run. (3) exists so fusion cannot leave the scaler inconsistent
+      ! with the fwet_moss it was supposedly derived from -- see that site for why
+      ! recomputing and area-weighting are not the same thing.
+
+      ! ARGUMENTS:
+      class(fates_patch_type), intent(inout) :: this  ! patch
+
+      ! hlm_moss_vcmax_fwet_thresh is validated by the host as strictly positive and no
+      ! greater than 1, so this division is safe and the min() is the only thing that can
+      ! bind. FATES itself only checks that it was set at all (check_allset).
+      this%moss_wetness_scaler = min(1.0_r8, this%fwet_moss/hlm_moss_vcmax_fwet_thresh)
+
+    end subroutine UpdateMossWetnessScaler
 
     !===========================================================================
 

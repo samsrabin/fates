@@ -240,6 +240,20 @@ module FatesInterfaceTypesMod
   real(r8), public ::  hlm_moss_max_burn_frac                       !  Maximum fraction of live moss fuel that
                                                                     !  can burn in a fire
 
+  real(r8), public ::  hlm_moss_vcmax_fwet_thresh                   !  Moss wetness proxy at and above which moss
+                                                                    !  reaches its full photosynthetic capacity
+                                                                    !  (and, if hlm_moss_scale_resp_by_fwet is on,
+                                                                    !  its full leaf maintenance respiration)
+
+  integer, public ::  hlm_moss_scale_resp_by_fwet                   !  Flag to also scale moss leaf maintenance
+                                                                    !  respiration by the moss wetness scaler
+                                                                    !  1 = TRUE, 0 = FALSE
+
+  !  Note: the host setting that floors the moss water-film factor is NOT here. It is
+  !  consumed only by LeafBiophysicsMod, which is deliberately buildable standalone and
+  !  therefore must not use-associate this module, so it lands on lb_params instead --
+  !  exactly like lb_params%stomatal_model and lb_params%electron_transport_model.
+
   
   ! Flag specifying what types of history fields to allocate and prepare
   ! The "_dynam" refers to history fields that can be updated on the dynamics (daily) step
