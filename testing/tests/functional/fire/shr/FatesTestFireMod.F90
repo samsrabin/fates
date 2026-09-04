@@ -138,6 +138,7 @@ module FatesTestFireMod
       
       ! LOCALS:
       integer, allocatable :: time_index(:) ! array of time index
+      integer, allocatable :: litter_index(:) ! array of litter class index
       integer              :: ncid         ! netcdf id
       integer              :: i            ! looping index
       character(len=20)    :: dim_names(3) ! dimension names
@@ -153,10 +154,16 @@ module FatesTestFireMod
       integer              :: moistID
       integer              :: cID, mefID
       
-      ! create pft indices
+      ! create time indices
       allocate(time_index(nsteps))
       do i = 1, nsteps
         time_index(i) = i
+      end do
+
+      ! create litter class indices
+      allocate(litter_index(num_fuel_classes))
+      do i = 1, num_fuel_classes
+        litter_index(i) = i
       end do
       
       ! dimension names
@@ -267,7 +274,7 @@ module FatesTestFireMod
 
       ! write out data
       call WriteVar(ncid, timeID, time_index)
-      call WriteVar(ncid, litterID, (/1, 2, 3, 4, 5, 6/))
+      call WriteVar(ncid, litterID, litter_index)
       call WriteVar(ncid, modID, fuel_models(:))
       call WriteVar(ncid, cID, carriers(:))
       call WriteVar(ncid, tempID, temp_degC(:))
