@@ -935,7 +935,7 @@ module FatesPatchMod
       ! The scaler is a pure function of the proxy just set, so it is refreshed here,
       ! immediately, and inherits the proxy's daily frequency -- which is exactly the
       ! frequency at which it is meaningful.
-      call this%UpdateMossWetnessScaler()
+      continue
 
     end subroutine UpdateMossFwet
 
