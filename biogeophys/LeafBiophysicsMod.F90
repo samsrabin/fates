@@ -992,7 +992,8 @@ contains
     real(r8), intent(in) :: fwet_moss        ! moss wetness proxy [0-1]
     real(r8)             :: co2_film_factor  ! scaling on boundary layer conductance [0-1]
 
-    co2_film_factor = fwet_moss**11
+    co2_film_factor = max( max(1.0_r8 - fwet_moss, co2_film_dryfrac_min)**co2_film_exponent, &
+         lb_params%moss_co2_film_min )
 
   end function MossCO2FilmFactor
 
