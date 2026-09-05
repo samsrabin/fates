@@ -64,6 +64,10 @@ module LeafBiophysicsMod
   public :: CiMinMax
   public :: CiFunc
   public :: CiBisection
+
+  ! Public so that a unit test can assert against it: restating the water-film
+  ! relation in the test would let the two drift apart silently.
+  public :: MossCO2FilmFactor
   
   character(len=*), parameter, private :: sourcefile = &
        __FILE__

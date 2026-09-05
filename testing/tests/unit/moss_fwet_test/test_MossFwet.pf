@@ -1,0 +1,456 @@
+module test_MossFwet
+  !
+  ! DESCRIPTION:
+  !   Tests the moss wetness proxy diagnosed by fates_patch_type::UpdateMossFwet, the
+  !   moss wetness scaler that UpdateMossWetnessScaler derives from it, and the moss CO2
+  !   water-film factor MossCO2FilmFactor that consumes it.
+  !
+  use FatesConstantsMod,      only : r8 => fates_r8
+  use FatesPatchMod,          only : fates_patch_type
+  use FatesInterfaceTypesMod, only : hlm_moss_vcmax_fwet_thresh
+  use LeafBiophysicsMod,      only : MossCO2FilmFactor
+  use LeafBiophysicsMod,      only : lb_params
+  use funit
+
+  implicit none
+
+  @TestCase
+  type, extends(TestCase) :: TestMossFwet
+     type(fates_patch_type) :: patch ! patch carrying the four moss wetness members
+   contains
+     procedure :: setUp
+  end type TestMossFwet
+
+  real(r8), parameter :: tol = 1.e-13_r8
+
+  ! Tolerance for the inner-clamp film case alone. That case's expected value is a
+  ! hundred times smaller than tol, so tol would let it pass against zero.
+  real(r8), parameter :: tol_film_inner = 1.0e-24_r8
+
+  ! Markers seeded into the four patch members by setUp. They are distinct from each
+  ! other, so a value written into the wrong member is visible, and negative, so no
+  ! marker can be mistaken for an expected result: every expected result below lies in
+  ! [0,1]. Uninitialized-variable checking is off in this build, so an unseeded member
+  ! would read as whatever the stack held and the seeding is not optional.
+  real(r8), parameter :: marker_fwet = -1.0_r8   ! seed for fwet_moss
+  real(r8), parameter :: marker_soil = -2.0_r8   ! seed for fwet_moss_soil
+  real(r8), parameter :: marker_canopy = -3.0_r8 ! seed for fwet_moss_canopy
+  real(r8), parameter :: marker_scaler = -4.0_r8 ! seed for moss_wetness_scaler
+
+  ! Host scalars the tests run at, deliberately not the namelist defaults so that the
+  ! tests do not depend on values the host may retune. The two wetness thresholds differ
+  ! from each other on purpose: replacing hlm_moss_vcmax_fwet_thresh in the source with
+  ! either literal then fails somewhere.
+  real(r8), parameter :: test_vcmax_thresh = 0.5_r8         ! hlm_moss_vcmax_fwet_thresh for the UpdateMossFwet cases; namelist default is 0.6
+  real(r8), parameter :: test_vcmax_thresh_scaler = 0.25_r8 ! hlm_moss_vcmax_fwet_thresh for the scaler cases
+  real(r8), parameter :: test_co2_film_min = 4.0e-6_r8      ! lb_params%moss_co2_film_min for the film cases; namelist default is 1.0e-6
+
+  ! Floor for the inner-clamp film case alone. It sits below the bound the routine's
+  ! internal dry-fraction clamp imposes, which its header names as the only regime in
+  ! which that clamp has any effect at all.
+  real(r8), parameter :: test_co2_film_min_tiny = 1.0e-15_r8 ! lb_params%moss_co2_film_min for the inner-clamp case
+
+  ! Porosity the host passes for a column it has no soil data for. wrap_btran, in
+  ! src/utils/clmfates_interfaceMod.F90, writes this into watsat_sl and h2o_liqvol_sl
+  ! alike for columns outside the exposed-vegetation filter.
+  real(r8), parameter :: watsat_sentinel = -999.0_r8
+
+  ! A porosity that is positive but far below FatesConstantsMod's nearzero. It is fixed
+  ! here rather than derived from nearzero on purpose: a value derived from the constant
+  ! would follow it wherever it moved, which is the opposite of pinning it.
+  real(r8), parameter :: watsat_below_nearzero = 1.0e-40_r8
+
+  contains
+
+    subroutine setUp(this)
+      class(TestMossFwet), intent(inout) :: this ! test object
+
+      ! the host scalars are module variables that persist across tests, so reset them
+      ! here rather than relying on each test to set them
+      hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh
+      lb_params%moss_co2_film_min = test_co2_film_min
+
+      this%patch%fwet_moss = marker_fwet
+      this%patch%fwet_moss_soil = marker_soil
+      this%patch%fwet_moss_canopy = marker_canopy
+      this%patch%moss_wetness_scaler = marker_scaler
+
+    end subroutine setUp
+
+    @Test
+    subroutine UpdateMossFwet_SoilWetterThanCanopy_ProxyTakesSoil(this)
+      ! UpdateMossFwet must take the proxy from the soil ingredient when the top soil
+      ! layer is wetter than the canopy.
+      !
+      ! The twin of UpdateMossFwet_CanopyWetterThanSoil_ProxyTakesCanopy, which differs
+      ! only in which of the two ingredients is the larger. Between them they pin that
+      ! the proxy is the wetter of the pair rather than either one of them, or the drier.
+      ! The soil ingredient here is the ratio of water to porosity, away from both clamps.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.125_r8                    ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = 0.1875_r8                ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 0.375_r8                 ! h2o_vol_top/watsat_top [0-1]
+      real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 0.75_r8                ! expect_proxy/test_vcmax_thresh [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_SoilWetterThanCanopy_ProxyTakesSoil
+
+    @Test
+    subroutine UpdateMossFwet_CanopyWetterThanSoil_ProxyTakesCanopy(this)
+      ! UpdateMossFwet must take the proxy from the canopy ingredient when the canopy is
+      ! wetter than the top soil layer.
+      !
+      ! The twin of UpdateMossFwet_SoilWetterThanCanopy_ProxyTakesSoil, which differs only
+      ! in which of the two ingredients is the larger; the porosity is the same in both.
+      ! This configuration is rare in a coupled run, because the host caps the canopy
+      ! wetted fraction at its maximum_leaf_wetted_fraction parameter, but the routine
+      ! makes no such assumption and neither does this test.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.3125_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = 0.0625_r8                ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 0.125_r8                 ! h2o_vol_top/watsat_top [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 0.625_r8               ! expect_proxy/test_vcmax_thresh [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_CanopyWetterThanSoil_ProxyTakesCanopy
+
+    @Test
+    subroutine UpdateMossFwet_WaterAtPorosity_SoilSaturationIsOne(this)
+      ! UpdateMossFwet must report a fully saturated soil ingredient when the top soil
+      ! layer holds water exactly equal to its porosity.
+      !
+      ! The twin of UpdateMossFwet_WaterAbovePorosity_SoilSaturationClampedToOne: same
+      ! canopy wetted fraction, same soil water, differing only in the porosity, which
+      ! there is small enough that the ratio overshoots. This case is at the limit
+      ! already, so it cannot pin that the upper clamp is enforced -- it behaves the same
+      ! whether that clamp is present, off by one, or absent -- and its twin is the one
+      ! that catches a dropped clamp. What it does pin is that a layer at porosity reads
+      ! as exactly full rather than merely close to it.
+      !
+      ! The soil ingredient, the proxy and the scaler all read exactly one here and in the
+      ! twin, so in these two cases alone a value written into the wrong member is caught
+      ! only by the canopy assertion and by the setUp markers.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = 0.375_r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.375_r8                  ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 1.0_r8                   ! h2o_vol_top/watsat_top [0-1]
+      real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 1.0_r8                 ! min(1, expect_proxy/test_vcmax_thresh) [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_WaterAtPorosity_SoilSaturationIsOne
+
+    @Test
+    subroutine UpdateMossFwet_WaterAbovePorosity_SoilSaturationClampedToOne(this)
+      ! UpdateMossFwet must clamp the soil ingredient to full saturation when the top soil
+      ! layer holds more water than its porosity allows.
+      !
+      ! The twin of UpdateMossFwet_WaterAtPorosity_SoilSaturationIsOne: same canopy wetted
+      ! fraction, same soil water, differing only in the porosity, which here is small
+      ! enough that the ratio overshoots one. This is the case that has to grow into the
+      ! limit, so it is the one that catches a dropped upper clamp; its twin, sitting at
+      ! the limit already, cannot.
+      !
+      ! The soil ingredient, the proxy and the scaler all read exactly one here and in the
+      ! twin, so in these two cases alone a value written into the wrong member is caught
+      ! only by the canopy assertion and by the setUp markers.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = 0.375_r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.25_r8                   ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 1.0_r8                   ! the ratio overshoots and is clamped [0-1]
+      real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 1.0_r8                 ! min(1, expect_proxy/test_vcmax_thresh) [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_WaterAbovePorosity_SoilSaturationClampedToOne
+
+    @Test
+    subroutine UpdateMossFwet_NegativeSoilWater_SoilSaturationClampedToZero(this)
+      ! UpdateMossFwet must clamp the soil ingredient to zero when the top soil layer's
+      ! water content comes in negative.
+      !
+      ! The only case in which the lower clamp binds, so the only one that catches its
+      ! removal. The canopy ingredient is the wetter of the two here, which keeps the
+      ! proxy away from zero and so keeps a clamped-to-zero soil ingredient
+      ! distinguishable from a proxy that has also collapsed.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.1875_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = -0.125_r8                ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 0.0_r8                   ! the ratio undershoots and is clamped [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 0.375_r8               ! expect_proxy/test_vcmax_thresh [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_NegativeSoilWater_SoilSaturationClampedToZero
+
+    @Test
+    subroutine UpdateMossFwet_SentinelPorosity_GuardZeroesSoilIngredient(this)
+      ! UpdateMossFwet must zero the soil ingredient when the host hands it the sentinel
+      ! it writes for a column it has no soil data for.
+      !
+      ! The sentinel is carried in the soil water as well as in the porosity, which is
+      ! what wrap_btran actually writes into both fields for a column outside the
+      ! exposed-vegetation filter. That is load-bearing rather than decorative: with a
+      ! valid positive soil water beside a sentinel porosity, deleting the guard yields a
+      ! negative ratio that the lower clamp returns to zero, which is the answer the guard
+      ! gives, and the case would pass with the guard gone. With the sentinel in both
+      ! fields the ratio is exactly one instead, so a deleted or inverted guard shows up.
+      !
+      ! The twin of UpdateMossFwet_PorosityBelowNearzero_GuardZeroesSoilIngredient, which
+      ! uses the same canopy wetted fraction and differs only in the porosity it rejects.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.4375_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = watsat_sentinel          ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = watsat_sentinel           ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 0.0_r8                   ! the guard rejects the porosity [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 0.875_r8               ! expect_proxy/test_vcmax_thresh [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_SentinelPorosity_GuardZeroesSoilIngredient
+
+    @Test
+    subroutine UpdateMossFwet_PorosityBelowNearzero_GuardZeroesSoilIngredient(this)
+      ! UpdateMossFwet must zero the soil ingredient when the top soil layer's porosity is
+      ! positive but negligibly small.
+      !
+      ! The twin of UpdateMossFwet_SentinelPorosity_GuardZeroesSoilIngredient, which uses
+      ! the same canopy wetted fraction and differs only in the porosity it rejects. This
+      ! is the only case that pins the guard's threshold as strictly positive: a porosity
+      ! of exactly the sentinel is rejected by a bare "greater than zero" test just as it
+      ! is by the real one, whereas this porosity is not. The soil water is valid and
+      ! large enough that dividing by this porosity overshoots the upper clamp, so a guard
+      ! that let it through would give a fully saturated soil ingredient rather than a dry
+      ! one.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_veg = 0.4375_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: h2o_vol_top = 0.75_r8                  ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = watsat_below_nearzero     ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = 0.0_r8                   ! the guard rejects the porosity [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_scaler = 0.875_r8               ! expect_proxy/test_vcmax_thresh [0-1]
+
+      call this%patch%UpdateMossFwet(fwet_veg, h2o_vol_top, watsat_top)
+
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossFwet_PorosityBelowNearzero_GuardZeroesSoilIngredient
+
+    @Test
+    subroutine UpdateMossWetnessScaler_ProxyBelowThreshold_ScalesLinearly(this)
+      ! UpdateMossWetnessScaler must cut moss photosynthetic capacity in proportion to the
+      ! proxy when the moss is drier than the wetness at which it performs fully.
+      !
+      ! The only one of the three scaler cases whose result is not full capacity, so the
+      ! only one that pins the proportionality at all; its siblings both sit on the clamp.
+      ! The proxy is set directly here rather than through UpdateMossFwet, which is how
+      ! the restart read and patch fusion call this routine.
+      !
+      ! The threshold differs from the one the UpdateMossFwet cases run at, so that
+      ! replacing the host scalar in the source with either literal fails somewhere. The
+      ! soil and canopy ingredients are asserted to still hold their setUp markers: this
+      ! routine writes the scaler and nothing else, and both other callers depend on that.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.125_r8                   ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_scaler = 0.5_r8                 ! fwet_moss/test_vcmax_thresh_scaler [0-1]
+
+      hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh_scaler
+      this%patch%fwet_moss = fwet_moss
+
+      call this%patch%UpdateMossWetnessScaler()
+
+      @assertEqual(marker_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(marker_canopy, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossWetnessScaler_ProxyBelowThreshold_ScalesLinearly
+
+    @Test
+    subroutine UpdateMossWetnessScaler_ProxyAtThreshold_ReachesFullCapacity(this)
+      ! UpdateMossWetnessScaler must give moss its full photosynthetic capacity exactly at
+      ! the wetness at which it performs fully.
+      !
+      ! This case pins that the boundary is inclusive, which is how the host namelist
+      ! documents the threshold: the proxy at and above which moss performs fully. Its
+      ! result is the same as that of
+      ! UpdateMossWetnessScaler_ProxyAboveThreshold_HeldAtFullCapacity, necessarily so,
+      ! because that is what the clamp is for; the two are not redundant because only the
+      ! sibling catches a dropped clamp and only this one catches a boundary moved by an
+      ! epsilon.
+      !
+      ! The soil and canopy ingredients are asserted to still hold their setUp markers:
+      ! this routine writes the scaler and nothing else, and both other callers depend on
+      ! that.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.25_r8                    ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_scaler = 1.0_r8                 ! fwet_moss/test_vcmax_thresh_scaler [0-1]
+
+      hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh_scaler
+      this%patch%fwet_moss = fwet_moss
+
+      call this%patch%UpdateMossWetnessScaler()
+
+      @assertEqual(marker_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(marker_canopy, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossWetnessScaler_ProxyAtThreshold_ReachesFullCapacity
+
+    @Test
+    subroutine UpdateMossWetnessScaler_ProxyAboveThreshold_HeldAtFullCapacity(this)
+      ! UpdateMossWetnessScaler must not carry moss past its full photosynthetic capacity
+      ! when the proxy is wetter than the wetness at which it performs fully.
+      !
+      ! The only one of the three scaler cases that has to grow into the clamp, so the
+      ! only one that catches its removal; the sibling sitting exactly at the threshold
+      ! reads the same result whether the clamp is there or not.
+      !
+      ! The soil and canopy ingredients are asserted to still hold their setUp markers:
+      ! this routine writes the scaler and nothing else, and both other callers depend on
+      ! that.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.625_r8                   ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_scaler = 1.0_r8                 ! the ratio overshoots and is clamped [0-1]
+
+      hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh_scaler
+      this%patch%fwet_moss = fwet_moss
+
+      call this%patch%UpdateMossWetnessScaler()
+
+      @assertEqual(marker_soil, this%patch%fwet_moss_soil, tolerance=tol)
+      @assertEqual(marker_canopy, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossWetnessScaler_ProxyAboveThreshold_HeldAtFullCapacity
+
+    @Test
+    subroutine MossCO2FilmFactor_DryMoss_NoAttenuation(this)
+      ! MossCO2FilmFactor must leave the boundary-layer conductance of bone-dry moss
+      ! untouched.
+      !
+      ! The one input at which the factor is exactly one, so the only case that pins the
+      ! dry end of the relation. The dry fraction is at its maximum here, which is what
+      ! makes this case blind to the internal dry-fraction clamp; the clamp is pinned by
+      ! MossCO2FilmFactor_FloorBelowInnerClamp_InnerClampSets instead.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.0_r8                     ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_factor = 1.0_r8                 ! no attenuation of the boundary layer conductance [0-1]
+
+      @assertEqual(expect_factor, MossCO2FilmFactor(fwet_moss), tolerance=tol)
+
+    end subroutine MossCO2FilmFactor_DryMoss_NoAttenuation
+
+    @Test
+    subroutine MossCO2FilmFactor_BelowOuterFloorCrossover_PowerLawSets(this)
+      ! MossCO2FilmFactor must return the power law of the dry fraction while that power
+      ! law still lies above the floor the host sets.
+      !
+      ! The twin of MossCO2FilmFactor_AboveOuterFloorCrossover_OuterFloorSets: same host
+      ! floor, differing only in the proxy, which there is wet enough that the power law
+      ! has fallen through the floor. Between them they bracket the crossover and so pin
+      ! which of the two terms is operative on each side of it.
+      !
+      ! The proxy is deliberately not one half, because the dry fraction and the proxy are
+      ! equal there and a flip between them would go unnoticed. The expected value is
+      ! given as a literal rather than recomputed from the exponent, so that a changed
+      ! exponent has something to fail against; it is the twelfth power of 0.625 and is
+      ! exact in binary.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.375_r8                   ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_factor = 3.5527136788005009e-3_r8 ! 0.625**12, above the host floor [0-1]
+
+      @assertEqual(expect_factor, MossCO2FilmFactor(fwet_moss), tolerance=tol)
+
+    end subroutine MossCO2FilmFactor_BelowOuterFloorCrossover_PowerLawSets
+
+    @Test
+    subroutine MossCO2FilmFactor_AboveOuterFloorCrossover_OuterFloorSets(this)
+      ! MossCO2FilmFactor must return the floor the host sets once the moss is wet enough
+      ! that the power law of the dry fraction has fallen below it.
+      !
+      ! The twin of MossCO2FilmFactor_BelowOuterFloorCrossover_PowerLawSets: same host
+      ! floor, differing only in the proxy, which here is wet enough to put the power law
+      ! under it. The assertion is against the floor the test set rather than against a
+      ! number, so a floor hardcoded in the source fails here. This is the regime the
+      ! routine's header says the moss sits in from roughly two-thirds saturation upward
+      ! at any floor the host permits.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.75_r8                    ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_factor = test_co2_film_min      ! the power law has fallen through the host floor [0-1]
+
+      @assertEqual(expect_factor, MossCO2FilmFactor(fwet_moss), tolerance=tol)
+
+    end subroutine MossCO2FilmFactor_AboveOuterFloorCrossover_OuterFloorSets
+
+    @Test
+    subroutine MossCO2FilmFactor_FloorBelowInnerClamp_InnerClampSets(this)
+      ! MossCO2FilmFactor must override a host floor set below the bound its internal
+      ! dry-fraction clamp imposes, in the wettest part of the range.
+      !
+      ! The routine's header states that the internal clamp has an effect in this regime
+      ! and in no other, so this is the only case that can pin it; without it the clamp is
+      ! dead code as far as this suite is concerned and its removal would pass everything.
+      ! The host floor is therefore set well below what any host would really ask for --
+      ! deliberately so, and it is reset by setUp before the next test, so it reaches
+      ! nothing else. The proxy is wet enough that the raw dry fraction is under the
+      ! clamp.
+      !
+      ! This case needs a tolerance of its own: the file-wide one is a hundred times its
+      ! expected value and would let it pass against zero.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: fwet_moss = 0.9375_r8                  ! moss wetness proxy [0-1]
+      real(r8), parameter :: expect_factor = 1.0e-12_r8             ! the clamped dry fraction raised to the twelfth power [0-1]
+
+      lb_params%moss_co2_film_min = test_co2_film_min_tiny
+
+      @assertEqual(expect_factor, MossCO2FilmFactor(fwet_moss), tolerance=tol_film_inner)
+
+    end subroutine MossCO2FilmFactor_FloorBelowInnerClamp_InnerClampSets
+
+end module test_MossFwet
