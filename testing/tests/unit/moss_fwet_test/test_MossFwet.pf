@@ -60,16 +60,15 @@ module test_MossFwet
   ! alike for columns outside the exposed-vegetation filter.
   real(r8), parameter :: watsat_sentinel = -999.0_r8
 
-  ! A porosity that is positive but far below FatesConstantsMod's nearzero. It is fixed
-  ! here rather than derived from nearzero on purpose: a value derived from the constant
-  ! would follow it wherever it moved, which is the opposite of pinning it.
-  real(r8), parameter :: watsat_below_nearzero = 1.0e-40_r8
-
-  ! A porosity just above that same nearzero, so that the guard has a case it must admit
-  ! as well as cases it must reject. Fixed here rather than derived from nearzero for the
-  ! same reason as its counterpart above: a derived value would follow the constant
-  ! wherever it moved instead of pinning where it is.
-  real(r8), parameter :: watsat_above_nearzero = 2.0e-30_r8
+  ! Two porosities that bracket FatesConstantsMod's nearzero tightly and deliberately, a
+  ! quarter of it below and twice it above, so that the guard has a case it must reject
+  ! and a case it must admit within a factor of eight of each other. That is what pins the
+  ! threshold's position: a bracket loose in either direction leaves it free to move by
+  ! orders of magnitude with every test still passing. Both are fixed here rather than
+  ! derived from nearzero on purpose, because a derived value would follow the constant
+  ! wherever it moved, which is the opposite of pinning it.
+  real(r8), parameter :: watsat_below_nearzero = 2.5e-31_r8 ! porosity the guard must reject [m3/m3]
+  real(r8), parameter :: watsat_above_nearzero = 2.0e-30_r8 ! porosity the guard must admit [m3/m3]
 
   contains
 
@@ -280,9 +279,12 @@ module test_MossFwet
       ! that let it through would give a fully saturated soil ingredient rather than a dry
       ! one.
       !
-      ! It constrains the threshold from below only. What constrains it from above is
-      ! UpdateMossFwet_PorosityAboveNearzero_GuardAdmitsSoilIngredient, which sits on the
-      ! other side of it; neither case is worth much without the other.
+      ! It bounds the threshold from below, and it does so tightly: its porosity is a
+      ! quarter of the real threshold rather than orders of magnitude under it.
+      ! UpdateMossFwet_PorosityAboveNearzero_GuardAdmitsSoilIngredient bounds it from
+      ! above at twice the threshold, and the pair is worth far more than either half --
+      ! together they hold the threshold inside a factor of eight, where a loose bracket
+      ! would let it move by orders of magnitude with every test here still passing.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.4375_r8                   ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_vol_top = 0.75_r8                  ! total volumetric water, top soil layer [m3/m3]
@@ -306,11 +308,11 @@ module test_MossFwet
       ! the threshold below which the guard rejects it.
       !
       ! The twin of UpdateMossFwet_PorosityBelowNearzero_GuardZeroesSoilIngredient: the
-      ! two straddle the guard's threshold and constrain it from opposite sides. This is
-      ! the only case in the file that has to grow into acceptance. Every other porosity
-      ! the guard must admit sits tens of orders of magnitude above the threshold, so
-      ! without this case the threshold could be raised by thirty orders of magnitude and
-      ! every other test here would still pass.
+      ! two straddle the guard's threshold at twice it and a quarter of it, holding it
+      ! inside a factor of eight. This is the only case in the file that has to grow into
+      ! acceptance -- every other porosity the guard must admit sits tens of orders of
+      ! magnitude above the threshold -- so without it the threshold could be raised by
+      ! thirty orders of magnitude and every other test here would still pass.
       !
       ! The soil water and the porosity differ by an exact power of two, so their ratio is
       ! exact and neither clamp is involved in reaching it.
@@ -487,9 +489,10 @@ module test_MossFwet
       ! routine's header says the moss sits in from roughly two-thirds saturation upward
       ! at any floor the host permits.
       !
-      ! Sitting on the floor makes this case blind to the exponent: the power law is far
-      ! enough under the floor here that changing the exponent leaves the floor winning
-      ! anyway. The exponent is pinned by
+      ! Sitting on the floor makes this case blind to the exponent, but only by a step or
+      ! two: the power law is 6.0e-8 here at the twelfth power, so it stays under the floor
+      ! down to the ninth (3.8e-6, only just) and rises above it at the eighth (1.5e-5),
+      ! where this case would go red. The exponent is pinned outright by
       ! MossCO2FilmFactor_BelowOuterFloorCrossover_PowerLawSets.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_moss = 0.75_r8                    ! moss wetness proxy [0-1]
@@ -512,8 +515,10 @@ module test_MossFwet
       ! nothing else. The proxy is wet enough that the raw dry fraction is under the
       ! clamp.
       !
-      ! This case needs a tolerance of its own: the file-wide one is a hundred times its
-      ! expected value and would let it pass against zero.
+      ! This case needs a tolerance of its own. tol would have caught an actual of zero
+      ! here, but as an absolute bound it is only a relative bound of 0.1 against an
+      ! expected value of 1.0e-12; tol_film_inner restores a relative bound comparable to
+      ! the rest of the file. See its declaration for the two distances it sits between.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_moss = 0.9375_r8                  ! moss wetness proxy [0-1]
       real(r8), parameter :: expect_factor = 1.0e-12_r8             ! the clamped dry fraction raised to the twelfth power [0-1]
