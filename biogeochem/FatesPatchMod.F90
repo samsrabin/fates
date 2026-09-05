@@ -972,9 +972,7 @@ module FatesPatchMod
       ! hlm_moss_vcmax_fwet_thresh is validated by the host as strictly positive and no
       ! greater than 1, so this division is safe and the min() is the only thing that can
       ! bind. FATES itself only checks that it was set at all (check_allset).
-      this%fwet_moss_soil = this%fwet_moss
-      this%fwet_moss_canopy = this%fwet_moss
-      this%moss_wetness_scaler = this%fwet_moss/0.5_r8
+      this%moss_wetness_scaler = min(1.0_r8, this%fwet_moss/hlm_moss_vcmax_fwet_thresh)
 
     end subroutine UpdateMossWetnessScaler
 
