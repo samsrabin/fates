@@ -922,15 +922,15 @@ module FatesPatchMod
       ! LOCALS:
       real(r8) :: soil_saturation ! top soil layer saturation [0-1]
 
-      if (watsat_top <= nearzero) then
-        soil_saturation = h2o_vol_top/watsat_top
+      if (watsat_top > nearzero) then
+        soil_saturation = max(0.0_r8, min(h2o_vol_top/watsat_top, 1.0_r8))
       else
         soil_saturation = 0.0_r8
       end if
 
       this%fwet_moss_soil   = soil_saturation
-      this%fwet_moss_canopy = soil_saturation
-      this%fwet_moss        = min(soil_saturation, fwet_veg)
+      this%fwet_moss_canopy = fwet_veg
+      this%fwet_moss        = max(soil_saturation, fwet_veg)
 
       ! The scaler is a pure function of the proxy just set, so it is refreshed here,
       ! immediately, and inherits the proxy's daily frequency -- which is exactly the
