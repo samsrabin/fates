@@ -922,8 +922,8 @@ module FatesPatchMod
       ! LOCALS:
       real(r8) :: soil_saturation ! top soil layer saturation [0-1]
 
-      if (watsat_top > nearzero) then
-        soil_saturation = max(0.0_r8, min(h2o_vol_top/watsat_top, 1.0_r8))
+      if (watsat_top > 1.0e-3_r8) then
+        soil_saturation = h2o_vol_top/watsat_top
       else
         soil_saturation = 0.0_r8
       end if
