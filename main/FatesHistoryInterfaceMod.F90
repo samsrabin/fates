@@ -655,6 +655,8 @@ module FatesHistoryInterfaceMod
   integer :: ih_recruitment_si_pft
   integer :: ih_recruitment_cflux_si_pft
   integer :: ih_mortality_si_pft
+  integer :: ih_m2_si_pft
+  integer :: ih_m6_si_pft
   integer :: ih_mortality_carbonflux_si_pft
   integer :: ih_hydraulicmortality_carbonflux_si_pft
   integer :: ih_cstarvmortality_carbonflux_si_pft
@@ -662,6 +664,8 @@ module FatesHistoryInterfaceMod
   integer :: ih_cstarvmortality_continuous_carbonflux_si_pft
   integer :: ih_crownarea_si_pft
   integer :: ih_canopycrownarea_si_pft
+  integer :: ih_lai_si_pft
+  integer :: ih_sai_si_pft
   integer :: ih_crownarea_si_cnlf
   integer :: ih_gpp_si_pft
   integer :: ih_npp_si_pft
@@ -3252,12 +3256,16 @@ contains
          hio_seeds_out_gc_si_pft => this%hvars(ih_seeds_out_gc_si_pft)%r82d, &
          hio_seeds_in_gc_si_pft  => this%hvars(ih_seeds_in_gc_si_pft)%r82d, &
          hio_mortality_si_pft    => this%hvars(ih_mortality_si_pft)%r82d, &
+         hio_m2_si_pft           => this%hvars(ih_m2_si_pft)%r82d, &
+         hio_m6_si_pft           => this%hvars(ih_m6_si_pft)%r82d, &
          hio_mortality_carbonflux_si_pft  => this%hvars(ih_mortality_carbonflux_si_pft)%r82d, &
          hio_cstarvmortality_carbonflux_si_pft  => this%hvars(ih_cstarvmortality_carbonflux_si_pft)%r82d, &
          hio_hydraulicmortality_carbonflux_si_pft  => this%hvars(ih_hydraulicmortality_carbonflux_si_pft)%r82d, &
          hio_firemortality_carbonflux_si_pft  => this%hvars(ih_firemortality_carbonflux_si_pft)%r82d, &
          hio_crownarea_si_pft    => this%hvars(ih_crownarea_si_pft)%r82d, &
          hio_canopycrownarea_si_pft  => this%hvars(ih_canopycrownarea_si_pft)%r82d, &
+         hio_lai_si_pft  => this%hvars(ih_lai_si_pft)%r82d, &
+         hio_sai_si_pft  => this%hvars(ih_sai_si_pft)%r82d, &
          hio_gpp_si_pft  => this%hvars(ih_gpp_si_pft)%r82d, &
          hio_npp_si_pft  => this%hvars(ih_npp_si_pft)%r82d, &
          hio_fragmentation_scaler_sl  => this%hvars(ih_fragmentation_scaler_sl)%r82d,  &
@@ -3993,6 +4001,14 @@ contains
 
                         hio_nplant_si_scls(io_si,scls) = hio_nplant_si_scls(io_si,scls) + ccohort%n / m2_per_ha
 
+                        ! PFT-level leaf and stem area index, summed over every canopy layer
+                        ! and size class. Per m2 land area; dividing by the PFT crown area
+                        ! recovers the per m2 crown area quantities treelai and treesai.
+                        hio_lai_si_pft(io_si,ft) = hio_lai_si_pft(io_si,ft) + &
+                             ccohort%treelai*ccohort%c_area * AREA_INV
+                        hio_sai_si_pft(io_si,ft) = hio_sai_si_pft(io_si,ft) + &
+                             ccohort%treesai*ccohort%c_area * AREA_INV
+
                         ! update SCPF/SCLS- and canopy/subcanopy- partitioned quantities
                         canlayer: if (ccohort%canopy_layer .eq. 1) then
                            hio_bstor_canopy_si_scpf(io_si,scpf) = hio_bstor_canopy_si_scpf(io_si,scpf) + &
@@ -4559,6 +4575,15 @@ contains
                       hio_mortality_si_pft(io_si, ft) = hio_mortality_si_pft(io_si,ft) + &
                            this%hvars(ih_m11_si_scpf)%r82d(io_si,i_scpf)
                    end if
+
+                   ! Individual mortality types that are also reported per PFT alone.
+                   ! Summing the size-resolved diagnostic here keeps each of these
+                   ! identical to its SZPF counterpart summed over size, by construction.
+                   hio_m2_si_pft(io_si,ft) = hio_m2_si_pft(io_si,ft) + &
+                        hio_m2_si_scpf(io_si,i_scpf)
+
+                   hio_m6_si_pft(io_si,ft) = hio_m6_si_pft(io_si,ft) + &
+                        hio_m6_si_scpf(io_si,i_scpf)
 
                 end do
              end do
@@ -7519,6 +7544,18 @@ contains
                hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
                index=ih_canopycrownarea_si_pft)
 
+          call this%set_history_var(vname='FATES_LAI_PF', units='m2 m-2',           &
+               long='total PFT-level leaf area index (LAI) per m2 land area',       &
+               use_default='active', avgflag='A', vtype=site_pft_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
+               index=ih_lai_si_pft)
+
+          call this%set_history_var(vname='FATES_SAI_PF', units='m2 m-2',           &
+               long='total PFT-level stem area index (SAI) per m2 land area',       &
+               use_default='active', avgflag='A', vtype=site_pft_r8,               &
+               hlms='CLM:ALM', upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables, &
+               index=ih_sai_si_pft)
+
           call this%set_history_var(vname='FATES_GPP_PF', units='kg m-2 s-1',        &
                long='total PFT-level GPP in kg carbon per m2 land area per second',  &
                use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
@@ -7593,6 +7630,18 @@ contains
                use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
                upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
                index=ih_mortality_si_pft)
+
+          call this%set_history_var(vname='FATES_MORTALITY_HYDRAULIC_PF', units='m-2 yr-1', &
+               long='hydraulic mortality by pft in number of plants per m2 per year', &
+               use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
+               upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
+               index=ih_m2_si_pft)
+
+          call this%set_history_var(vname='FATES_MORTALITY_TERMINATION_PF', units='m-2 yr-1', &
+               long='termination mortality (excluding C-starvation) by pft in number of plants per m2 per year', &
+               use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
+               upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
+               index=ih_m6_si_pft)
 
           !MLO - Drought-deciduous phenology variables are now defined for each PFT.
           call this%set_history_var(vname='FATES_DROUGHT_STATUS_PF',                     &
