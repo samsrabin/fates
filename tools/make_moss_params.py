@@ -213,7 +213,7 @@ MOSS_PFT_OVERRIDES = {
     # Nothing reads it yet; the Fortran that does arrives in the next
     # task.
     "fates_vascular": 0,
-    # --- corrections applied here: for these three, NVP's moss column
+    # --- corrections applied here: for these four, NVP's moss column
     #     still holds the grass values, and we deliberately override
     #     them ---
     # Reproductive allocation is two branches
@@ -261,6 +261,23 @@ MOSS_PFT_OVERRIDES = {
     # transpiration is extracted through this profile, and an all-zero
     # one would break the water budget.
     "fates_allom_fnrt_prof_a": 30.0,
+    # Moss's fine roots are a modelling fiction: this branch gives moss
+    # grass-style roots only to open a soil-water uptake pathway,
+    # because (unlike NVP) it does not represent the moss mat as a
+    # distinct CTSM layer with its own water store. A structure that
+    # does not physically exist should carry no carbon, so the
+    # fine-root-to-leaf allocation target is zero -- otherwise moss
+    # pays fine-root maintenance respiration and prioritized
+    # replacement of fine-root turnover out of storage, which is what
+    # drives it into C-starvation. Zeroing this does not close the
+    # water pathway: the per-layer root fraction FATES hands the HLM
+    # (bc_out%rootr_pasl, biogeophys/EDBtranMod.F90) is built from
+    # fates_allom_fnrt_prof_mode and its shape parameters and then
+    # weighted by leaf-area-weighted stomatal conductance, never by
+    # fine-root biomass. Nor is the value floored: l2fr_min
+    # (parteh/PRTGenericMod.F90) applies only in the CNP hypothesis,
+    # which this carbon-only configuration never reaches.
+    "fates_allom_l2fr": 0.0,
     # fates_allom_fnrt_prof_mode is deliberately NOT overridden: it keeps
     # the grass-copied value of 3 (see the NOTE above).
 }

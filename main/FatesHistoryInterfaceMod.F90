@@ -656,6 +656,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_recruitment_cflux_si_pft
   integer :: ih_mortality_si_pft
   integer :: ih_m2_si_pft
+  integer :: ih_m3_si_pft
   integer :: ih_m6_si_pft
   integer :: ih_mortality_carbonflux_si_pft
   integer :: ih_hydraulicmortality_carbonflux_si_pft
@@ -3257,6 +3258,7 @@ contains
          hio_seeds_in_gc_si_pft  => this%hvars(ih_seeds_in_gc_si_pft)%r82d, &
          hio_mortality_si_pft    => this%hvars(ih_mortality_si_pft)%r82d, &
          hio_m2_si_pft           => this%hvars(ih_m2_si_pft)%r82d, &
+         hio_m3_si_pft           => this%hvars(ih_m3_si_pft)%r82d, &
          hio_m6_si_pft           => this%hvars(ih_m6_si_pft)%r82d, &
          hio_mortality_carbonflux_si_pft  => this%hvars(ih_mortality_carbonflux_si_pft)%r82d, &
          hio_cstarvmortality_carbonflux_si_pft  => this%hvars(ih_cstarvmortality_carbonflux_si_pft)%r82d, &
@@ -4581,6 +4583,9 @@ contains
                    ! identical to its SZPF counterpart summed over size, by construction.
                    hio_m2_si_pft(io_si,ft) = hio_m2_si_pft(io_si,ft) + &
                         hio_m2_si_scpf(io_si,i_scpf)
+
+                   hio_m3_si_pft(io_si,ft) = hio_m3_si_pft(io_si,ft) + &
+                        hio_m3_si_scpf(io_si,i_scpf)
 
                    hio_m6_si_pft(io_si,ft) = hio_m6_si_pft(io_si,ft) + &
                         hio_m6_si_scpf(io_si,i_scpf)
@@ -7636,6 +7641,12 @@ contains
                use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
                upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
                index=ih_m2_si_pft)
+
+          call this%set_history_var(vname='FATES_MORTALITY_CSTARV_PF', units='m-2 yr-1', &
+               long='carbon starvation mortality by pft in number of plants per m2 per year (both continuous and termination)', &
+               use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM', &
+               upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                 &
+               index=ih_m3_si_pft)
 
           call this%set_history_var(vname='FATES_MORTALITY_TERMINATION_PF', units='m-2 yr-1', &
                long='termination mortality (excluding C-starvation) by pft in number of plants per m2 per year', &

@@ -308,7 +308,7 @@
       "dims": ["fates_pft"],
       "long_name": "Allocation parameter  fine root C per leaf C",
       "units": "gC/gC",
-      "data": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.67, 0.67, 1.41, 0.67]
+      "data": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.67, 0.67, 1.41, 0.0]
     },
     "fates_allom_la_per_sa_int": {
       "dtype": "float",
