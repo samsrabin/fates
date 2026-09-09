@@ -129,6 +129,11 @@ module FatesAllometryMod
   public :: tree_lai_sai       ! LAI and SAI calculations must work together, thus they
                                ! should never be called separately
 
+  public :: jackson_beta_profile_type    ! The four fine-root profile mode
+  public :: exponential_1p_profile_type  ! codes; declared and explained below
+  public :: exponential_2p_profile_type
+  public :: top_layer_profile_type
+
   logical         , parameter :: verbose_logging = .false.
   character(len=*), parameter :: sourcefile = __FILE__
 
@@ -141,10 +146,10 @@ module FatesAllometryMod
   ! 5 and not 4: mode 4 is a no-roots profile on another branch, so numbering
   ! the top-layer profile 5 keeps the parameter-file encoding free of a
   ! collision with that branch.
-  integer, parameter, public :: jackson_beta_profile_type   = 1
-  integer, parameter, public :: exponential_1p_profile_type = 2
-  integer, parameter, public :: exponential_2p_profile_type = 3
-  integer, parameter, public :: top_layer_profile_type      = 5
+  integer, parameter :: jackson_beta_profile_type   = 1
+  integer, parameter :: exponential_1p_profile_type = 2
+  integer, parameter :: exponential_2p_profile_type = 3
+  integer, parameter :: top_layer_profile_type      = 5
 
   character(len=1024) :: warn_msg   ! for defining a warning message
   
@@ -2824,6 +2829,11 @@ contains
        write(fates_log(),*) 'layer interface array should be 1 larger than'
        write(fates_log(),*) 'root fraction array'
        call endrun(msg=errMsg(sourcefile, __LINE__))
+       ! Not dead code: the unit test harness stubs the abort to return, and
+       ! without this the layer count below is taken off zi anyway - which
+       ! indexes root_fraction out of bounds when zi is the longer of the two,
+       ! and silently builds a profile over too few layers when it is not.
+       return
     end if
 
     nlevroot = ubound(zi,1)
@@ -2846,7 +2856,31 @@ contains
        ! zero-size slice no method can define a profile at all, and the whole
        ! of the answer would come from the residual correction below instead.
        ! The floor also covers a negative max_nlevroot, which the check above
-       ! does not: that one only runs in a debug build.
+       ! does not: debug is a hardcoded .false. parameter that a developer has
+       ! to edit and recompile, so that check is dead in every build.
+       !
+       ! Bit-for-bit for the three methods that tolerated a zero-size slice,
+       ! and not because normalizing a single layer against itself gives
+       ! exactly 1.0.  That is true, but it is not what carries the identity:
+       ! even if layer 1 came back as 1 +/- d at the ULP scale, the residual
+       ! correction below would restore exactly 1.0, since 1 - (1 -/+ d) is
+       ! exact by Sterbenz and adding it back is exact.  All the identity
+       ! needs is that layer 1's raw weight be finite and nonzero.  A denormal
+       ! weight is the one gap - -ftz is in the base Intel flags for every
+       ! build, so it would flush to zero and then to NaN - but reaching one
+       ! takes a shape parameter in the tens of thousands, which flattens the
+       ! rest of the column regardless.
+       !
+       ! Inside present(max_nlevroot) deliberately, rather than applied to
+       ! nlevroot unconditionally: a caller handing over a zero-length
+       ! root_fraction with no max_nlevroot has ubound(zi,1) == 0, and
+       ! flooring that would add an out-of-bounds read of zi(1) to a call that
+       ! makes none today.  It does not rescue such a caller either way: the
+       ! same caller passing max_nlevroot now gets out-of-bounds slices of
+       ! both arrays where it used to get in-bounds zero-size ones, and the
+       ! residual correction below indexes outside a zero-size root_fraction
+       ! whichever way the floor goes.  No call site has fewer than one soil
+       ! layer, so none of that is reachable in the model.
        nlevroot = max(1,min(max_nlevroot,nlevroot))
     end if
     
@@ -2865,6 +2899,11 @@ contains
        write(fates_log(),*) 'An undefined root profile type was specified'
        write(fates_log(),*) 'Aborting'
        call endrun(msg=errMsg(sourcefile, __LINE__))
+       ! Not dead code: the unit test harness stubs the abort to return, and
+       ! without this control reaches the residual correction below, which
+       ! hands an unrecognized mode the whole of layer 1 - a well-formed
+       ! profile where the answer is meant to be an abort.
+       return
     end select
 
 

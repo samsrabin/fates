@@ -3551,9 +3551,11 @@ contains
                 ! carries the same value. The bareground patch is skipped in btran_ed and
                 ! so keeps its initialized zero, which is why it is excluded here too.
                 ! Area-weighting over the vegetated patches and normalizing by that same
-                ! area below therefore returns btran_ft(ft) to within a few ULP - exactly
-                ! it where there is one vegetated patch, and an area-weighted mean of
-                ! identical values otherwise - so the reader needs no divide-by-cover.
+                ! area below therefore return btran_ft(ft) to within a few ULP in every
+                ! case, the single-vegetated-patch case included: multiplying by an area
+                ! and dividing by the same area is not the identity in floating point,
+                ! and differs by 1 ULP for roughly one area-and-btran pair in nine. So
+                ! the reader needs no divide-by-cover.
                 !
                 ! A site with no vegetated patch at all reports zero, which reads no
                 ! differently from btran having genuinely gone to zero.  That is what

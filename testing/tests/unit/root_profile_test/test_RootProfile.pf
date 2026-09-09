@@ -3,17 +3,20 @@ module test_RootProfile
   ! DESCRIPTION:
   !   Tests the normalized per-soil-layer root fraction that
   !   FatesAllometryMod::set_root_fraction builds from a PFT's fine-root profile mode and
-  !   its shape parameters. The subject is the top-layer profile mode, which has to put
-  !   the whole profile in soil layer 1 and exactly nothing below it, including when the
-  !   optional max_nlevroot argument compresses the profile over a shallower active
-  !   column, and including when it says no soil layer is active at all. The three
-  !   pre-existing profile modes are covered too, as a guard that none of them was
-  !   rerouted into the new branch and as a record of what they do over an active column
-  !   with no layers in it, plus one anchor on what the two-parameter exponential gives
-  !   at moss's present shape parameters.
+  !   its shape parameters. Every mode the routine dispatches on is covered. Most of the
+  !   cases are the top-layer mode, because it is the one whose contract is exact - the
+  !   whole profile in soil layer 1 and exactly nothing below it - and that has to hold
+  !   when the optional max_nlevroot argument compresses the profile over a shallower
+  !   active column, and when the same argument says no soil layer is active at all. The
+  !   three legacy modes are covered as a guard that none of them is routed into the
+  !   top-layer branch, as a record of what they do over an active column with no layers
+  !   in it, and with one quantitative anchor on the two-parameter exponential at a steep
+  !   a against a shallow b.
   !
   use FatesConstantsMod, only : r8 => fates_r8
   use FatesAllometryMod, only : set_root_fraction
+  use FatesAllometryMod, only : jackson_beta_profile_type, exponential_1p_profile_type
+  use FatesAllometryMod, only : exponential_2p_profile_type, top_layer_profile_type
   use PRTParametersMod,  only : prt_params
   use shr_infnan_mod,    only : nan => shr_infnan_nan, assignment(=)
   use funit
@@ -33,17 +36,6 @@ module test_RootProfile
   ! mistaken for a legitimate root fraction; PrefillRootFraction says what it buys.
   real(r8), parameter :: prefill_value = -9.0_r8
 
-  ! Fine-root profile mode codes. set_root_fraction declares these as integer parameters
-  ! local to itself rather than exporting them, so the test has to restate them and they
-  ! have to be kept in step with that routine by hand. They are reals here because
-  ! prt_params carries the mode as a real that set_root_fraction rounds. Code 4 is
-  ! deliberately absent: it is a no-roots profile on another branch, and the top-layer
-  ! mode was numbered 5 to keep clear of it.
-  real(r8), parameter :: jackson_beta_profile_type   = 1.0_r8
-  real(r8), parameter :: exponential_1p_profile_type = 2.0_r8
-  real(r8), parameter :: exponential_2p_profile_type = 3.0_r8
-  real(r8), parameter :: top_layer_profile_type      = 5.0_r8
-
   ! PFT slots the prt_params profile arrays are allocated over, and the mode each slot
   ! carries. Two slots carry the top-layer mode, neither of them is slot 1, and the two
   ! are separated by the legacy modes: a set_root_fraction that reached the top-layer
@@ -58,19 +50,20 @@ module test_RootProfile
   integer, parameter :: ft_top_layer_high = 5 ! carries top_layer_profile_type
 
   ! Shape parameters. The two single-parameter modes run at the FATES defaults their own
-  ! subroutines document. The two-parameter exponential runs at moss's parameterization
-  ! as of this change - a raised to 30 with b left at grass's 2 - because that
-  ! combination is the thing the top-layer mode exists to replace, and the anchor test
-  ! below pins what it produces. The top-layer PFTs get no shape parameters at all.
+  ! subroutines document. The two-parameter exponential runs with a steep a against a
+  ! shallow b, which is the corner of that mode's parameter space where its two limbs
+  ! disagree most about where the roots are; the anchor test below pins what it produces
+  ! there, and where these two values came from is at frac_above_two_cm. The top-layer
+  ! PFTs get no shape parameters at all.
   real(r8), parameter :: jackson_beta_a = 0.976_r8       ! fnrt_prof_a, Jackson beta
   real(r8), parameter :: exponential_1p_a = 3.0_r8       ! fnrt_prof_a, 1-param exponential
-  real(r8), parameter :: moss_exponential_2p_a = 30.0_r8 ! fnrt_prof_a, moss today
-  real(r8), parameter :: moss_exponential_2p_b = 2.0_r8  ! fnrt_prof_b, moss today
+  real(r8), parameter :: exponential_2p_a = 30.0_r8      ! fnrt_prof_a, 2-param exponential
+  real(r8), parameter :: exponential_2p_b = 2.0_r8       ! fnrt_prof_b, 2-param exponential
 
   ! The main test column: five layers, no two of the same thickness (0.02, 0.04, 0.14,
   ! 0.40 and 0.80 m), so a profile routine that indexed a thickness where it meant an
   ! interface, or that swapped two layers, has nowhere to hide. The first interface sits
-  ! at 0.02 m, the depth the design document quotes moss's uptake fraction at.
+  ! at 0.02 m, the depth the anchor test below measures a cumulative uptake fraction at.
   integer, parameter :: n_layers = 5   ! soil layers in the main test column
   real(r8), parameter :: zi_col(0:n_layers) = &
        [0.00_r8, 0.02_r8, 0.06_r8, 0.20_r8, 0.60_r8, 1.40_r8] ! layer interfaces [m]
@@ -84,7 +77,7 @@ module test_RootProfile
 
   ! A deep column, for the two-parameter-exponential anchor. Its bottom at 8 m is there
   ! so the profile's normalization is within 1.4e-8 of an unbounded column's, which is
-  ! what the quoted uptake fraction assumes; thicknesses again all differ, and the first
+  ! what the anchor's expected value assumes; thicknesses again all differ, and the first
   ! interface is again at 0.02 m.
   integer, parameter :: n_layers_deep = 6   ! soil layers in the deep column
   real(r8), parameter :: zi_deep(0:n_layers_deep) = &
@@ -103,18 +96,26 @@ module test_RootProfile
   integer, parameter :: max_nlevroot_top_only = 1  ! active column is the top layer alone
   integer, parameter :: max_nlevroot_upper = 3     ! active column ends part way down
 
-  ! Cumulative fraction of the two-parameter-exponential profile above 0.02 m, at moss's
-  ! shape parameters. With zi(0) = 0 the per-layer expression in
+  ! Cumulative fraction of the two-parameter-exponential profile above 0.02 m, at the
+  ! shape parameters above. With zi(0) = 0 the per-layer expression in
   ! exponential_2p_root_profile telescopes, so the fraction above an interface z, on a
   ! column whose bottom interface is at z_col, is
   !
   !   F(z) = (2 - exp(-a z) - exp(-b z)) / (2 - exp(-a z_col) - exp(-b z_col))
   !
   ! At a = 30, b = 2 and z = 0.02 the numerator is 0.4903989247536503. Over an unbounded
-  ! column the denominator is 2 and F is the value below - the 24.5% of uptake in the top
-  ! 2 cm that the design document quotes, and the fact that motivates giving moss a
-  ! different mode entirely. On the deep column the denominator is smaller by exp(-16),
-  ! which raises F by 1.4e-8 to 0.2451994761736081.
+  ! column the denominator is 2 and F is the value below. On the deep column the
+  ! denominator is smaller by exp(-16), which raises F by 1.4e-8 to 0.2451994761736081.
+  !
+  ! a = 30 against b = 2 was originally chosen for a moss parameterization rather than
+  ! for this test, and the case is worth keeping whoever uses the mode next. The mode is
+  ! a half-and-half sum of two exponentials: whatever a is, the b limb owns half the
+  ! profile and spreads that half on its own depth scale, 1/b. So steepening a cannot
+  ! pull the profile up past that half, and the numbers here are what it looks like when
+  ! someone tries - a = 30 puts 95% of its own limb inside the top 0.1 m, and the two
+  ! limbs together still leave three quarters of the uptake below 0.02 m. A steep a
+  ! against a shallow b is therefore the corner of this mode's parameter space where a
+  ! quantitative anchor earns its keep, which is why the one in this file is here.
   real(r8), parameter :: frac_above_two_cm = 0.2451994623768252_r8
 
   ! Tolerance for the anchor alone. It has to span the 1.4e-8 the finite column adds to
@@ -147,19 +148,23 @@ module test_RootProfile
       prt_params%fnrt_prof_a(:) = nan
       prt_params%fnrt_prof_b(:) = nan
 
-      prt_params%fnrt_prof_mode(ft_jackson_beta) = jackson_beta_profile_type
+      ! The mode codes FatesAllometryMod exports are integers, while prt_params carries
+      ! the mode as a real - the parameter file holds integer values in a real variable,
+      ! and set_root_fraction rounds it back - so each code is converted here rather than
+      ! restated as a second, real set of constants that could drift from the first.
+      prt_params%fnrt_prof_mode(ft_jackson_beta) = real(jackson_beta_profile_type, r8)
       prt_params%fnrt_prof_a(ft_jackson_beta) = jackson_beta_a
 
-      prt_params%fnrt_prof_mode(ft_top_layer_low) = top_layer_profile_type
+      prt_params%fnrt_prof_mode(ft_top_layer_low) = real(top_layer_profile_type, r8)
 
-      prt_params%fnrt_prof_mode(ft_exponential_1p) = exponential_1p_profile_type
+      prt_params%fnrt_prof_mode(ft_exponential_1p) = real(exponential_1p_profile_type, r8)
       prt_params%fnrt_prof_a(ft_exponential_1p) = exponential_1p_a
 
-      prt_params%fnrt_prof_mode(ft_exponential_2p) = exponential_2p_profile_type
-      prt_params%fnrt_prof_a(ft_exponential_2p) = moss_exponential_2p_a
-      prt_params%fnrt_prof_b(ft_exponential_2p) = moss_exponential_2p_b
+      prt_params%fnrt_prof_mode(ft_exponential_2p) = real(exponential_2p_profile_type, r8)
+      prt_params%fnrt_prof_a(ft_exponential_2p) = exponential_2p_a
+      prt_params%fnrt_prof_b(ft_exponential_2p) = exponential_2p_b
 
-      prt_params%fnrt_prof_mode(ft_top_layer_high) = top_layer_profile_type
+      prt_params%fnrt_prof_mode(ft_top_layer_high) = real(top_layer_profile_type, r8)
 
     end subroutine setUp
 
@@ -222,10 +227,11 @@ module test_RootProfile
       ! down rejects it. That is why nothing here has a tolerance argument, which pFUnit
       ! reads as exact equality.
       !
-      ! Also called by the two no-active-layers cases, where the exact 1.0 and 0.0 come
-      ! from no profile mode at all: with max_nlevroot = 0 the mode is handed a zero-size
-      ! slice and writes nothing, and set_root_fraction's residual correction supplies
-      ! the whole of layer 1.
+      ! Also called by the two no-active-layers cases, where the exact 1.0 and 0.0 owe
+      ! nothing to the profile mode's own shape: set_root_fraction floors its active-layer
+      ! count at one, so a mode asked for an active column of no layers is handed a
+      ! one-layer slice, and every mode normalizes one layer against itself to exactly
+      ! 1.0. The residual correction is then exactly zero.
       real(r8), intent(in) :: root_fraction(:) ! [1:soil layers in the column]
 
       integer :: n_col ! soil layers in the column
@@ -353,10 +359,11 @@ module test_RootProfile
       !
       ! The active column CTSM hands FATES for the whole first model year of a cold-start
       ! run, and forever for a column that never thaws, derived at max_nlevroot_none_active
-      ! above. There is no layer inside the active column to build a profile over, so the
-      ! answer has to come out of set_root_fraction rather than out of the profile mode,
-      ! which is handed a zero-size slice and cannot write a layer 1 it has not been
-      ! given. The twin of the legacy-mode case below: same soil column, same
+      ! above. The host reports no active layer at all, and set_root_fraction's floor
+      ! turns that into the top layer alone, so what this case pins beyond the top-only
+      ! case above is the floor itself: without it the mode is handed a zero-size slice
+      ! and has no layer 1 to write, which for this mode is an abort rather than a wrong
+      ! answer. The twin of the legacy-mode case below: same soil column, same
       ! max_nlevroot, differing only in the profile mode, because the whole point is that
       ! the two agree.
       class(TestRootProfile), intent(inout) :: this ! test object
@@ -396,26 +403,27 @@ module test_RootProfile
       ! soil layer 1 and none at all below, when the active column holds no soil layers
       ! at all.
       !
-      ! This records pre-existing FATES behaviour rather than anything this branch
-      ! introduces. With max_nlevroot = 0 each of the three modes is handed a zero-size
-      ! slice, runs its per-layer loop zero times and normalizes a zero-size array, and
-      ! set_root_fraction's residual correction then adds the whole of the missing 1.0 to
-      ! maxloc of an all-zero profile, which is layer 1. Since CTSM supplies
-      ! max_nlevroot = 0 for the whole first model year of any cold-start run (see
-      ! max_nlevroot_none_active above), every PFT's root profile is top-layer-only for
-      ! that year whatever profile mode it carries - which is surprising enough to be
-      ! worth writing down executably so that nobody has to rediscover it. The twin of
-      ! the top-layer-mode case above: same soil column, same max_nlevroot, differing
-      ! only in the profile mode.
+      ! This is what these three modes have always done with an active column of no
+      ! layers, not something the top-layer mode's arrival changed. With max_nlevroot = 0
+      ! set_root_fraction floors its active-layer count at one, so each mode gets a
+      ! one-layer slice and divides that layer's weight by itself, which is exactly 1.0
+      ! for any finite nonzero weight; the residual correction is then exactly zero.
+      ! Since CTSM supplies max_nlevroot = 0 for the whole first model year of any
+      ! cold-start run (see max_nlevroot_none_active above), every PFT's root profile is
+      ! top-layer-only for that year whatever profile mode it carries - which is
+      ! surprising enough to be worth writing down executably so that nobody has to
+      ! rediscover it. The twin of the top-layer-mode case above: same soil column, same
+      ! max_nlevroot, differing only in the profile mode.
       !
       ! The three modes share one case rather than getting one each, unlike the
-      ! spread-over-column siblings below, because at max_nlevroot = 0 no mode-specific
-      ! code runs beyond a zero-trip loop: the result comes entirely out of what
-      ! set_root_fraction does before and after the dispatch, so three cases would carry
-      ! three near-identical descriptions of one behaviour. What varying the mode here
-      ! does still buy is that none of the three zero-size normalizations performs its
-      ! divide-by-zero-sum, which -fpe0 would turn into an abort. They run in sequence,
-      ! so a failure in the first hides the other two.
+      ! spread-over-column siblings below, because at max_nlevroot = 0 the shape
+      ! parameters cancel out of the answer: each mode runs one trip of its per-layer
+      ! loop and then normalizes that one layer away, so three cases would carry three
+      ! near-identical descriptions of one behaviour. What varying the mode here does
+      ! still buy is that no mode's one-layer weight comes out as a zero it would then
+      ! divide by, or as a NaN, either of which -fpe0 turns into an abort rather than a
+      ! failed assertion. They run in sequence, so a failure in the first hides the other
+      ! two.
       class(TestRootProfile), intent(inout) :: this ! test object
 
       real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
@@ -480,11 +488,11 @@ module test_RootProfile
       ! the soil column rather than concentrating it in soil layer 1.
       !
       ! One of three sibling cases, one per pre-existing profile mode, that exist to
-      ! catch a mode being rerouted into the top-layer branch. This is the mode moss
-      ! carries today and it runs here at moss's own shape parameters, which makes it the
-      ! sharpest of the three siblings: even at a = 30 the b limb keeps layer 1 down to
-      ! 0.253 of the profile on this column, and the bracket below straddles that by
-      ! about a factor of two either way.
+      ! catch a mode being rerouted into the top-layer branch. It runs at the steepest
+      ! shape parameter anything in this file uses, which makes it the sharpest of the
+      ! three siblings: even at a = 30 the b limb keeps layer 1 down to 0.253 of the
+      ! profile on this column, and the bracket below straddles that by about a factor of
+      ! two either way.
       class(TestRootProfile), intent(inout) :: this ! test object
 
       real(r8), parameter :: layer1_min = 0.15_r8 ! lower bound on layer 1's share [0-1]
@@ -495,17 +503,21 @@ module test_RootProfile
     end subroutine set_root_fraction_exponential2pMode_spreadOverColumn
 
     @Test
-    subroutine set_root_fraction_exponential2pModeMossShape_quarterAboveTwoCm(this)
-      ! set_root_fraction must put a quarter of the two-parameter exponential profile
-      ! above the depth moss draws water from, at the shape parameters moss carries
-      ! today, on a soil column deep enough not to distort the normalization.
+    subroutine set_root_fraction_exponential2pSteepAShallowB_quarterAboveTwoCm(this)
+      ! set_root_fraction must put only a quarter of the two-parameter exponential
+      ! profile into the top few centimetres of a deep soil column when that mode's a
+      ! limb is made steep and its b limb is left shallow.
       !
-      ! This is the measurement that motivates giving moss a different profile mode
-      ! altogether, pinned here so that a later edit to the shared exponential path
-      ! cannot quietly undo it. The expected value and the tolerance are derived at
-      ! frac_above_two_cm and tol_anchor above. Unlike the three sibling cases, this one
-      ! is quantitative and runs on the deep column rather than the main one, because the
-      ! quoted fraction assumes a column whose bottom contributes nothing.
+      ! The one quantitative case in this file, and the corner of the two-parameter
+      ! exponential's parameter space that deserves one: the mode sums two exponentials
+      ! half and half, so a steep a cannot pull the profile up past the half the b limb
+      ! owns, and anyone reaching for a steep a to get a surface-weighted profile out of
+      ! this mode needs the number rather than the intuition. The expected value, the
+      ! tolerance and where these two shape parameters came from are all at
+      ! frac_above_two_cm and tol_anchor above.
+      ! Unlike the three sibling cases it runs on the deep column rather than the main
+      ! one, because the expected value assumes a column whose bottom contributes
+      ! nothing.
       class(TestRootProfile), intent(inout) :: this ! test object
 
       real(r8) :: root_fraction(n_layers_deep) ! normalized profile [1:n_layers_deep]
@@ -516,6 +528,6 @@ module test_RootProfile
       @assertEqual(1.0_r8, sum(root_fraction), tolerance=tol)
       @assertEqual(frac_above_two_cm, root_fraction(1), tolerance=tol_anchor)
 
-    end subroutine set_root_fraction_exponential2pModeMossShape_quarterAboveTwoCm
+    end subroutine set_root_fraction_exponential2pSteepAShallowB_quarterAboveTwoCm
 
 end module test_RootProfile
