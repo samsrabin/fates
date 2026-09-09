@@ -6,9 +6,11 @@ module test_RootProfile
   !   its shape parameters. The subject is the top-layer profile mode, which has to put
   !   the whole profile in soil layer 1 and exactly nothing below it, including when the
   !   optional max_nlevroot argument compresses the profile over a shallower active
-  !   column. The three pre-existing profile modes are covered too, as a guard that none
-  !   of them was rerouted into the new branch, plus one anchor on what the
-  !   two-parameter exponential gives at moss's present shape parameters.
+  !   column, and including when it says no soil layer is active at all. The three
+  !   pre-existing profile modes are covered too, as a guard that none of them was
+  !   rerouted into the new branch and as a record of what they do over an active column
+  !   with no layers in it, plus one anchor on what the two-parameter exponential gives
+  !   at moss's present shape parameters.
   !
   use FatesConstantsMod, only : r8 => fates_r8
   use FatesAllometryMod, only : set_root_fraction
@@ -26,6 +28,10 @@ module test_RootProfile
   end type TestRootProfile
 
   real(r8), parameter :: tol = 1.e-13_r8
+
+  ! Fill value for the root-fraction output arrays. Outside [0,1], so it can never be
+  ! mistaken for a legitimate root fraction; PrefillRootFraction says what it buys.
+  real(r8), parameter :: prefill_value = -9.0_r8
 
   ! Fine-root profile mode codes. set_root_fraction declares these as integer parameters
   ! local to itself rather than exporting them, so the test has to restate them and they
@@ -84,11 +90,16 @@ module test_RootProfile
   real(r8), parameter :: zi_deep(0:n_layers_deep) = &
        [0.00_r8, 0.02_r8, 0.10_r8, 0.40_r8, 1.20_r8, 3.00_r8, 8.00_r8] ! layer interfaces [m]
 
-  ! Active-column depths the optional max_nlevroot argument is exercised at. One layer is
-  ! the shallowest active column there is; the intermediate depth leaves two of the main
-  ! column's five layers outside the active column, which is what makes the assertion
-  ! that those two are still exactly zero worth making. Neither equals n_layers, so
-  ! neither case can pass by the argument being ignored.
+  ! Active-column depths the optional max_nlevroot argument is exercised at. Zero, not
+  ! one, is the shallowest active column CTSM can ask for: clmfates_interfaceMod passes
+  ! min(nlevsoil, altmax_lastyear_indx_col) with no floor, altmax_lastyear_indx_col is
+  ! zero out of InitCold, and it is refreshed only once a year - so every cold-started
+  ! column supplies zero for the whole of its first model year, and a column that never
+  ! thaws supplies it forever. The intermediate depth leaves two of the main column's
+  ! five layers outside the active column, which is what makes the assertion that those
+  ! two are still exactly zero worth making. None of the three equals n_layers, so no
+  ! case can pass by the argument being ignored.
+  integer, parameter :: max_nlevroot_none_active = 0 ! active column holds no layers at all
   integer, parameter :: max_nlevroot_top_only = 1  ! active column is the top layer alone
   integer, parameter :: max_nlevroot_upper = 3     ! active column ends part way down
 
@@ -170,25 +181,31 @@ module test_RootProfile
 
     end subroutine DeallocateProfileParams
 
-    subroutine SeedRootFractionMarkers(root_fraction)
-      ! Fills a root-fraction array with a distinct negative marker per layer, so that a
-      ! layer set_root_fraction never writes reads back as its own negated index rather
-      ! than as zero, and a fraction written into the wrong layer is visible. Every
-      ! legitimate value lies in [0,1], so no marker can be mistaken for a result.
+    subroutine PrefillRootFraction(root_fraction)
+      ! Fills a root-fraction array with an out-of-range value, so that a layer
+      ! set_root_fraction leaves alone reads back as that value instead of as whatever
+      ! the stack happened to hold - which can be exactly 0.0, and would then satisfy an
+      ! "exactly zero below" assertion without anything having written the layer.
       !
-      ! Markers rather than a signalling NaN here, even though NaN is the protective
-      ! choice for an array a routine only reads: these are outputs the assertions read
-      ! back, and a NaN would trap inside pFUnit's own subtraction and take the whole
-      ! executable down instead of failing the one assertion that caught it.
+      ! One value rather than a distinct marker per layer, because a per-layer marker
+      ! cannot tell "never written" from "written zero" and it is not worth implying that
+      ! it can: set_root_fraction opens with root_fraction(:) = 0._r8 over the whole
+      ! array, before it clamps to max_nlevroot and before it dispatches on the profile
+      ! mode, so no prefill value survives into any layer. Confirmed rather than assumed:
+      ! an assertion that a layer outside the active column still held its prefill value
+      ! came back with 0.0. What the prefill does still buy is the case where that opening
+      ! assignment is itself wrong or missing, which would leave the layers outside the
+      ! active column unwritten.
+      !
+      ! Not a signalling NaN, even though NaN is the protective choice for an array a
+      ! routine only reads: these are outputs the assertions read back, and a NaN would
+      ! trap inside pFUnit's own subtraction and take the whole executable down instead
+      ! of failing the one assertion that caught it.
       real(r8), intent(out) :: root_fraction(:) ! [1:soil layers in the column]
 
-      integer :: j ! soil layer index
+      root_fraction(:) = prefill_value
 
-      do j = 1, size(root_fraction)
-         root_fraction(j) = -real(j, r8)
-      end do
-
-    end subroutine SeedRootFractionMarkers
+    end subroutine PrefillRootFraction
 
     subroutine ExpectAllInLayer1(root_fraction)
       ! Asserts that a profile holds exactly all of itself in soil layer 1: exactly 1.0
@@ -204,6 +221,11 @@ module test_RootProfile
       ! metre down behaves like a real root there, and no tolerance anyone would write
       ! down rejects it. That is why nothing here has a tolerance argument, which pFUnit
       ! reads as exact equality.
+      !
+      ! Also called by the two no-active-layers cases, where the exact 1.0 and 0.0 come
+      ! from no profile mode at all: with max_nlevroot = 0 the mode is handed a zero-size
+      ! slice and writes nothing, and set_root_fraction's residual correction supplies
+      ! the whole of layer 1.
       real(r8), intent(in) :: root_fraction(:) ! [1:soil layers in the column]
 
       integer :: n_col ! soil layers in the column
@@ -211,6 +233,17 @@ module test_RootProfile
       n_col = size(root_fraction)
 
       @assertEqual(1.0_r8, root_fraction(1), message="layer 1 must hold the whole profile, exactly")
+      ! The assertion below is kept although no mutation can redden it independently, on
+      ! the same footing as the sum-to-one checks further down this file. Two reasons it
+      ! cannot: pFUnit returns from a test at its first failure, so it never runs once
+      ! the assertion above has failed; and when that one passes, this one cannot fail.
+      ! set_root_fraction closes by adding 1 - sum(root_fraction) to
+      ! maxloc(root_fraction), so layer 1 coming back at exactly 1.0 with the correction
+      ! landing there means the layers below it sum to exactly zero, and no profile mode
+      ! gives a layer a negative weight, so each of them is zero. It stays because it is
+      ! the half of the contract a reader has to be able to see stated, and because the
+      ! implication is a property of that closing correction rather than of the profile
+      ! modes: a refactor that moves or drops the correction makes this assertion live.
       if (n_col > 1) then
          @assertEqual(0.0_r8, root_fraction(2:n_col), message="every layer below the first must be exactly zero")
       end if
@@ -238,7 +271,7 @@ module test_RootProfile
 
       real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
 
-      call SeedRootFractionMarkers(root_fraction)
+      call PrefillRootFraction(root_fraction)
       call set_root_fraction(root_fraction, ft, zi_col)
 
       @assertEqual(1.0_r8, sum(root_fraction), tolerance=tol)
@@ -255,15 +288,15 @@ module test_RootProfile
       !
       ! The base case for the mode: max_nlevroot is absent, so the profile is built over
       ! every layer the column has and every layer below the first has to come back
-      ! exactly zero. The counterpart of the two active-column cases below, which hold
+      ! exactly zero. The counterpart of the three active-column cases below, which hold
       ! the column fixed and vary only how much of it is active. This case uses the higher
       ! of the two top-layer PFT slots and they use the lower, so no one PFT index
-      ! carries all three.
+      ! carries all four.
       class(TestRootProfile), intent(inout) :: this ! test object
 
       real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
 
-      call SeedRootFractionMarkers(root_fraction)
+      call PrefillRootFraction(root_fraction)
       call set_root_fraction(root_fraction, ft_top_layer_high, zi_col)
 
       call ExpectAllInLayer1(root_fraction)
@@ -275,15 +308,16 @@ module test_RootProfile
       ! set_root_fraction must give the top-layer profile mode all of its depth in soil
       ! layer 1 and none at all below, when the active column is the top layer alone.
       !
-      ! The shallowest active column max_nlevroot can ask for, on the same soil column as
-      ! the full-column and part-way-down cases. Here the active column and the profile's
-      ! one occupied layer coincide, so what this pins beyond those two is that the mode
-      ! does not need a layer below the first to normalize against.
+      ! The shallowest active column that still holds a soil layer - max_nlevroot can go
+      ! one lower, which the no-layers case below covers - on the same soil column as the
+      ! full-column and part-way-down cases. Here the active column and the profile's one
+      ! occupied layer coincide, so what this pins beyond the others is that the mode does
+      ! not need a layer below the first to normalize against.
       class(TestRootProfile), intent(inout) :: this ! test object
 
       real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
 
-      call SeedRootFractionMarkers(root_fraction)
+      call PrefillRootFraction(root_fraction)
       call set_root_fraction(root_fraction, ft_top_layer_low, zi_col, max_nlevroot_top_only)
 
       call ExpectAllInLayer1(root_fraction)
@@ -296,21 +330,45 @@ module test_RootProfile
       ! layer 1 and none at all below, when the active column ends part way down the soil
       ! column.
       !
-      ! The intermediate active-column depth, on the same soil column as the full-column
-      ! and top-layer-only cases and differing from them only in max_nlevroot. It is the
-      ! one of the three in which layers exist both inside the active column and outside
-      ! it, so it is the only one that pins that the layers beyond max_nlevroot come back
-      ! exactly zero rather than merely unwritten.
+      ! The intermediate active-column depth, on the same soil column as the other
+      ! active-column cases and differing from them only in max_nlevroot. It is the only
+      ! one of the four in which a layer sits inside the active column but below the
+      ! first, so it is the only one that pins both halves at once: that such a layer is
+      ! exactly zero, and that the layers beyond max_nlevroot are too.
       class(TestRootProfile), intent(inout) :: this ! test object
 
       real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
 
-      call SeedRootFractionMarkers(root_fraction)
+      call PrefillRootFraction(root_fraction)
       call set_root_fraction(root_fraction, ft_top_layer_low, zi_col, max_nlevroot_upper)
 
       call ExpectAllInLayer1(root_fraction)
 
     end subroutine set_root_fraction_topLayerModeUpperLayersActive_allInLayer1
+
+    @Test
+    subroutine set_root_fraction_topLayerModeNoLayersActive_allInLayer1(this)
+      ! set_root_fraction must give the top-layer profile mode all of its depth in soil
+      ! layer 1 and none at all below, when the active column holds no soil layers at all.
+      !
+      ! The active column CTSM hands FATES for the whole first model year of a cold-start
+      ! run, and forever for a column that never thaws, derived at max_nlevroot_none_active
+      ! above. There is no layer inside the active column to build a profile over, so the
+      ! answer has to come out of set_root_fraction rather than out of the profile mode,
+      ! which is handed a zero-size slice and cannot write a layer 1 it has not been
+      ! given. The twin of the legacy-mode case below: same soil column, same
+      ! max_nlevroot, differing only in the profile mode, because the whole point is that
+      ! the two agree.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
+
+      call PrefillRootFraction(root_fraction)
+      call set_root_fraction(root_fraction, ft_top_layer_low, zi_col, max_nlevroot_none_active)
+
+      call ExpectAllInLayer1(root_fraction)
+
+    end subroutine set_root_fraction_topLayerModeNoLayersActive_allInLayer1
 
     @Test
     subroutine set_root_fraction_topLayerModeSingleLayerColumn_allInLayer1(this)
@@ -325,12 +383,56 @@ module test_RootProfile
 
       real(r8) :: root_fraction(n_layers_single) ! normalized profile [1:n_layers_single]
 
-      call SeedRootFractionMarkers(root_fraction)
+      call PrefillRootFraction(root_fraction)
       call set_root_fraction(root_fraction, ft_top_layer_low, zi_single)
 
       call ExpectAllInLayer1(root_fraction)
 
     end subroutine set_root_fraction_topLayerModeSingleLayerColumn_allInLayer1
+
+    @Test
+    subroutine set_root_fraction_legacyModesNoLayersActive_allInLayer1(this)
+      ! set_root_fraction must give every pre-existing profile mode all of its depth in
+      ! soil layer 1 and none at all below, when the active column holds no soil layers
+      ! at all.
+      !
+      ! This records pre-existing FATES behaviour rather than anything this branch
+      ! introduces. With max_nlevroot = 0 each of the three modes is handed a zero-size
+      ! slice, runs its per-layer loop zero times and normalizes a zero-size array, and
+      ! set_root_fraction's residual correction then adds the whole of the missing 1.0 to
+      ! maxloc of an all-zero profile, which is layer 1. Since CTSM supplies
+      ! max_nlevroot = 0 for the whole first model year of any cold-start run (see
+      ! max_nlevroot_none_active above), every PFT's root profile is top-layer-only for
+      ! that year whatever profile mode it carries - which is surprising enough to be
+      ! worth writing down executably so that nobody has to rediscover it. The twin of
+      ! the top-layer-mode case above: same soil column, same max_nlevroot, differing
+      ! only in the profile mode.
+      !
+      ! The three modes share one case rather than getting one each, unlike the
+      ! spread-over-column siblings below, because at max_nlevroot = 0 no mode-specific
+      ! code runs beyond a zero-trip loop: the result comes entirely out of what
+      ! set_root_fraction does before and after the dispatch, so three cases would carry
+      ! three near-identical descriptions of one behaviour. What varying the mode here
+      ! does still buy is that none of the three zero-size normalizations performs its
+      ! divide-by-zero-sum, which -fpe0 would turn into an abort. They run in sequence,
+      ! so a failure in the first hides the other two.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
+
+      call PrefillRootFraction(root_fraction)
+      call set_root_fraction(root_fraction, ft_jackson_beta, zi_col, max_nlevroot_none_active)
+      call ExpectAllInLayer1(root_fraction)
+
+      call PrefillRootFraction(root_fraction)
+      call set_root_fraction(root_fraction, ft_exponential_1p, zi_col, max_nlevroot_none_active)
+      call ExpectAllInLayer1(root_fraction)
+
+      call PrefillRootFraction(root_fraction)
+      call set_root_fraction(root_fraction, ft_exponential_2p, zi_col, max_nlevroot_none_active)
+      call ExpectAllInLayer1(root_fraction)
+
+    end subroutine set_root_fraction_legacyModesNoLayersActive_allInLayer1
 
     @Test
     subroutine set_root_fraction_jacksonBetaMode_spreadOverColumn(this)
@@ -408,7 +510,7 @@ module test_RootProfile
 
       real(r8) :: root_fraction(n_layers_deep) ! normalized profile [1:n_layers_deep]
 
-      call SeedRootFractionMarkers(root_fraction)
+      call PrefillRootFraction(root_fraction)
       call set_root_fraction(root_fraction, ft_exponential_2p, zi_deep)
 
       @assertEqual(1.0_r8, sum(root_fraction), tolerance=tol)
