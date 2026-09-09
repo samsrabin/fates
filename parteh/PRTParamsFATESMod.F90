@@ -32,6 +32,10 @@ module PRTInitParamsFatesMod
   use FatesAllometryMod  , only : carea_allom
   use FatesAllometryMod  , only : CheckIntegratedAllometries
   use FatesAllometryMod, only : set_root_fraction
+  use FatesAllometryMod, only : jackson_beta_profile_type
+  use FatesAllometryMod, only : exponential_1p_profile_type
+  use FatesAllometryMod, only : exponential_2p_profile_type
+  use FatesAllometryMod, only : top_layer_profile_type
   use PRTGenericMod, only : StorageNutrientTarget
   use EDTypesMod,          only : init_recruit_trim
   use FatesConstantsMod,   only : ievergreen
@@ -786,6 +790,31 @@ contains
            ! -------------------------------------------------------------------------------
            is_hmode_fine = .false.
         end if
+
+        ! Check that the fine root profile mode is one that FATES implements.
+        ! Without this check the only rejection is set_root_fraction's case default,
+        ! which does not fire until the first dynamics call and names neither the
+        ! PFT nor the offending value.
+        ! ----------------------------------------------------------------------------------
+        select_fnrt_prof_check: select case (nint(prt_params%fnrt_prof_mode(ipft)))
+        case (jackson_beta_profile_type, exponential_1p_profile_type, &
+              exponential_2p_profile_type, top_layer_profile_type)
+           ! These are the modes set_root_fraction knows how to build.
+        case default
+           write(fates_log(),*) "---~---"
+           write(fates_log(),*) " Unknown fine root profile mode."
+           write(fates_log(),*) ' PFT index:      ',ipft
+           write(fates_log(),*) ' fnrt_prof_mode: ',prt_params%fnrt_prof_mode(ipft)
+           write(fates_log(),*) " Parameter ""fnrt_prof_mode"" must be one of:"
+           write(fates_log(),*) '   ',jackson_beta_profile_type,  ' (Jackson beta)'
+           write(fates_log(),*) '   ',exponential_1p_profile_type,' (1 parameter exponential)'
+           write(fates_log(),*) '   ',exponential_2p_profile_type,' (2 parameter exponential)'
+           write(fates_log(),*) '   ',top_layer_profile_type,     ' (entire profile in the top soil layer)'
+           write(fates_log(),*) "---~---"
+           write(fates_log(),*) ''
+           write(fates_log(),*) ''
+           nerror = nerror + 1
+        end select select_fnrt_prof_check
 
         ! Make sure that the crown depth does not exceed plant height.
         ! ----------------------------------------------------------------------------------

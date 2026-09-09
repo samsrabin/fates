@@ -3551,8 +3551,14 @@ contains
                 ! carries the same value. The bareground patch is skipped in btran_ed and
                 ! so keeps its initialized zero, which is why it is excluded here too.
                 ! Area-weighting over the vegetated patches and normalizing by that same
-                ! area below therefore recovers btran_ft(ft) itself, and the reader needs
-                ! no divide-by-cover.
+                ! area below therefore returns btran_ft(ft) to within a few ULP - exactly
+                ! it where there is one vegetated patch, and an area-weighted mean of
+                ! identical values otherwise - so the reader needs no divide-by-cover.
+                !
+                ! A site with no vegetated patch at all reports zero, which reads no
+                ! differently from btran having genuinely gone to zero.  That is what
+                ! every other per-PFT variable in this output group does with the case,
+                ! none of them flagging it, so this one is not made an exception.
                 if (cpatch%nocomp_pft_label .ne. nocomp_bareground) then
                    area_veg_btran = area_veg_btran + cpatch%area
                    do ft = 1,numpft

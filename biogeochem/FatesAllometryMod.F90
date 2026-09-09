@@ -135,6 +135,17 @@ module FatesAllometryMod
   
   logical, parameter :: debug = .false.
 
+  ! Fine-root profile methods, as encoded by the fates_allom_fnrt_prof_mode
+  ! parameter.  set_root_fraction dispatches on these, and PRTCheckParams
+  ! rejects a parameter file that asks for anything else.
+  ! 5 and not 4: mode 4 is a no-roots profile on another branch, so numbering
+  ! the top-layer profile 5 keeps the parameter-file encoding free of a
+  ! collision with that branch.
+  integer, parameter, public :: jackson_beta_profile_type   = 1
+  integer, parameter, public :: exponential_1p_profile_type = 2
+  integer, parameter, public :: exponential_2p_profile_type = 3
+  integer, parameter, public :: top_layer_profile_type      = 5
+
   character(len=1024) :: warn_msg   ! for defining a warning message
   
   ! If testing b4b with older versions, do not remove sapwood
@@ -2792,20 +2803,13 @@ contains
     ! allow different profiles for how water is drawn from the soil
     ! and different profiles to define the biomass for litter flux.
     ! These two context can currently choose 1 of the following four
-    ! methods of defining the profile: 1) A 1 parameter exponential, 2)
-    ! a beta profile defined by Jackson et al. and 3) a 2 parameter
+    ! methods of defining the profile: 1) a beta profile defined by
+    ! Jackson et al., 2) a 1 parameter exponential and 3) a 2 parameter
     ! exponential.
     ! A fourth method places the entire profile in the top soil layer.
-    ! Its mode code is 5 rather than 4; see top_layer_profile_type below.
+    ! Its mode code is 5 rather than 4; see top_layer_profile_type at
+    ! module scope, where all four codes are defined.
     ! All methods return a normalized profile.
-
-    integer, parameter :: jackson_beta_profile_type   = 1
-    integer, parameter :: exponential_1p_profile_type = 2
-    integer, parameter :: exponential_2p_profile_type = 3
-    ! 5 and not 4: mode 4 is a no-roots profile on another branch, so
-    ! numbering the top-layer profile 5 keeps the parameter-file encoding
-    ! free of a collision with that branch.
-    integer, parameter :: top_layer_profile_type      = 5
 
     integer :: root_profile_type
     integer :: corr_id(1)        ! This is the bin with largest fraction
@@ -2833,7 +2837,17 @@ contains
           write(fates_log(),*) 'A maximum rooting layer depth <0 was specified'
           call endrun(msg=errMsg(sourcefile, __LINE__))
        end if
-       nlevroot = min(max_nlevroot,nlevroot)
+       ! Floored at one soil layer, because the host may report an active
+       ! column with no layers in it at all.  CTSM passes
+       ! min(nlevsoil,altmax_lastyear_indx_col), and altmax_lastyear_indx_col
+       ! is zero out of a cold start and is refreshed only once a year, so a
+       ! cold-started column reports zero for the whole of its first model
+       ! year and a column that never thaws reports it forever.  Over a
+       ! zero-size slice no method can define a profile at all, and the whole
+       ! of the answer would come from the residual correction below instead.
+       ! The floor also covers a negative max_nlevroot, which the check above
+       ! does not: that one only runs in a debug build.
+       nlevroot = max(1,min(max_nlevroot,nlevroot))
     end if
     
     select case(nint(prt_params%fnrt_prof_mode(ft)))
@@ -3013,11 +3027,22 @@ contains
     ! !ARGUMENTS
     real(r8),intent(out) :: root_fraction(:) ! fraction of root mass in each soil layer
 
+    ! There is no layer 1 to fill if the caller handed over a zero-size profile.
+    ! set_root_fraction floors its layer count at one and so never does, but
+    ! another caller could.  The sibling methods need no such guard: their
+    ! per-layer loops are zero-trip, and they normalize with a whole-array
+    ! assignment, which performs no division at all when the array is zero-size.
     if(size(root_fraction) < 1) then
        write(fates_log(),*) 'the top-layer root profile needs at least one soil layer'
        call endrun(msg=errMsg(sourcefile, __LINE__))
+       ! Not dead code: the unit test harness stubs the abort to return, and
+       ! without this the indexed write below runs on a zero-size array.
+       return
     end if
 
+    ! Every layer is written here rather than leaning on set_root_fraction
+    ! having zeroed the whole array first, as the sibling methods also do: a
+    ! method that defines a profile should define all of it.
     root_fraction(:) = 0._r8
     root_fraction(1) = 1._r8
 
