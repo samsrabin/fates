@@ -1,0 +1,419 @@
+module test_RootProfile
+  !
+  ! DESCRIPTION:
+  !   Tests the normalized per-soil-layer root fraction that
+  !   FatesAllometryMod::set_root_fraction builds from a PFT's fine-root profile mode and
+  !   its shape parameters. The subject is the top-layer profile mode, which has to put
+  !   the whole profile in soil layer 1 and exactly nothing below it, including when the
+  !   optional max_nlevroot argument compresses the profile over a shallower active
+  !   column. The three pre-existing profile modes are covered too, as a guard that none
+  !   of them was rerouted into the new branch, plus one anchor on what the
+  !   two-parameter exponential gives at moss's present shape parameters.
+  !
+  use FatesConstantsMod, only : r8 => fates_r8
+  use FatesAllometryMod, only : set_root_fraction
+  use PRTParametersMod,  only : prt_params
+  use shr_infnan_mod,    only : nan => shr_infnan_nan, assignment(=)
+  use funit
+
+  implicit none
+
+  @TestCase
+  type, extends(TestCase) :: TestRootProfile
+    contains
+      procedure :: setUp
+      procedure :: tearDown
+  end type TestRootProfile
+
+  real(r8), parameter :: tol = 1.e-13_r8
+
+  ! Fine-root profile mode codes. set_root_fraction declares these as integer parameters
+  ! local to itself rather than exporting them, so the test has to restate them and they
+  ! have to be kept in step with that routine by hand. They are reals here because
+  ! prt_params carries the mode as a real that set_root_fraction rounds. Code 4 is
+  ! deliberately absent: it is a no-roots profile on another branch, and the top-layer
+  ! mode was numbered 5 to keep clear of it.
+  real(r8), parameter :: jackson_beta_profile_type   = 1.0_r8
+  real(r8), parameter :: exponential_1p_profile_type = 2.0_r8
+  real(r8), parameter :: exponential_2p_profile_type = 3.0_r8
+  real(r8), parameter :: top_layer_profile_type      = 5.0_r8
+
+  ! PFT slots the prt_params profile arrays are allocated over, and the mode each slot
+  ! carries. Two slots carry the top-layer mode, neither of them is slot 1, and the two
+  ! are separated by the legacy modes: a set_root_fraction that reached the top-layer
+  ! branch on a hardcoded PFT index, or that read a neighbouring PFT's mode, then fails
+  ! rather than passing. No two slots share a shape parameter either, so a profile built
+  ! from the wrong PFT's parameters is visible as well.
+  integer, parameter :: num_pft = 5           ! PFT slots the prt_params arrays span
+  integer, parameter :: ft_jackson_beta = 1   ! carries jackson_beta_profile_type
+  integer, parameter :: ft_top_layer_low = 2  ! carries top_layer_profile_type
+  integer, parameter :: ft_exponential_1p = 3 ! carries exponential_1p_profile_type
+  integer, parameter :: ft_exponential_2p = 4 ! carries exponential_2p_profile_type
+  integer, parameter :: ft_top_layer_high = 5 ! carries top_layer_profile_type
+
+  ! Shape parameters. The two single-parameter modes run at the FATES defaults their own
+  ! subroutines document. The two-parameter exponential runs at moss's parameterization
+  ! as of this change - a raised to 30 with b left at grass's 2 - because that
+  ! combination is the thing the top-layer mode exists to replace, and the anchor test
+  ! below pins what it produces. The top-layer PFTs get no shape parameters at all.
+  real(r8), parameter :: jackson_beta_a = 0.976_r8       ! fnrt_prof_a, Jackson beta
+  real(r8), parameter :: exponential_1p_a = 3.0_r8       ! fnrt_prof_a, 1-param exponential
+  real(r8), parameter :: moss_exponential_2p_a = 30.0_r8 ! fnrt_prof_a, moss today
+  real(r8), parameter :: moss_exponential_2p_b = 2.0_r8  ! fnrt_prof_b, moss today
+
+  ! The main test column: five layers, no two of the same thickness (0.02, 0.04, 0.14,
+  ! 0.40 and 0.80 m), so a profile routine that indexed a thickness where it meant an
+  ! interface, or that swapped two layers, has nowhere to hide. The first interface sits
+  ! at 0.02 m, the depth the design document quotes moss's uptake fraction at.
+  integer, parameter :: n_layers = 5   ! soil layers in the main test column
+  real(r8), parameter :: zi_col(0:n_layers) = &
+       [0.00_r8, 0.02_r8, 0.06_r8, 0.20_r8, 0.60_r8, 1.40_r8] ! layer interfaces [m]
+
+  ! A one-layer column, for the degenerate case where layer 1 is the entire column. Its
+  ! single layer is deliberately far thicker than the main column's first layer, so the
+  ! top-layer mode cannot be passing there by any accident of depth.
+  integer, parameter :: n_layers_single = 1   ! soil layers in the single-layer column
+  real(r8), parameter :: zi_single(0:n_layers_single) = &
+       [0.00_r8, 0.35_r8] ! layer interfaces [m]
+
+  ! A deep column, for the two-parameter-exponential anchor. Its bottom at 8 m is there
+  ! so the profile's normalization is within 1.4e-8 of an unbounded column's, which is
+  ! what the quoted uptake fraction assumes; thicknesses again all differ, and the first
+  ! interface is again at 0.02 m.
+  integer, parameter :: n_layers_deep = 6   ! soil layers in the deep column
+  real(r8), parameter :: zi_deep(0:n_layers_deep) = &
+       [0.00_r8, 0.02_r8, 0.10_r8, 0.40_r8, 1.20_r8, 3.00_r8, 8.00_r8] ! layer interfaces [m]
+
+  ! Active-column depths the optional max_nlevroot argument is exercised at. One layer is
+  ! the shallowest active column there is; the intermediate depth leaves two of the main
+  ! column's five layers outside the active column, which is what makes the assertion
+  ! that those two are still exactly zero worth making. Neither equals n_layers, so
+  ! neither case can pass by the argument being ignored.
+  integer, parameter :: max_nlevroot_top_only = 1  ! active column is the top layer alone
+  integer, parameter :: max_nlevroot_upper = 3     ! active column ends part way down
+
+  ! Cumulative fraction of the two-parameter-exponential profile above 0.02 m, at moss's
+  ! shape parameters. With zi(0) = 0 the per-layer expression in
+  ! exponential_2p_root_profile telescopes, so the fraction above an interface z, on a
+  ! column whose bottom interface is at z_col, is
+  !
+  !   F(z) = (2 - exp(-a z) - exp(-b z)) / (2 - exp(-a z_col) - exp(-b z_col))
+  !
+  ! At a = 30, b = 2 and z = 0.02 the numerator is 0.4903989247536503. Over an unbounded
+  ! column the denominator is 2 and F is the value below - the 24.5% of uptake in the top
+  ! 2 cm that the design document quotes, and the fact that motivates giving moss a
+  ! different mode entirely. On the deep column the denominator is smaller by exp(-16),
+  ! which raises F by 1.4e-8 to 0.2451994761736081.
+  real(r8), parameter :: frac_above_two_cm = 0.2451994623768252_r8
+
+  ! Tolerance for the anchor alone. It has to span the 1.4e-8 the finite column adds to
+  ! the unbounded-column value, so tol is too tight. It is still seven orders of
+  ! magnitude below the distance to 1.0, which is what this mode would give if it were
+  ! rerouted into the top-layer branch, and five below the distance to what the same
+  ! profile gives at any materially different b.
+  real(r8), parameter :: tol_anchor = 1.0e-6_r8
+
+  contains
+
+    subroutine setUp(this)
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      ! prt_params is module-level state in PRTParametersMod that outlives one test, and
+      ! no parameter file reaches a FATES unit test, so these three arrays are the test's
+      ! to allocate and fill. Deallocate first: allocating an already-allocated array
+      ! aborts the executable rather than failing one test.
+      call DeallocateProfileParams()
+
+      allocate(prt_params%fnrt_prof_mode(num_pft))
+      allocate(prt_params%fnrt_prof_a(num_pft))
+      allocate(prt_params%fnrt_prof_b(num_pft))
+
+      ! Shape parameters start as a signalling NaN so that a profile mode which reads a
+      ! parameter it has no business reading aborts on the arithmetic instead of quietly
+      ! returning a plausible number. Only the entries each mode actually consumes are
+      ! set below: the top-layer mode consumes neither a nor b, and the two
+      ! single-parameter modes consume only a.
+      prt_params%fnrt_prof_a(:) = nan
+      prt_params%fnrt_prof_b(:) = nan
+
+      prt_params%fnrt_prof_mode(ft_jackson_beta) = jackson_beta_profile_type
+      prt_params%fnrt_prof_a(ft_jackson_beta) = jackson_beta_a
+
+      prt_params%fnrt_prof_mode(ft_top_layer_low) = top_layer_profile_type
+
+      prt_params%fnrt_prof_mode(ft_exponential_1p) = exponential_1p_profile_type
+      prt_params%fnrt_prof_a(ft_exponential_1p) = exponential_1p_a
+
+      prt_params%fnrt_prof_mode(ft_exponential_2p) = exponential_2p_profile_type
+      prt_params%fnrt_prof_a(ft_exponential_2p) = moss_exponential_2p_a
+      prt_params%fnrt_prof_b(ft_exponential_2p) = moss_exponential_2p_b
+
+      prt_params%fnrt_prof_mode(ft_top_layer_high) = top_layer_profile_type
+
+    end subroutine setUp
+
+    subroutine tearDown(this)
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      call DeallocateProfileParams()
+
+    end subroutine tearDown
+
+    subroutine DeallocateProfileParams()
+      ! Releases the three prt_params profile arrays if they are held. Called from both
+      ! ends of the fixture, because a test that aborts part way through still has to
+      ! leave the module state in a shape the next setUp can allocate into.
+
+      if (allocated(prt_params%fnrt_prof_mode)) deallocate(prt_params%fnrt_prof_mode)
+      if (allocated(prt_params%fnrt_prof_a)) deallocate(prt_params%fnrt_prof_a)
+      if (allocated(prt_params%fnrt_prof_b)) deallocate(prt_params%fnrt_prof_b)
+
+    end subroutine DeallocateProfileParams
+
+    subroutine SeedRootFractionMarkers(root_fraction)
+      ! Fills a root-fraction array with a distinct negative marker per layer, so that a
+      ! layer set_root_fraction never writes reads back as its own negated index rather
+      ! than as zero, and a fraction written into the wrong layer is visible. Every
+      ! legitimate value lies in [0,1], so no marker can be mistaken for a result.
+      !
+      ! Markers rather than a signalling NaN here, even though NaN is the protective
+      ! choice for an array a routine only reads: these are outputs the assertions read
+      ! back, and a NaN would trap inside pFUnit's own subtraction and take the whole
+      ! executable down instead of failing the one assertion that caught it.
+      real(r8), intent(out) :: root_fraction(:) ! [1:soil layers in the column]
+
+      integer :: j ! soil layer index
+
+      do j = 1, size(root_fraction)
+         root_fraction(j) = -real(j, r8)
+      end do
+
+    end subroutine SeedRootFractionMarkers
+
+    subroutine ExpectAllInLayer1(root_fraction)
+      ! Asserts that a profile holds exactly all of itself in soil layer 1: exactly 1.0
+      ! there and exactly 0.0 in every layer below.
+      !
+      ! The exactness is the point of the case rather than a stylistic choice. The
+      ! alternative implementation the top-layer mode exists to rule out - the
+      ! two-parameter exponential with both limbs made steep - leaves a small but nonzero
+      ! fraction in the deep layers, which set_root_fraction then normalizes into a
+      ! perfectly well-formed profile: on the main test column below, at a = b = 300, the
+      ! bottom layer comes back at 6.7e-79. EDBtranMod treats any layer with a nonzero
+      ! root fraction and available water as a water source, so that residue in a layer a
+      ! metre down behaves like a real root there, and no tolerance anyone would write
+      ! down rejects it. That is why nothing here has a tolerance argument, which pFUnit
+      ! reads as exact equality.
+      real(r8), intent(in) :: root_fraction(:) ! [1:soil layers in the column]
+
+      integer :: n_col ! soil layers in the column
+
+      n_col = size(root_fraction)
+
+      @assertEqual(1.0_r8, root_fraction(1), message="layer 1 must hold the whole profile, exactly")
+      if (n_col > 1) then
+         @assertEqual(0.0_r8, root_fraction(2:n_col), message="every layer below the first must be exactly zero")
+      end if
+
+    end subroutine ExpectAllInLayer1
+
+    subroutine ExpectProfileSpreadOverColumn(ft, layer1_min, layer1_max)
+      ! Asserts the properties every profile mode other than the top-layer mode has to
+      ! keep on the main test column: the profile is normalized, layer 1's share lies
+      ! inside the bracket the caller supplies, and the bottom layer of the column holds
+      ! a strictly positive fraction.
+      !
+      ! Shared by the three legacy-mode tests so that they cannot drift apart; each of
+      ! those owns the PFT and the bracket, which is the whole of what differs between
+      ! them. The bracket's upper bound is the guard those tests are really about - none
+      ! of these modes may be rerouted into the top-layer branch, which would make layer
+      ! 1 exactly 1.0 - but a bound loose on one side only would also admit a profile
+      ! that had collapsed the other way, so both sides are pinned. The bottom-layer
+      ! assertion is one-sided and strict instead, because a strictly positive root
+      ! fraction is what EDBtranMod turns into a water source: the distinction between
+      ! zero and not-zero there is behavioural, while its size is not.
+      integer,  intent(in) :: ft         ! PFT index into the prt_params arrays
+      real(r8), intent(in) :: layer1_min ! lower bound on layer 1's share [0-1]
+      real(r8), intent(in) :: layer1_max ! upper bound on layer 1's share [0-1]
+
+      real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
+
+      call SeedRootFractionMarkers(root_fraction)
+      call set_root_fraction(root_fraction, ft, zi_col)
+
+      @assertEqual(1.0_r8, sum(root_fraction), tolerance=tol)
+      @assertLessThan(layer1_min, root_fraction(1))
+      @assertGreaterThan(layer1_max, root_fraction(1))
+      @assertLessThan(0.0_r8, root_fraction(n_layers))
+
+    end subroutine ExpectProfileSpreadOverColumn
+
+    @Test
+    subroutine set_root_fraction_topLayerModeFullColumnActive_allInLayer1(this)
+      ! set_root_fraction must give the top-layer profile mode all of its depth in soil
+      ! layer 1 and none at all below, when the whole soil column is active.
+      !
+      ! The base case for the mode: max_nlevroot is absent, so the profile is built over
+      ! every layer the column has and every layer below the first has to come back
+      ! exactly zero. The counterpart of the two active-column cases below, which hold
+      ! the column fixed and vary only how much of it is active. This case uses the higher
+      ! of the two top-layer PFT slots and they use the lower, so no one PFT index
+      ! carries all three.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
+
+      call SeedRootFractionMarkers(root_fraction)
+      call set_root_fraction(root_fraction, ft_top_layer_high, zi_col)
+
+      call ExpectAllInLayer1(root_fraction)
+
+    end subroutine set_root_fraction_topLayerModeFullColumnActive_allInLayer1
+
+    @Test
+    subroutine set_root_fraction_topLayerModeTopLayerOnlyActive_allInLayer1(this)
+      ! set_root_fraction must give the top-layer profile mode all of its depth in soil
+      ! layer 1 and none at all below, when the active column is the top layer alone.
+      !
+      ! The shallowest active column max_nlevroot can ask for, on the same soil column as
+      ! the full-column and part-way-down cases. Here the active column and the profile's
+      ! one occupied layer coincide, so what this pins beyond those two is that the mode
+      ! does not need a layer below the first to normalize against.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
+
+      call SeedRootFractionMarkers(root_fraction)
+      call set_root_fraction(root_fraction, ft_top_layer_low, zi_col, max_nlevroot_top_only)
+
+      call ExpectAllInLayer1(root_fraction)
+
+    end subroutine set_root_fraction_topLayerModeTopLayerOnlyActive_allInLayer1
+
+    @Test
+    subroutine set_root_fraction_topLayerModeUpperLayersActive_allInLayer1(this)
+      ! set_root_fraction must give the top-layer profile mode all of its depth in soil
+      ! layer 1 and none at all below, when the active column ends part way down the soil
+      ! column.
+      !
+      ! The intermediate active-column depth, on the same soil column as the full-column
+      ! and top-layer-only cases and differing from them only in max_nlevroot. It is the
+      ! one of the three in which layers exist both inside the active column and outside
+      ! it, so it is the only one that pins that the layers beyond max_nlevroot come back
+      ! exactly zero rather than merely unwritten.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers) ! normalized profile [1:n_layers]
+
+      call SeedRootFractionMarkers(root_fraction)
+      call set_root_fraction(root_fraction, ft_top_layer_low, zi_col, max_nlevroot_upper)
+
+      call ExpectAllInLayer1(root_fraction)
+
+    end subroutine set_root_fraction_topLayerModeUpperLayersActive_allInLayer1
+
+    @Test
+    subroutine set_root_fraction_topLayerModeSingleLayerColumn_allInLayer1(this)
+      ! set_root_fraction must give the top-layer profile mode all of its depth in soil
+      ! layer 1 on a column that has no layer below the first.
+      !
+      ! The degenerate column, where the layer the mode fills is also the only layer
+      ! there is and the "exactly zero below" half of the contract has nothing to say.
+      ! Its single layer is much thicker than the main column's first layer, so a mode
+      ! that happened to work only for a thin top layer fails here.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers_single) ! normalized profile [1:n_layers_single]
+
+      call SeedRootFractionMarkers(root_fraction)
+      call set_root_fraction(root_fraction, ft_top_layer_low, zi_single)
+
+      call ExpectAllInLayer1(root_fraction)
+
+    end subroutine set_root_fraction_topLayerModeSingleLayerColumn_allInLayer1
+
+    @Test
+    subroutine set_root_fraction_jacksonBetaMode_spreadOverColumn(this)
+      ! set_root_fraction must keep spreading the Jackson beta profile down the soil
+      ! column rather than concentrating it in soil layer 1.
+      !
+      ! One of three sibling cases, one per pre-existing profile mode, that exist to
+      ! catch a mode being rerouted into the top-layer branch. Of the three, this is the
+      ! one least concentrated in layer 1 on this column, which holds 0.049 of the
+      ! profile, so the bracket below straddles that by about a factor of two either way.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8), parameter :: layer1_min = 0.02_r8 ! lower bound on layer 1's share [0-1]
+      real(r8), parameter :: layer1_max = 0.10_r8 ! upper bound on layer 1's share [0-1]
+
+      call ExpectProfileSpreadOverColumn(ft_jackson_beta, layer1_min, layer1_max)
+
+    end subroutine set_root_fraction_jacksonBetaMode_spreadOverColumn
+
+    @Test
+    subroutine set_root_fraction_exponential1pMode_spreadOverColumn(this)
+      ! set_root_fraction must keep spreading the one-parameter exponential profile down
+      ! the soil column rather than concentrating it in soil layer 1.
+      !
+      ! One of three sibling cases, one per pre-existing profile mode, that exist to
+      ! catch a mode being rerouted into the top-layer branch. Layer 1 holds 0.336 of
+      ! this profile on this column. The upper bound straddles that by about a factor of
+      ! two, but the lower one cannot: this mode's per-layer weight falls monotonically
+      ! with depth whatever a is, so layer 1's share can never drop below one fifth on a
+      ! five-layer column, and a lower bound at 0.2 would be sitting on a floor it is
+      ! structurally impossible to breach. 0.25 is above the floor and so has something
+      ! to catch.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8), parameter :: layer1_min = 0.25_r8 ! lower bound on layer 1's share [0-1]
+      real(r8), parameter :: layer1_max = 0.50_r8 ! upper bound on layer 1's share [0-1]
+
+      call ExpectProfileSpreadOverColumn(ft_exponential_1p, layer1_min, layer1_max)
+
+    end subroutine set_root_fraction_exponential1pMode_spreadOverColumn
+
+    @Test
+    subroutine set_root_fraction_exponential2pMode_spreadOverColumn(this)
+      ! set_root_fraction must keep spreading the two-parameter exponential profile down
+      ! the soil column rather than concentrating it in soil layer 1.
+      !
+      ! One of three sibling cases, one per pre-existing profile mode, that exist to
+      ! catch a mode being rerouted into the top-layer branch. This is the mode moss
+      ! carries today and it runs here at moss's own shape parameters, which makes it the
+      ! sharpest of the three siblings: even at a = 30 the b limb keeps layer 1 down to
+      ! 0.253 of the profile on this column, and the bracket below straddles that by
+      ! about a factor of two either way.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8), parameter :: layer1_min = 0.15_r8 ! lower bound on layer 1's share [0-1]
+      real(r8), parameter :: layer1_max = 0.40_r8 ! upper bound on layer 1's share [0-1]
+
+      call ExpectProfileSpreadOverColumn(ft_exponential_2p, layer1_min, layer1_max)
+
+    end subroutine set_root_fraction_exponential2pMode_spreadOverColumn
+
+    @Test
+    subroutine set_root_fraction_exponential2pModeMossShape_quarterAboveTwoCm(this)
+      ! set_root_fraction must put a quarter of the two-parameter exponential profile
+      ! above the depth moss draws water from, at the shape parameters moss carries
+      ! today, on a soil column deep enough not to distort the normalization.
+      !
+      ! This is the measurement that motivates giving moss a different profile mode
+      ! altogether, pinned here so that a later edit to the shared exponential path
+      ! cannot quietly undo it. The expected value and the tolerance are derived at
+      ! frac_above_two_cm and tol_anchor above. Unlike the three sibling cases, this one
+      ! is quantitative and runs on the deep column rather than the main one, because the
+      ! quoted fraction assumes a column whose bottom contributes nothing.
+      class(TestRootProfile), intent(inout) :: this ! test object
+
+      real(r8) :: root_fraction(n_layers_deep) ! normalized profile [1:n_layers_deep]
+
+      call SeedRootFractionMarkers(root_fraction)
+      call set_root_fraction(root_fraction, ft_exponential_2p, zi_deep)
+
+      @assertEqual(1.0_r8, sum(root_fraction), tolerance=tol)
+      @assertEqual(frac_above_two_cm, root_fraction(1), tolerance=tol_anchor)
+
+    end subroutine set_root_fraction_exponential2pModeMossShape_quarterAboveTwoCm
+
+end module test_RootProfile
