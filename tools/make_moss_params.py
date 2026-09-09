@@ -142,13 +142,19 @@ MOSS_PFT_NAME = "non_vascular_phototroph"  # NVP's name for the moss PFT
 # markers below for which values come straight from that file versus
 # are deliberately overridden here.
 #
-# NOTE: fates_allom_fnrt_prof_mode is intentionally ABSENT from this
-# dict. NVP's moss column sets it to 4, a no-roots profile that exists
-# only on that branch; our FATES supports modes 1-3, and moss
-# transpiration has to be extracted through a real root profile or the
-# water budget does not close -- see fates_allom_fnrt_prof_a below for
-# how that profile is shaped. Moss keeps the grass-copied mode 3
-# instead.
+# NOTE: fates_allom_fnrt_prof_mode is set below to 5, the top-layer
+# profile mode (biogeochem/FatesAllometryMod.F90), which puts the whole
+# profile in soil layer 1 and exactly nothing below it. NVP's moss
+# column instead sets 4, a no-roots profile that exists only on that
+# branch and that we still do not use: moss transpiration is extracted
+# through this profile, so an all-zero one would leave moss with no
+# uptake pathway at all. That is not a water-budget failure -- CTSM
+# gates transpiration on btran(p) > btran0 with btran0 = 0, and the
+# condition that zeroes the profile also zeroes btran_pa, so CTSM
+# simply contributes nothing for moss -- it just removes the pathway
+# this design depends on. Mode 4's existence on that branch is also why
+# the top-layer mode is numbered 5: it keeps the parameter-file encoding
+# free of a collision.
 MOSS_PFT_OVERRIDES = {
     # --- harvested from NVP's moss column: taken as-is because staying
     #     aligned with that branch is the point ---
@@ -184,9 +190,15 @@ MOSS_PFT_OVERRIDES = {
     "fates_leaf_slatop": 0.027,
     "fates_woody": 0,
     # Moss has no stomata; the moss CO2 path replaces the stomatal solve
-    # with boundary-layer diffusion, so these three are unused for moss.
-    # Zeroed so any stray use shows up as zero rather than as a
-    # plausible number.
+    # with boundary-layer diffusion, so the two slopes really are unread
+    # for moss. fates_leaf_stomatal_intercept is not: it is read on the
+    # moss path, as gs0 = max(gsmin0, stomatal_intercept(ft)*btran) at
+    # biogeophys/LeafBiophysicsMod.F90:2234 under the inherited
+    # fates_leaf_stomatal_btran_model = 1 (the other branch, line 2237,
+    # reads it without the btran factor). At zero it simply loses to the
+    # gsmin0 floor, and that floor is what keeps the host's rssun/rssha
+    # finite (LeafBiophysicsMod.F90:1183-1190). All three are zeroed so
+    # any stray use shows up as zero rather than as a plausible number.
     "fates_leaf_stomatal_intercept": 0.0,
     "fates_leaf_stomatal_slope_ballberry": 0.0,
     "fates_leaf_stomatal_slope_medlyn": 0.0,
@@ -213,9 +225,10 @@ MOSS_PFT_OVERRIDES = {
     # Nothing reads it yet; the Fortran that does arrives in the next
     # task.
     "fates_vascular": 0,
-    # --- corrections applied here: for these four, NVP's moss column
-    #     still holds the grass values, and we deliberately override
-    #     them ---
+    # --- corrections applied here: NVP's moss column carries a value we
+    #     do not want for these four -- the grass value it was seeded
+    #     from, except for fates_allom_fnrt_prof_mode, where NVP's own
+    #     value is the mode-4 no-roots profile ---
     # Reproductive allocation is two branches
     # (parteh/PRTAllometricCarbonMod.F90:1074-1078): below
     # dbh_repro_threshold, repro_fraction = seed_alloc; above it,
@@ -255,14 +268,21 @@ MOSS_PFT_OVERRIDES = {
     # cohort termination floors actually cull moss in testing (watch
     # the FATES_MORTALITY_TERMINATION_* history variables).
     "fates_recruit_height_min": 0.02,
-    # Concentrates the rooting profile in soil layer 1 so moss water
-    # status tracks surface moisture. Needed because we keep mode 3
-    # rather than NVP's no-roots mode 4 (see the NOTE above); moss
-    # transpiration is extracted through this profile, and an all-zero
-    # one would break the water budget.
-    "fates_allom_fnrt_prof_a": 30.0,
+    # Puts the whole rooting profile in soil layer 1, and exactly nothing
+    # below it, so moss water status tracks surface moisture (see the
+    # NOTE above for why the mode is 5 and not 4). The grass-copied mode
+    # 3 cannot do this at any shape parameters: it is a half-and-half
+    # sum of two exponentials, so raising a alone leaves the b limb
+    # holding half the profile at a 0.5 m e-folding depth -- only 24.5%
+    # of uptake in the top 2 cm -- and making both limbs steep still
+    # leaves order 1e-79 in the deep layers, which EDBtranMod treats as
+    # a real water source whenever moss's own layer is dry.
+    # fates_allom_fnrt_prof_a and _b are deliberately NOT overridden:
+    # mode 5 reads neither, so an override there would do nothing and
+    # moss keeps the grass-copied 11.0 and 2.0.
+    "fates_allom_fnrt_prof_mode": 5,
     # Moss's fine roots are a modelling fiction: this branch gives moss
-    # grass-style roots only to open a soil-water uptake pathway,
+    # a rooting profile only to open a soil-water uptake pathway,
     # because (unlike NVP) it does not represent the moss mat as a
     # distinct CTSM layer with its own water store. A structure that
     # does not physically exist should carry no carbon, so the
@@ -278,8 +298,6 @@ MOSS_PFT_OVERRIDES = {
     # (parteh/PRTGenericMod.F90) applies only in the CNP hypothesis,
     # which this carbon-only configuration never reaches.
     "fates_allom_l2fr": 0.0,
-    # fates_allom_fnrt_prof_mode is deliberately NOT overridden: it keeps
-    # the grass-copied value of 3 (see the NOTE above).
 }
 
 DEAD_LEAVES_INDEX = 4  # 0-based index of "dead leaves" in fates_litterclass

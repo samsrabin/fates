@@ -676,6 +676,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_meanliqvol_si_pft
   integer :: ih_meansmp_si_pft
   integer :: ih_elong_factor_si_pft
+  integer :: ih_btran_si_pft
   integer :: ih_nocomp_pftpatchfraction_si_pft
   integer :: ih_nocomp_pftnpatches_si_pft
   integer :: ih_nocomp_pftburnedarea_si_pft
@@ -3216,6 +3217,8 @@ contains
     integer  :: iscag_anthrodist  ! what is the equivalent age class for
                                   ! time-since-anthropogenic-disturbance of secondary forest
     real(r8) :: patch_fracarea  ! Fraction of area for this patch
+    real(r8) :: area_veg_btran  ! summed area of the non-bareground patches that the
+                                ! per-PFT btran sample is weighted over [m2]
     real(r8) :: frac_canopy_in_bin  ! fraction of a leaf's canopy that is within a given height bin
     real(r8) :: binbottom,bintop    ! edges of height bins
     integer  :: height_bin_max, height_bin_min   ! which height bin a given cohort's canopy is in
@@ -3434,6 +3437,7 @@ contains
              hio_meanliqvol_si_pft                => this%hvars(ih_meanliqvol_si_pft)%r82d, &
              hio_meansmp_si_pft                   => this%hvars(ih_meansmp_si_pft)%r82d, &
              hio_elong_factor_si_pft              => this%hvars(ih_elong_factor_si_pft)%r82d, &
+             hio_btran_si_pft                     => this%hvars(ih_btran_si_pft)%r82d, &
              hio_seed_bank_si_pft                 => this%hvars(ih_seed_bank_si_pft)%r82d, &
              hio_ungerm_seed_bank_si_pft          => this%hvars(ih_ungerm_seed_bank_si_pft)%r82d, &
              hio_seedling_pool_si_pft             => this%hvars(ih_seedling_pool_si_pft)%r82d, &
@@ -3533,11 +3537,29 @@ contains
              end do
 
              ! Loop through patches to sum up diagonistics
+             area_veg_btran = 0._r8
              cpatch => sites(s)%oldest_patch
              patchloop: do while(associated(cpatch))
 
                 hio_fracarea_si(io_si) = hio_fracarea_si(io_si) &
                      + cpatch%area * AREA_INV
+
+                ! Sample of each PFT's transpiration wetness factor. btran_ft is stored
+                ! per patch but is really a site-level quantity: btran_ed builds it from
+                ! site-level boundary conditions and a root profile that depends only on
+                ! the PFT, with nothing patch-specific entering, so every vegetated patch
+                ! carries the same value. The bareground patch is skipped in btran_ed and
+                ! so keeps its initialized zero, which is why it is excluded here too.
+                ! Area-weighting over the vegetated patches and normalizing by that same
+                ! area below therefore recovers btran_ft(ft) itself, and the reader needs
+                ! no divide-by-cover.
+                if (cpatch%nocomp_pft_label .ne. nocomp_bareground) then
+                   area_veg_btran = area_veg_btran + cpatch%area
+                   do ft = 1,numpft
+                      hio_btran_si_pft(io_si,ft) = hio_btran_si_pft(io_si,ft) + &
+                           cpatch%btran_ft(ft) * cpatch%area
+                   end do
+                end if
 
                 ! ignore land use info on nocomp bareground (where landuse label = 0)
                 if (cpatch%land_use_label .gt. nocomp_bareground_land) then 
@@ -4355,6 +4377,13 @@ contains
 
                 cpatch => cpatch%younger
              end do patchloop !patch loop
+
+             ! Normalize the btran sample by the vegetated area it was weighted over
+             if (area_veg_btran > nearzero) then
+                do ft = 1,numpft
+                   hio_btran_si_pft(io_si,ft) = hio_btran_si_pft(io_si,ft) / area_veg_btran
+                end do
+             end if
 
              ! pass the cohort termination mortality as a flux to the history, and then reset the termination mortality buffer
              ! note there are various ways of reporting the total mortality, so pass to these as well
@@ -7695,6 +7724,23 @@ contains
                use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM',    &
                upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,                    &
                index=ih_elong_factor_si_pft)
+
+          ! TODO: Before merge, change these to default 'inactive'
+          ! Modeled on FATES_ELONG_FACTOR_PF, and deliberately not on FATES_BTRAN_SZPF:
+          ! that field is filled from ccohort_hydr%btran and so is identically zero
+          ! unless FATES-Hydro is on, which use_fates_moss forbids.
+          !
+          ! Registered unconditionally, and filled for every PFT whether or not that PFT
+          ! is present at the site: btran_ed computes btran_ft over 1:numpft regardless
+          ! of what is growing there.
+          call this%set_history_var(vname='FATES_BTRAN_PF',                             &
+               units='1',                                                               &
+               long='PFT-level transpiration wetness factor (btran), sampled once '//   &
+               'daily at the dynamics call - the cadence and the moment at which '//    &
+               'hydraulic-failure mortality reads it - and not a diurnal mean',         &
+               use_default='active', avgflag='A', vtype=site_pft_r8, hlms='CLM:ALM',    &
+               upfreq=group_dyna_complx, ivar=ivar, initialize=initialize_variables,    &
+               index=ih_btran_si_pft)
 
           nocomp_if: if (hlm_use_nocomp .eq. itrue) then
              call this%set_history_var(vname='FATES_NOCOMP_NPATCHES_PF', units='',      &

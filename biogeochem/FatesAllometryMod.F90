@@ -2791,15 +2791,21 @@ contains
     ! Two context exist 'hydraulic' and 'biomass'.  This allows us to
     ! allow different profiles for how water is drawn from the soil
     ! and different profiles to define the biomass for litter flux.
-    ! These two context can currently choose 1 of the following three
+    ! These two context can currently choose 1 of the following four
     ! methods of defining the profile: 1) A 1 parameter exponential, 2)
     ! a beta profile defined by Jackson et al. and 3) a 2 parameter
     ! exponential.
+    ! A fourth method places the entire profile in the top soil layer.
+    ! Its mode code is 5 rather than 4; see top_layer_profile_type below.
     ! All methods return a normalized profile.
 
     integer, parameter :: jackson_beta_profile_type   = 1
     integer, parameter :: exponential_1p_profile_type = 2
     integer, parameter :: exponential_2p_profile_type = 3
+    ! 5 and not 4: mode 4 is a no-roots profile on another branch, so
+    ! numbering the top-layer profile 5 keeps the parameter-file encoding
+    ! free of a collision with that branch.
+    integer, parameter :: top_layer_profile_type      = 5
 
     integer :: root_profile_type
     integer :: corr_id(1)        ! This is the bin with largest fraction
@@ -2838,6 +2844,8 @@ contains
     case ( exponential_2p_profile_type ) 
        call exponential_2p_root_profile(root_fraction(1:nlevroot), zi(0:nlevroot), & 
              prt_params%fnrt_prof_a(ft),prt_params%fnrt_prof_b(ft))
+    case ( top_layer_profile_type )
+       call top_layer_root_profile(root_fraction(1:nlevroot))
 
     case default
        write(fates_log(),*) 'An undefined root profile type was specified'
@@ -2982,6 +2990,39 @@ contains
 
     return
   end subroutine jackson_beta_root_profile
+
+  ! =====================================================================================
+
+  subroutine top_layer_root_profile(root_fraction)
+
+    ! -----------------------------------------------------------------------------------
+    ! Places the entire root profile in the top soil layer and exactly nothing below it,
+    ! for a plant whose water status should track surface moisture alone (a non-vascular
+    ! phototroph, say).
+    !
+    ! This cannot be had from the exponential or beta profiles at any shape parameters.
+    ! Those give every layer a strictly positive weight and then normalize, so however
+    ! steep they are made the deep layers keep a tiny nonzero fraction - and EDBtranMod
+    ! treats any layer with a nonzero root fraction and available water as a water
+    ! source regardless of how small that fraction is. Hence the exact 1 and exact 0
+    ! here.
+    !
+    ! The profile is normalized by construction, so set_root_fraction's residual
+    ! correction is exactly zero for it.
+    ! -----------------------------------------------------------------------------------
+    ! !ARGUMENTS
+    real(r8),intent(out) :: root_fraction(:) ! fraction of root mass in each soil layer
+
+    if(size(root_fraction) < 1) then
+       write(fates_log(),*) 'the top-layer root profile needs at least one soil layer'
+       call endrun(msg=errMsg(sourcefile, __LINE__))
+    end if
+
+    root_fraction(:) = 0._r8
+    root_fraction(1) = 1._r8
+
+    return
+  end subroutine top_layer_root_profile
 
   ! =====================================================================================
 
