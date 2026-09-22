@@ -226,7 +226,7 @@ MOSS_PFT_OVERRIDES = {
     # task.
     "fates_vascular": 0,
     # --- corrections applied here: NVP's moss column carries a value we
-    #     do not want for these four -- the grass value it was seeded
+    #     do not want for these five -- the grass value it was seeded
     #     from, except for fates_allom_fnrt_prof_mode, where NVP's own
     #     value is the mode-4 no-roots profile ---
     # Reproductive allocation is two branches
@@ -298,6 +298,21 @@ MOSS_PFT_OVERRIDES = {
     # (parteh/PRTGenericMod.F90) applies only in the CNP hypothesis,
     # which this carbon-only configuration never reaches.
     "fates_allom_l2fr": 0.0,
+    # Switches off FATES's non-hydro hydraulic-failure mortality for moss.
+    # That proxy is keyed to btran, and moss's
+    # fates_leaf_agross_btran_model = 0 (above) keeps btran out of moss's
+    # photosynthetic capacity entirely, so for moss btran feeds only
+    # soil-water extraction and this one mortality term -- a vascular
+    # mechanism with no moss counterpart, and with the profile now wholly
+    # in soil layer 1 it fired on 37 of 730 days at ALP2. What moss
+    # therefore cannot do at any dryness, and where a real moss version of
+    # it would have to be built, is recorded in section 12 of the design
+    # spec. fates_mort_hf_sm_threshold is deliberately NOT overridden:
+    # the gate is btran <= threshold
+    # (biogeochem/EDMortalityFunctionsMod.F90:193), which moss's exactly
+    # zero btran still satisfies at a zero threshold, and the magnitude
+    # (threshold - btran)/threshold would then evaluate 0/0.
+    "fates_mort_scalar_hydrfailure": 0.0,
 }
 
 DEAD_LEAVES_INDEX = 4  # 0-based index of "dead leaves" in fates_litterclass

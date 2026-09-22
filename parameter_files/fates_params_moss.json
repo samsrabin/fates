@@ -1092,7 +1092,7 @@
       "dims": ["fates_pft"],
       "long_name": "maximum mortality rate from hydraulic failure",
       "units": "1/yr",
-      "data": [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.8, 0.6, 0.6, 0.6, 0.6]
+      "data": [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.8, 0.6, 0.6, 0.6, 0.0]
     },
     "fates_mort_upthresh_cstarvation": {
       "dtype": "float",
