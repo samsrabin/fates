@@ -133,35 +133,32 @@ def _match_repo_style(text):
 # ----------------------------------------------------------------------
 
 GRASS_PFT_INDEX = 11  # 0-based index of arctic_c3_grass (FATES PFT 12)
-MOSS_PFT_NAME = "non_vascular_phototroph"  # NVP's name for the moss PFT
+# The moss PFT's name on Hui's NVP branch (ctsm5.4.028_nvp on the
+# huitang-earth remote), called "the NVP branch" throughout below.
+MOSS_PFT_NAME = "non_vascular_phototroph"
 
 # Values applied to the moss (new, 15th) FATES PFT column after it is
-# seeded by copying the arctic_c3_grass column, harvested from NVP's
-# moss column (8382939b9:parameter_files/fates_params_default_moss.json)
-# unless noted otherwise. See the "harvested" and "corrections" section
+# seeded by copying the arctic_c3_grass column, harvested from the NVP
+# branch's moss column
+# (8382939b9:parameter_files/fates_params_default_moss.json) unless
+# noted otherwise. See the "harvested" and "corrections" section
 # markers below for which values come straight from that file versus
 # are deliberately overridden here.
 #
 # NOTE: fates_allom_fnrt_prof_mode is set below to 5, the top-layer
 # profile mode (biogeochem/FatesAllometryMod.F90), which puts the whole
-# profile in soil layer 1 and exactly nothing below it. NVP's moss
-# column instead sets 4, a no-roots profile that exists only on that
-# branch and that we still do not use: moss transpiration is extracted
-# through this profile, so an all-zero one would leave moss with no
-# uptake pathway at all. That is not a water-budget failure -- CTSM
-# gates transpiration on btran(p) > btran0 with btran0 = 0, and the
-# condition that zeroes the profile also zeroes btran_pa, so CTSM
-# simply contributes nothing for moss -- it just removes the pathway
-# this design depends on. Mode 4's existence on that branch is also why
-# the top-layer mode is numbered 5: it keeps the parameter-file encoding
-# free of a collision.
+# profile in soil layer 1 and exactly nothing below it. Mode 4 is the
+# NVP branch's no-roots profile, which this branch does not use; why
+# not is in section 3 of the design spec. Mode 4 being taken there is
+# also why the top-layer mode is numbered 5: it keeps the
+# parameter-file encoding free of a collision.
 MOSS_PFT_OVERRIDES = {
-    # --- harvested from NVP's moss column: taken as-is because staying
-    #     aligned with that branch is the point ---
-    # NVP's name for the moss PFT, kept verbatim.
+    # --- harvested from the NVP branch's moss column: taken as-is
+    #     because staying aligned with that branch is the point ---
+    # The NVP branch's name for the moss PFT, kept verbatim.
     "fates_pftname": MOSS_PFT_NAME,
     # Porada et al. (2013)-based moss photosynthetic capacity (grass is
-    # 86.0); harvested from NVP.
+    # 86.0); harvested from the NVP branch.
     "fates_leaf_vcmax25top": 30.0,  # dims include fates_leafage_class too
     # How much self-shading between leaves reduces the canopy's light
     # interception. It multiplies the light-extinction coefficient: at
@@ -176,17 +173,18 @@ MOSS_PFT_OVERRIDES = {
     # essentially all the absorption in the mat's top leaf layer and
     # lets almost nothing reach the ground -- a fair description of a
     # continuous moss surface, got from a knob not meant to provide it.
-    # A typo here would pass just as silently. Harvested from NVP as-is.
+    # A typo here would pass just as silently. Harvested from the NVP
+    # branch as-is.
     "fates_rad_leaf_clumping_index": 10.0,
-    # fates_leaf_slatop and fates_woody (below) are no-ops: NVP's harvested
-    # moss value for each already equals the arctic_c3_grass value the
-    # moss column is seeded from. Listed anyway for completeness/parity
-    # with NVP's column -- not a moss-vs-grass difference (slatop's
-    # provenance is still Porada et al. 2013-based SLA, same source as
-    # vcmax25top above). fates_woody = 0 is also what routes moss
-    # through the non-woody paths: live biomass to the live fuel pool,
-    # stem litter to leaf fines, no treefall disturbance, dbh forced
-    # from leaf carbon.
+    # fates_leaf_slatop and fates_woody (below) are no-ops: the NVP
+    # branch's harvested moss value for each already equals the
+    # arctic_c3_grass value the moss column is seeded from. Listed
+    # anyway for completeness/parity with the NVP branch's column --
+    # not a moss-vs-grass difference (slatop's provenance is still
+    # Porada et al. 2013-based SLA, same source as vcmax25top above).
+    # fates_woody = 0 is also what routes moss through the non-woody
+    # paths: live biomass to the live fuel pool, stem litter to leaf
+    # fines, no treefall disturbance, dbh forced from leaf carbon.
     "fates_leaf_slatop": 0.027,
     "fates_woody": 0,
     # Moss has no stomata; the moss CO2 path replaces the stomatal solve
@@ -212,23 +210,23 @@ MOSS_PFT_OVERRIDES = {
     # deciduous phenflush_fraction requirement enforced at
     # main/EDPftvarcon.F90:1219.
     "fates_phen_leaf_habit": 1,
-    # 0.01 is near-opaque; harvested from NVP.
+    # 0.01 is near-opaque; harvested from the NVP branch.
     "fates_rad_leaf_taunir": 0.01,
     "fates_rad_leaf_tauvis": 0.01,
     "fates_rad_stem_taunir": 0.01,
     "fates_rad_stem_tauvis": 0.01,
     # Leaf-angle orientation index; 0 is random/spherical (grass is
-    # -0.23). Harvested from NVP; no rationale is recorded on that side
-    # for why moss should have it this way.
+    # -0.23). Harvested from the NVP branch; no rationale is recorded
+    # on that side for why moss should have it this way.
     "fates_rad_leaf_xl": 0.0,
     # The flag that identifies moss -- grass and every other PFT are 1.
     # Nothing reads it yet; the Fortran that does arrives in the next
     # task.
     "fates_vascular": 0,
-    # --- corrections applied here: NVP's moss column carries a value we
-    #     do not want for these five -- the grass value it was seeded
-    #     from, except for fates_allom_fnrt_prof_mode, where NVP's own
-    #     value is the mode-4 no-roots profile ---
+    # --- corrections applied here: the NVP branch's moss column carries
+    #     a value we do not want for these five -- the grass value it was
+    #     seeded from, except for fates_allom_fnrt_prof_mode, where the
+    #     NVP branch's own value is the mode-4 no-roots profile ---
     # Reproductive allocation is two branches
     # (parteh/PRTAllometricCarbonMod.F90:1074-1078): below
     # dbh_repro_threshold, repro_fraction = seed_alloc; above it,
@@ -283,8 +281,8 @@ MOSS_PFT_OVERRIDES = {
     "fates_allom_fnrt_prof_mode": 5,
     # Moss's fine roots are a modelling fiction: this branch gives moss
     # a rooting profile only to open a soil-water uptake pathway,
-    # because (unlike NVP) it does not represent the moss mat as a
-    # distinct CTSM layer with its own water store. A structure that
+    # because (unlike the NVP branch) it does not represent the moss mat
+    # as a distinct CTSM layer with its own water store. A structure that
     # does not physically exist should carry no carbon, so the
     # fine-root-to-leaf allocation target is zero -- otherwise moss
     # pays fine-root maintenance respiration and prioritized
