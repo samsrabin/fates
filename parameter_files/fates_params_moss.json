@@ -259,7 +259,7 @@
       "dims": ["fates_pft"],
       "long_name": "Fine root profile function, parameter a",
       "units": "unitless",
-      "data": [7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0, 11.0, 11.0, 11.0, 30.0]
+      "data": [7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0, 11.0, 11.0, 11.0, 11.0]
     },
     "fates_allom_fnrt_prof_b": {
       "dtype": "float",
@@ -271,9 +271,9 @@
     "fates_allom_fnrt_prof_mode": {
       "dtype": "integer",
       "dims": ["fates_pft"],
-      "long_name": "Index to select fine root profile function  1) Jackson Beta, 2) 1-param exponential 3) 2-param exponential",
+      "long_name": "Index to select fine root profile function  1) Jackson Beta, 2) 1-param exponential 3) 2-param exponential 5) entire profile in top soil layer (4 is skipped deliberately: it is a no-roots profile on another branch)",
       "units": "index",
-      "data": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+      "data": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5]
     },
     "fates_allom_frbstor_repro": {
       "dtype": "float",
@@ -1092,7 +1092,7 @@
       "dims": ["fates_pft"],
       "long_name": "maximum mortality rate from hydraulic failure",
       "units": "1/yr",
-      "data": [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.8, 0.6, 0.6, 0.6, 0.6]
+      "data": [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.8, 0.6, 0.6, 0.6, 0.0]
     },
     "fates_mort_upthresh_cstarvation": {
       "dtype": "float",
