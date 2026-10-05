@@ -222,10 +222,9 @@ contains
     ! fire is off and in satellite-phenology (SP) mode, the proxy cannot be updated inside the
     ! fire path; it must instead be updated here, outside the ST3/SP gate and ahead of
     ! DailyFireModel, regardless of whether fire is active. This is deliberately the *only*
-    ! writer: a bc_in field's contents can depend on which host routine last wrote it --
-    ! h2o_liqvol_sl is the case in point, holding total soil water at this point in the daily
-    ! sequence but liquid-only water during the sub-daily canopy flux steps -- so a second,
-    ! sub-daily writer of this proxy would silently change what it means.
+    ! writer: h2o_liqvol_sl holds liquid water at both this daily fill and the sub-daily
+    ! canopy flux steps, so a second, sub-daily writer of this proxy would simply overwrite
+    ! today's value rather than disagree about what it means.
     if (hlm_use_moss == itrue) then
        currentPatch => currentSite%oldest_patch
        do while(associated(currentPatch))

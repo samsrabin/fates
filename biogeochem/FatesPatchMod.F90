@@ -893,16 +893,12 @@ module FatesPatchMod
       ! quantity for the patch, shared with any vascular cohorts in it and governed by the
       ! host's leaf-interception scheme rather than by moss thallus hydrology.
       !
-      ! Two properties of the inputs are worth knowing, because both constrain where this
-      ! may be called from:
+      ! Two properties of the inputs are worth knowing:
       !
-      ! (1) h2o_vol_top is TOTAL volumetric water, liquid plus ice, and deliberately so: a
-      !     frozen top soil layer means frozen moss, which damps fire. It comes from
-      !     bc_in%h2o_liqvol_sl(1), whose contents depend on the caller -- the daily
-      !     dynamics driver fills it from h2osoi_vol_col (total water), while wrap_btran
-      !     overwrites it with liquid-only water during the sub-daily canopy flux steps.
-      !     Call this from the daily dynamics sequence only, or the proxy silently changes
-      !     meaning.
+      ! (1) h2o_vol_top is liquid volumetric water, top soil layer, not total: it comes from
+      !     bc_in%h2o_liqvol_sl(1), which both the daily dynamics driver and wrap_btran fill
+      !     with liquid-only water. A frozen top soil layer therefore reads as dry, since
+      !     freezing removes water from the liquid phase that this proxy sees.
       !
       ! (2) fwet_veg is CTSM's canopy wetted fraction, which CTSM caps at its
       !     maximum_leaf_wetted_fraction parameter (0.05 on the standard parameter file).
@@ -916,7 +912,7 @@ module FatesPatchMod
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this         ! patch
       real(r8),                intent(in)    :: fwet_veg     ! canopy wetted fraction [0-1]
-      real(r8),                intent(in)    :: h2o_vol_top  ! total volumetric water, top soil layer [m3/m3]
+      real(r8),                intent(in)    :: h2o_vol_top  ! liquid volumetric water, top soil layer [m3/m3]
       real(r8),                intent(in)    :: watsat_top   ! porosity of top soil layer [m3/m3]
 
       ! LOCALS:
