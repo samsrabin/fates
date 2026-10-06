@@ -184,7 +184,7 @@ contains
     real(r8) :: mm_ko2                           ! Michaelis-Menten constant for O2 (Pa)
     real(r8) :: co2_cpoint                       ! CO2 compensation point (Pa)
     real(r8) :: btran_eff                        ! effective transpiration wetness factor (0 to 1)
-    real(r8) :: fwet_moss_arg                    ! moss wetness proxy passed into the photosynthesis
+    real(r8) :: fwet_moss_tot_arg                ! total-water moss wetness proxy passed into the photosynthesis
                                                  ! solve, or fwet_moss_vascular for a vascular PFT
     real(r8) :: moss_wetness_scaler_arg          ! moss capacity limitation passed to
                                                  ! LeafLayerBiophysicalRates; 1 for a vascular PFT
@@ -452,10 +452,10 @@ contains
                               write(fates_log(),*) 'pft: ',ft
                               call endrun(msg=errMsg(sourcefile, __LINE__))
                            end if
-                           fwet_moss_arg = currentPatch%fwet_moss
+                           fwet_moss_tot_arg = currentPatch%fwet_moss
                            moss_wetness_scaler_arg = currentPatch%moss_wetness_scaler
                         else
-                           fwet_moss_arg = fwet_moss_vascular
+                           fwet_moss_tot_arg = fwet_moss_vascular
                            moss_wetness_scaler_arg = 1.0_r8
                         end if
 
@@ -832,8 +832,8 @@ contains
                                        hydr_k_lwp = 1._r8
                                     end if
 
-                                    ! ONE call, with the moss decision carried in the sign of fwet_moss_arg: the patch
-                                    ! moss wetness proxy for a moss cohort, the negative value fwet_moss_vascular
+                                    ! ONE call, with the moss decision carried in the sign of fwet_moss_tot_arg: the patch
+                                    ! total-water moss wetness proxy for a moss cohort, the negative value fwet_moss_vascular
                                     ! for a vascular one. That sign is what makes LeafBiophysicsMod take the moss
                                     ! pathway -- no stomatal solve, and a ci residual in which CO2 crosses the leaf
                                     ! boundary layer only, damped by a water film. Both are harvested from the NVP
@@ -865,7 +865,7 @@ contains
                                          c13disc_ll,                         &  ! out
                                          co2_inter_c_utest,                  &  ! out (unit tests)
                                          solve_iter,                         &  ! out performance tracking
-                                         fwet_moss_arg)                         ! in (sign selects the moss CO2 pathway)
+                                         fwet_moss_tot_arg)                     ! in (total-water proxy; sign selects moss CO2 path)
 
                                     ! Average output quantities across sunlit and shaded leaves
                                     ! Convert from molar to velocity (umol /m**2/s) to (m/s)
