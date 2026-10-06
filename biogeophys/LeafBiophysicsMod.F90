@@ -116,18 +116,6 @@ module LeafBiophysicsMod
   integer,  parameter :: co2_film_exponent = 12          ! exponent on the dry (film-free) fraction
   real(r8), parameter :: co2_film_dryfrac_min = 0.1_r8   ! floor on the dry fraction, pre-exponent
 
-  ! Sentinel value of the fwet_moss_tot (total-water moss wetness proxy) argument threaded through LeafLayerPhotosynthesis,
-  ! CiFunc and CiBisection, marking a VASCULAR cohort: one that has stomata and must take
-  ! the ordinary stomatal-conductance path. A real moss wetness proxy is a fraction in
-  ! [0,1], so any negative value is unambiguous. Callers test fwet_moss_tot >= 0 to mean
-  ! "this is moss". Public so the one caller that decides moss-ness can name it rather
-  ! than write a bare negative literal.
-  !
-  ! One weakness of a sign test versus an optional argument: NaN >= 0 is false, so a NaN
-  ! proxy would read as vascular and run the wrong physics silently. The caller checks for
-  ! that explicitly before assigning; see the NaN tripwire in FatesPlantRespPhotosynthMod.
-  real(r8), public, parameter :: fwet_moss_vascular = -1.0_r8
-
   ! Alternatively, Gross Assimilation can be used to estimate
   ! leaf co2 partial pressure and therefore conductance. The default
   ! is to use anet
@@ -1003,20 +991,20 @@ contains
        ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
        can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
        gs0, gs1, gs2, &
-       anet,agross,gs,fval,fwet_moss_tot)
+       anet,agross,gs,fval,is_moss,fwet_moss_tot)
 
     ! -----------------------------------------------------------------------------------
-    ! *** THE PHYSICS HERE IS SELECTED BY THE SIGN OF fwet_moss_tot ***
-    ! fwet_moss_tot >= 0 means "this is a moss (non-vascular) cohort" and selects a
-    ! stomata-free CO2 pathway instead of the stomatal-conductance solve. The named constant
-    ! fwet_moss_vascular, which is negative, means "vascular" and takes the ordinary path.
+    ! *** THE PHYSICS HERE IS SELECTED BY THE LOGICAL is_moss ***
+    ! is_moss true means "this is a moss (non-vascular) cohort" and selects a
+    ! stomata-free CO2 pathway instead of the stomatal-conductance solve. When it is false
+    ! the cohort is vascular and takes the ordinary path. fwet_moss_tot is used only when
+    ! is_moss is true.
     !
     ! This module is kept free of any notion of which PFT is moss -- it has no access to
     ! prt_params -- and it should stay that way. Moss-ness is decided once, by the caller
-    ! in FatesPlantRespPhotosynthMod, and that decision arrives here encoded in the sign
-    ! of this one argument. Do not add a PFT-based moss test here, and do not pass a
-    ! non-negative fwet_moss_tot for a vascular PFT: either would silently change vascular
-    ! photosynthesis.
+    ! in FatesPlantRespPhotosynthMod, and that decision arrives here as is_moss. Do not
+    ! add a PFT-based moss test here, and do not pass is_moss true for a vascular PFT:
+    ! either would silently change vascular photosynthesis.
     ! -----------------------------------------------------------------------------------
     !
     ! DESCRIPTION:
@@ -1062,10 +1050,10 @@ contains
     real(r8), intent(out) :: agross         ! gross leaf photosynthesis (umol CO2/m**2/s)
     real(r8), intent(out) :: gs             ! stomatal conductance (umol h2o/m2/s)
     real(r8), intent(out) :: fval           ! ci_input - ci_updated  (Pa)
-    ! The moss wetness proxy for a moss (non-vascular) cohort, or fwet_moss_vascular
-    ! (negative) for a vascular one. Its SIGN selects the CO2 pathway below. See the
-    ! banner at the top of this routine.
-    real(r8), intent(in) :: fwet_moss_tot  ! total-water moss wetness proxy [0-1], or fwet_moss_vascular
+    logical, intent(in) :: is_moss  ! true for a moss (non-vascular) cohort
+    ! fwet_moss_tot is the total-water moss wetness proxy, used only when is_moss is true.
+    ! is_moss selects the CO2 pathway below. See the banner at the top of this routine.
+    real(r8), intent(in) :: fwet_moss_tot  ! total-water moss wetness proxy [0-1]
 
     
     real(r8) :: co2_film_factor   ! moss water-film scaling of boundary layer CO2 diffusion [0-1]
@@ -1180,7 +1168,7 @@ contains
     ! Determine saturation vapor pressure at the leaf surface, from temp and atm-pressure
     !call QSat(veg_tempk, can_press, veg_qs, veg_esat)
     
-    if ( fwet_moss_tot >= 0.0_r8 ) then
+    if ( is_moss ) then
        ! Moss has no stomata, so there is no stomatal solve. gs is reported as the
        ! existing minimum conductance (gs0), which LeafLayerBiophysicalRates floors at
        ! gsmin0 (the conductance reciprocal of rsmax0) even when the stomatal intercept
@@ -1201,7 +1189,7 @@ contains
     ! (h2o_co2_bl_diffuse_ratio/gb + h2o_co2_stoma_diffuse_ratio/gs_out)
     
     ! fval = ci_input - ci_predicted
-    if ( fwet_moss_tot >= 0.0_r8 ) then
+    if ( is_moss ) then
 
        ! Moss ci prediction: CO2 crosses the leaf boundary layer only (no stomatal
        ! resistance term), with the boundary layer conductance scaled down by a water
@@ -1234,7 +1222,7 @@ contains
   subroutine CiBisection(ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
        can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
        gs0,gs1,gs2,ci_tol, &
-       anet,agross,gs,ci,solve_iter,fwet_moss_tot)
+       anet,agross,gs,ci,solve_iter,is_moss,fwet_moss_tot)
 
     ! -----------------------------------------------------------------------------------
     !
@@ -1242,12 +1230,13 @@ contains
     ! intracellular CO2. This is an inefficient yet robust search method that we resort
     ! to if the recursive solver cannot find an answer within its convergence criteria.
     !
-    ! *** ONE BRANCH HERE IS SELECTED BY THE SIGN OF fwet_moss_tot ***
-    ! This routine forwards fwet_moss_tot unchanged to every CiFunc call, where
-    ! fwet_moss_tot >= 0 selects the moss (stomata-free) CO2 pathway. It also has one moss
+    ! *** ONE BRANCH HERE IS SELECTED BY THE LOGICAL is_moss ***
+    ! This routine forwards is_moss and fwet_moss_tot unchanged to every CiFunc call, where
+    ! is_moss true selects the moss (stomata-free) CO2 pathway. It also has one moss
     ! branch of its own, sizing the wide fallback bracket -- see it below. A vascular
-    ! cohort carries the negative value fwet_moss_vascular and so takes neither, which
-    ! is what keeps vascular bisection unchanged. See the banner on CiFunc.
+    ! cohort has is_moss false and so takes neither, which is what keeps vascular
+    ! bisection unchanged. fwet_moss_tot is used only when is_moss is true. See the banner
+    ! on CiFunc.
     ! -----------------------------------------------------------------------------------
     
     integer, intent(in)    :: ft             ! plant functional type index
@@ -1273,10 +1262,11 @@ contains
     real(r8), intent(out)  :: gs             ! stomatal conductance (umol h2o/m2/s)
     real(r8), intent(out)  :: ci             ! Input (trial) intracellular leaf CO2 (Pa)
     integer, intent(inout) :: solve_iter     ! number of bisections required
-    ! The moss wetness proxy for a moss (non-vascular) cohort, or fwet_moss_vascular
-    ! (negative) for a vascular one. Forwarded verbatim to CiFunc, whose sign test
-    ! selects the CO2 pathway. See the banner above.
-    real(r8), intent(in) :: fwet_moss_tot  ! total-water moss wetness proxy [0-1], or fwet_moss_vascular
+    logical, intent(in) :: is_moss  ! true for a moss (non-vascular) cohort
+    ! fwet_moss_tot is the total-water moss wetness proxy, used only when is_moss is true.
+    ! Both are forwarded verbatim to CiFunc, where is_moss selects the CO2 pathway. See the
+    ! banner above.
+    real(r8), intent(in) :: fwet_moss_tot  ! total-water moss wetness proxy [0-1]
 
     ! With bisection, we need to keep track of three different ci values at any given time
     ! The high, the low and the bisection.
@@ -1301,13 +1291,13 @@ contains
          ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
          can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
          gs0,gs1,gs2, &
-         anet,agross,gs,fval_h,fwet_moss_tot)
+         anet,agross,gs,fval_h,is_moss,fwet_moss_tot)
     
     call CiFunc(ci_l, &
          ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
          can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
          gs0,gs1,gs2, &
-         anet,agross,gs,fval_l,fwet_moss_tot)
+         anet,agross,gs,fval_l,is_moss,fwet_moss_tot)
 
     ! It is necessary that our starting points are on opposite sides of the root
     if( nint(fval_h/abs(fval_h)) .eq. nint(fval_l/abs(fval_l)) ) then
@@ -1319,7 +1309,7 @@ contains
             ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
             can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
             gs0,gs1,gs2, &
-            anet,agross,gs,fval_h,fwet_moss_tot)
+            anet,agross,gs,fval_h,is_moss,fwet_moss_tot)
 
        ! The 2000 Pa upper end is a vascular-scale number that predates any stomata-free
        ! PFT, and it does not always enclose the moss solution, so moss gets its own bound.
@@ -1347,7 +1337,7 @@ contains
        !
        ! Cost: starting from a wider upper end costs a few extra halvings. Even a
        ! deliberately adverse case finishes well inside max_iters.
-       if ( fwet_moss_tot >= 0.0_r8 ) then
+       if ( is_moss ) then
           ci_l = max(2000._r8, 1.25_r8*(can_co2_ppress + lmr*can_press* &
                h2o_co2_bl_diffuse_ratio/(gb*MossCO2FilmFactor(fwet_moss_tot))))
        else
@@ -1357,7 +1347,7 @@ contains
          ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
          can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk, veg_esat, &
          gs0,gs1,gs2, &
-         anet,agross,gs,fval_l,fwet_moss_tot)
+         anet,agross,gs,fval_l,is_moss,fwet_moss_tot)
        
        ! It is necessary that our starting points are on opposite sides of the root
        if( nint(fval_h/abs(fval_h)) .eq. nint(fval_l/abs(fval_l)) ) then
@@ -1386,7 +1376,7 @@ contains
             ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
             can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
             gs0,gs1,gs2, &
-            anet,agross,gs,fval_b,fwet_moss_tot)
+            anet,agross,gs,fval_b,is_moss,fwet_moss_tot)
 
        if(abs(fval_b)<ci_tol) then
           !loop_continue = .false.
@@ -1449,7 +1439,8 @@ contains
        c13disc,           &  ! out
        ci,                &  ! out
        solve_iter,        &  ! out
-       fwet_moss_tot)        ! in (total-water moss wetness proxy; sign selects the moss CO2 pathway)
+       is_moss,           &  ! in (true selects the moss CO2 pathway)
+       fwet_moss_tot)        ! in (total-water moss wetness proxy; used only when is_moss)
 
 
     ! ------------------------------------------------------------------------------------
@@ -1460,12 +1451,12 @@ contains
     ! (LSL), those variables are given a dimension tag "_lsl"
     ! Other arguments or variables may be indicative of scales broader than the LSL.
     !
-    ! *** THE PHYSICS HERE IS SELECTED BY THE SIGN OF fwet_moss_tot ***
-    ! This routine does not itself branch on fwet_moss_tot; it forwards it to CiFunc and
-    ! CiBisection, where fwet_moss_tot >= 0 selects the moss (stomata-free) CO2 pathway.
-    ! Only the caller in FatesPlantRespPhotosynthMod decides moss-ness; it passes the
-    ! patch's total-water moss wetness proxy for a non-vascular PFT and the negative value
-    ! fwet_moss_vascular otherwise. See the banner on CiFunc.
+    ! *** THE PHYSICS HERE IS SELECTED BY THE LOGICAL is_moss ***
+    ! This routine does not itself branch on is_moss; it forwards it and fwet_moss_tot to
+    ! CiFunc and CiBisection, where is_moss true selects the moss (stomata-free) CO2
+    ! pathway. Only the caller in FatesPlantRespPhotosynthMod decides moss-ness; it passes
+    ! is_moss true for a non-vascular PFT, with the patch's total-water moss wetness proxy
+    ! in fwet_moss_tot, which is used only then. See the banner on CiFunc.
     ! ------------------------------------------------------------------------------------
 
     ! Arguments
@@ -1497,10 +1488,11 @@ contains
     real(r8), intent(out) :: c13disc          ! carbon 13 in newly assimilated carbon
     real(r8), intent(out) :: ci               ! intracellular leaf CO2 (Pa)
     integer,  intent(out) :: solve_iter       ! Number of iterations required for the solve
-    ! The moss wetness proxy for a moss (non-vascular) cohort, or fwet_moss_vascular
-    ! (negative) for a vascular one. Forwarded to CiFunc/CiBisection, whose sign test
-    ! selects the CO2 pathway. See the banner above.
-    real(r8), intent(in) :: fwet_moss_tot  ! total-water moss wetness proxy [0-1], or fwet_moss_vascular
+    logical,  intent(in) :: is_moss           ! true for a moss (non-vascular) cohort
+    ! fwet_moss_tot is the total-water moss wetness proxy, used only when is_moss is true.
+    ! Both are forwarded to CiFunc/CiBisection, where is_moss selects the CO2 pathway. See
+    ! the banner above.
+    real(r8), intent(in) :: fwet_moss_tot  ! total-water moss wetness proxy [0-1]
     
     ! Important Note on the gas pressures as input arguments.  This photosynthesis scheme will iteratively
     ! solve for the co2 partial pressure at the leaf surface (ie in the stomata). The reference
@@ -1573,7 +1565,7 @@ contains
                ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
                can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
                gs0,gs1,gs2, &
-               anet,agross,gs,fval,fwet_moss_tot)
+               anet,agross,gs,fval,is_moss,fwet_moss_tot)
           
           ! fval = ci_input - ci_predicted
           ! ci_predicted = ci_input - fval
@@ -1596,7 +1588,7 @@ contains
                ft,vcmax,jmax,kp,co2_cpoint,mm_kco2,mm_ko2, &
                can_co2_ppress,can_o2_ppress,can_press,can_vpress,lmr,par_abs,gb,veg_tempk,veg_esat, &
                gs0,gs1,gs2,ci_tol, &
-               anet,agross,gs,ci,solve_iter,fwet_moss_tot)
+               anet,agross,gs,ci,solve_iter,is_moss,fwet_moss_tot)
           loop_continue = .false.
           exit iter_loop
        end if

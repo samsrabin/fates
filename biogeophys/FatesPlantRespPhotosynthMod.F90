@@ -71,7 +71,6 @@ module FATESPlantRespPhotosynthMod
   use LeafBiophysicsMod, only : LeafLayerMaintenanceRespiration_Ryan_1991
   use LeafBiophysicsMod, only : LeafLayerMaintenanceRespiration_Atkin_etal_2017
   use LeafBiophysicsMod, only : LeafLayerBiophysicalRates
-  use LeafBiophysicsMod, only : fwet_moss_vascular
   use LeafBiophysicsMod, only : LowstorageMainRespReduction
   use LeafBiophysicsMod, only : rsmax0
   use LeafBiophysicsMod, only : DecayCoeffVcmax
@@ -185,7 +184,7 @@ contains
     real(r8) :: co2_cpoint                       ! CO2 compensation point (Pa)
     real(r8) :: btran_eff                        ! effective transpiration wetness factor (0 to 1)
     real(r8) :: fwet_moss_tot_arg                ! total-water moss wetness proxy passed into the photosynthesis
-                                                 ! solve, or fwet_moss_vascular for a vascular PFT
+                                                 ! solve; ignored (0) for a vascular PFT
     real(r8) :: moss_wetness_scaler_arg          ! moss capacity limitation passed to
                                                  ! LeafLayerBiophysicalRates; 1 for a vascular PFT
     logical  :: is_moss                          ! is this cohort's PFT non-vascular (moss)?
@@ -432,19 +431,16 @@ contains
                         cl = currentCohort%canopy_layer
                         
                         ! Moss-ness is decided once, here, and that decision travels
-                        ! downstream encoded in the SIGN of fwet_moss: non-negative for
-                        ! moss, the negative value fwet_moss_vascular otherwise.
-                        ! LeafBiophysicsMod has no access to prt_params and therefore no
+                        ! downstream as the logical is_moss, which selects the moss CO2
+                        ! path in LeafBiophysicsMod. LeafBiophysicsMod has no access to
+                        ! prt_params and therefore no
                         ! notion of which PFT is moss; keep it that way.
                         is_moss = (prt_params%vascular(ft) == ifalse)
                         if (is_moss) then
-                           ! NaN tripwire, restoring one the sign encoding would otherwise
-                           ! remove. fwet_moss is NaN-initialised in FatesPatchMod's
-                           ! NanValues, and every comparison against NaN is false, so a NaN
-                           ! proxy would test as fwet_moss < 0 and quietly select the
-                           ! VASCULAR path -- running stomatal physics on moss whose zeroed
-                           ! stomatal parameters collapse gs to gsmin0, with no signal at
-                           ! all.
+                           ! NaN tripwire: catches a proxy that was never set. fwet_moss
+                           ! is NaN-initialised in FatesPatchMod's NanValues, so a patch
+                           ! that no UpdateMossFwet call, ZeroValues or restart read has
+                           ! reached would otherwise feed NaN into the moss CO2 solve.
                            if (currentPatch%fwet_moss /= currentPatch%fwet_moss) then
                               write(fates_log(),*) 'currentPatch%fwet_moss is NaN for a moss cohort.'
                               write(fates_log(),*) 'It should have been set by UpdateMossFwet,'
@@ -455,7 +451,7 @@ contains
                            fwet_moss_tot_arg = currentPatch%fwet_moss
                            moss_wetness_scaler_arg = currentPatch%moss_wetness_scaler
                         else
-                           fwet_moss_tot_arg = fwet_moss_vascular
+                           fwet_moss_tot_arg = 0._r8  ! ignored: is_moss is false
                            moss_wetness_scaler_arg = 1.0_r8
                         end if
 
@@ -832,12 +828,13 @@ contains
                                        hydr_k_lwp = 1._r8
                                     end if
 
-                                    ! ONE call, with the moss decision carried in the sign of fwet_moss_tot_arg: the patch
-                                    ! total-water moss wetness proxy for a moss cohort, the negative value fwet_moss_vascular
-                                    ! for a vascular one. That sign is what makes LeafBiophysicsMod take the moss
-                                    ! pathway -- no stomatal solve, and a ci residual in which CO2 crosses the leaf
-                                    ! boundary layer only, damped by a water film. Both are harvested from the NVP
-                                    ! branch; see MossCO2FilmFactor and CiFunc for what was taken and what diverges.
+                                    ! ONE call, with the moss decision carried by the logical is_moss. For a moss
+                                    ! cohort, is_moss makes LeafBiophysicsMod take the moss pathway -- no stomatal
+                                    ! solve, and a ci residual in which CO2 crosses the leaf boundary layer only,
+                                    ! damped by a water film set by fwet_moss_tot_arg, the patch total-water moss
+                                    ! wetness proxy. For a vascular cohort fwet_moss_tot_arg is an ignored 0. Both
+                                    ! are harvested from the NVP branch; see MossCO2FilmFactor and CiFunc for what
+                                    ! was taken and what diverges.
                                     call LeafLayerPhotosynthesis(            & !
                                          par_abs,                            &  ! in
                                          ft,                                 &  ! in
@@ -865,7 +862,8 @@ contains
                                          c13disc_ll,                         &  ! out
                                          co2_inter_c_utest,                  &  ! out (unit tests)
                                          solve_iter,                         &  ! out performance tracking
-                                         fwet_moss_tot_arg)                     ! in (total-water proxy; sign selects moss CO2 path)
+                                         is_moss,                            &  ! in (true selects the moss CO2 path)
+                                         fwet_moss_tot_arg)                     ! in (total-water proxy; used only if is_moss)
 
                                     ! Average output quantities across sunlit and shaded leaves
                                     ! Convert from molar to velocity (umol /m**2/s) to (m/s)
