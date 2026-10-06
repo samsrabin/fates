@@ -3318,11 +3318,13 @@ contains
 
     rp%livegrass               = (dp%livegrass*dp%area + rp%livegrass*rp%area) * inv_sum_area
     rp%livemoss                = (dp%livemoss*dp%area + rp%livemoss*rp%area) * inv_sum_area
-    rp%fwet_moss               = (dp%fwet_moss*dp%area + rp%fwet_moss*rp%area) * inv_sum_area
-    rp%fwet_moss_soil          = (dp%fwet_moss_soil*dp%area + rp%fwet_moss_soil*rp%area) * inv_sum_area
+    rp%fwet_moss_liq           = (dp%fwet_moss_liq*dp%area + rp%fwet_moss_liq*rp%area) * inv_sum_area
+    rp%fwet_moss_tot           = (dp%fwet_moss_tot*dp%area + rp%fwet_moss_tot*rp%area) * inv_sum_area
+    rp%fwet_moss_soil_liq      = (dp%fwet_moss_soil_liq*dp%area + rp%fwet_moss_soil_liq*rp%area) * inv_sum_area
+    rp%fwet_moss_soil_tot      = (dp%fwet_moss_soil_tot*dp%area + rp%fwet_moss_soil_tot*rp%area) * inv_sum_area
     rp%fwet_moss_canopy        = (dp%fwet_moss_canopy*dp%area + rp%fwet_moss_canopy*rp%area) * inv_sum_area
     ! The scaler could be fused either of two ways: area-weight the two patches' existing
-    ! scalers, or recompute min(1, fwet/threshold) from the fwet_moss just fused above.
+    ! scalers, or recompute min(1, fwet/threshold) from the fwet_moss_liq just fused above.
     ! Because min() is nonlinear those disagree whenever the two patches straddle the
     ! threshold, and the second is what the restart read does -- so we recompute, and the
     ! two paths cannot drift apart.

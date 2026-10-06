@@ -222,15 +222,18 @@ contains
     ! fire is off and in satellite-phenology (SP) mode, the proxy cannot be updated inside the
     ! fire path; it must instead be updated here, outside the ST3/SP gate and ahead of
     ! DailyFireModel, regardless of whether fire is active. This is deliberately the *only*
-    ! writer: h2o_liqvol_sl holds liquid water at both this daily fill and the sub-daily
-    ! canopy flux steps, so a second, sub-daily writer of this proxy would simply overwrite
-    ! today's value rather than disagree about what it means.
+    ! writer: each proxy reads a field whose water phase is the same at this daily fill and
+    ! at the sub-daily canopy flux steps (h2o_liqvol_sl is liquid, h2o_totvol_sl is liquid
+    ! plus ice), so a second, sub-daily writer of a proxy would simply overwrite today's
+    ! value rather than disagree about what it means.
     if (hlm_use_moss == itrue) then
        currentPatch => currentSite%oldest_patch
        do while(associated(currentPatch))
           if (currentPatch%nocomp_pft_label /= nocomp_bareground) then
-             call currentPatch%UpdateMossFwet(bc_in%fwet_veg_pa(currentPatch%patchno), &
+             call currentPatch%UpdateMossFwetLiq(bc_in%fwet_veg_pa(currentPatch%patchno), &
                   bc_in%h2o_liqvol_sl(1), bc_in%watsat_sl(1))
+             call currentPatch%UpdateMossFwetTot(bc_in%fwet_veg_pa(currentPatch%patchno), &
+                  bc_in%h2o_totvol_sl(1), bc_in%watsat_sl(1))
           end if
           currentPatch => currentPatch%younger
        end do

@@ -483,8 +483,10 @@ module FatesHistoryInterfaceMod
   integer :: ih_sum_fuel_si
   integer :: ih_livemoss_fuel_si
   integer :: ih_moss_fines_si
-  integer :: ih_moss_fwet_si
-  integer :: ih_moss_fwet_soil_si
+  integer :: ih_moss_fwet_liq_si
+  integer :: ih_moss_fwet_tot_si
+  integer :: ih_moss_fwet_soil_liq_si
+  integer :: ih_moss_fwet_soil_tot_si
   integer :: ih_moss_fwet_canopy_si
   integer :: ih_moss_wetness_scaler_si
   integer :: ih_moss_height_si
@@ -2786,10 +2788,14 @@ contains
                ! Area-weighted like every other patch-level diagnostic in this loop, so
                ! bareground patch area -- where the proxy is not diagnosed and stays 0 --
                ! dilutes the site mean.
-               this%hvars(ih_moss_fwet_si)%r81d(io_si) = this%hvars(ih_moss_fwet_si)%r81d(io_si) + &
-                    cpatch%fwet_moss * cpatch%area * AREA_INV
-               this%hvars(ih_moss_fwet_soil_si)%r81d(io_si) = this%hvars(ih_moss_fwet_soil_si)%r81d(io_si) + &
-                    cpatch%fwet_moss_soil * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_liq_si)%r81d(io_si) = this%hvars(ih_moss_fwet_liq_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_liq * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_tot_si)%r81d(io_si) = this%hvars(ih_moss_fwet_tot_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_tot * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_soil_liq_si)%r81d(io_si) = this%hvars(ih_moss_fwet_soil_liq_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_soil_liq * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_soil_tot_si)%r81d(io_si) = this%hvars(ih_moss_fwet_soil_tot_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_soil_tot * cpatch%area * AREA_INV
                this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) + &
                     cpatch%fwet_moss_canopy * cpatch%area * AREA_INV
                this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) = this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) + &
@@ -6958,22 +6964,38 @@ contains
             index = ih_moss_fines_si)
 
        ! TODO: Before merge, change these to default 'inactive'
-       call this%set_history_var(vname='FATES_MOSS_FWET', units='1',       &
-            long='moss wetness proxy, the wetter of top soil layer saturation and canopy wetted fraction', &
+       call this%set_history_var(vname='FATES_MOSS_FWET_LIQ', units='1',       &
+            long='moss wetness proxy from liquid water: the wetter of top soil layer liquid saturation and '// &
+                 'canopy wetted fraction; drives moss photosynthetic capacity and respiration', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
-            index = ih_moss_fwet_si)
+            index = ih_moss_fwet_liq_si)
 
        ! TODO: Before merge, change these to default 'inactive'
-       call this%set_history_var(vname='FATES_MOSS_FWET_SOIL', units='1',       &
-            long='top soil layer saturation ingredient of the moss wetness proxy', &
+       call this%set_history_var(vname='FATES_MOSS_FWET_TOT', units='1',       &
+            long='moss wetness proxy from total (liquid plus ice) water: the wetter of top soil layer total '// &
+                 'saturation and canopy wetted fraction; drives the moss CO2 water film and fuel moisture', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
-            index = ih_moss_fwet_soil_si)
+            index = ih_moss_fwet_tot_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FWET_SOIL_LIQ', units='1',       &
+            long='top soil layer liquid-water saturation ingredient of the liquid moss wetness proxy', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fwet_soil_liq_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FWET_SOIL_TOT', units='1',       &
+            long='top soil layer total-water (liquid plus ice) saturation ingredient of the total moss wetness proxy', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fwet_soil_tot_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY', units='1',       &
-            long='canopy wetted fraction ingredient of the moss wetness proxy', &
+            long='canopy wetted fraction ingredient of both moss wetness proxies', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_si)
@@ -6986,14 +7008,16 @@ contains
             index = ih_moss_height_si)
 
        ! TODO: Before merge, change these to default 'inactive'
-       ! The long name names all three consumers of the wetness proxy on purpose. The same
-       ! fwet_moss drives moss photosynthesis, moss respiration and moss fuel moisture, and
-       ! nothing else in the history file would tell a reader that THIS scaler governs the
-       ! first two but not the third -- fuel moisture applies its own intercept/slope map.
+       ! The long name says which consumers the scaler governs and which it does not, on
+       ! purpose. The scaler follows the liquid proxy fwet_moss_liq and governs moss
+       ! photosynthetic capacity and respiration, but not the moss CO2 water film or moss
+       ! fuel moisture, and nothing else in the history file would tell a reader that. (The
+       ! film and fuel moisture move to the total proxy in a later change; until then they
+       ! still read the liquid one.)
        call this%set_history_var(vname='FATES_MOSS_WETNESS_SCALER', units='1',       &
-            long='moss wetness scaler applied to photosynthetic capacity, and to leaf '// &
-                 'maintenance respiration unless hlm_moss_scale_resp_by_fwet is false; '// &
-                 'not applied to moss fuel moisture, which uses its own map', &
+            long='moss wetness scaler from the liquid-water proxy, applied to photosynthetic capacity and, '// &
+                 'unless hlm_moss_scale_resp_by_fwet is false, leaf maintenance respiration; '// &
+                 'not to CO2 film or fuel moisture', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_wetness_scaler_si)

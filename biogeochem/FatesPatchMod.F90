@@ -224,15 +224,19 @@ module FatesPatchMod
     real(r8)              :: livegrass               ! total aboveground grass biomass in patch [kgC/m2]
     real(r8)              :: livemoss                ! total aboveground moss biomass in patch [kgC/m2]
 
-    ! moss wetness proxy and its two ingredients (all 0-1); see UpdateMossFwet
-    real(r8)              :: fwet_moss               ! moss wetness proxy [0-1]
-    real(r8)              :: fwet_moss_soil          ! top soil layer saturation ingredient [0-1]
+    ! moss wetness proxies and their ingredients (all 0-1); see UpdateMossFwetLiq and
+    ! UpdateMossFwetTot. The liquid proxy is built from liquid soil water, the total proxy
+    ! from liquid plus ice; both share the canopy ingredient.
+    real(r8)              :: fwet_moss_liq           ! moss wetness proxy from liquid soil water [0-1]
+    real(r8)              :: fwet_moss_tot           ! moss wetness proxy from total soil water [0-1]
+    real(r8)              :: fwet_moss_soil_liq      ! top soil layer liquid saturation ingredient [0-1]
+    real(r8)              :: fwet_moss_soil_tot      ! top soil layer total saturation ingredient [0-1]
     real(r8)              :: fwet_moss_canopy        ! canopy wetted fraction ingredient [0-1]
 
     ! Moss wetness scaler applied to photosynthetic capacity and (optionally) to leaf
-    ! maintenance respiration. A pure function of fwet_moss, so it needs no restart
-    ! field of its own -- fwet_moss is restarted and this is recomputed from it.
-    real(r8)              :: moss_wetness_scaler     ! min(1, fwet_moss/thresh) [0-1]
+    ! maintenance respiration. A pure function of fwet_moss_liq, so it needs no restart
+    ! field of its own -- fwet_moss_liq is restarted and this is recomputed from it.
+    real(r8)              :: moss_wetness_scaler     ! min(1, fwet_moss_liq/thresh) [0-1]
 
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
@@ -278,7 +282,8 @@ module FatesPatchMod
       procedure :: SortCohorts
       procedure :: UpdateTreeGrassArea
       procedure :: UpdateLiveNonwoody
-      procedure :: UpdateMossFwet
+      procedure :: UpdateMossFwetLiq
+      procedure :: UpdateMossFwetTot
       procedure :: UpdateMossWetnessScaler
       procedure :: FreeMemory
       procedure :: Dump
@@ -536,8 +541,10 @@ module FatesPatchMod
       ! FUELS AND FIRE
       this%livegrass                    = nan 
       this%livemoss                     = nan
-      this%fwet_moss                    = nan
-      this%fwet_moss_soil               = nan
+      this%fwet_moss_liq                = nan
+      this%fwet_moss_tot                = nan
+      this%fwet_moss_soil_liq           = nan
+      this%fwet_moss_soil_tot           = nan
       this%fwet_moss_canopy             = nan
       this%moss_wetness_scaler          = nan
       this%ros_front                    = nan
@@ -632,8 +639,10 @@ module FatesPatchMod
       ! FIRE
       this%livegrass                         = 0.0_r8
       this%livemoss                          = 0.0_r8
-      this%fwet_moss                         = 0.0_r8
-      this%fwet_moss_soil                    = 0.0_r8
+      this%fwet_moss_liq                     = 0.0_r8
+      this%fwet_moss_tot                     = 0.0_r8
+      this%fwet_moss_soil_liq                = 0.0_r8
+      this%fwet_moss_soil_tot                = 0.0_r8
       this%fwet_moss_canopy                  = 0.0_r8
       this%moss_wetness_scaler               = 0.0_r8
       this%ros_front                         = 0.0_r8
@@ -878,14 +887,14 @@ module FatesPatchMod
 
     !===========================================================================
 
-    subroutine UpdateMossFwet(this, fwet_veg, h2o_vol_top, watsat_top)
+    subroutine UpdateMossFwetLiq(this, fwet_veg, h2o_liqvol_top, watsat_top)
       !
       ! DESCRIPTION:
-      ! Diagnoses the moss wetness proxy on a patch: the wetter of the top soil layer's
-      ! saturation and the canopy wetted fraction. Moss carries no thallus water state of its
-      ! own in this design, so this proxy stands in for thallus wetness; it is consumed by
-      ! moss fuel moisture and by moss photosynthesis, and it is diagnostic only -- neither
-      ! this routine nor the quantity it produces holds or moves water.
+      ! Diagnoses the liquid-water moss wetness proxy on a patch: the wetter of the top soil
+      ! layer's liquid saturation and the canopy wetted fraction. Moss carries no thallus
+      ! water state of its own in this design, so this proxy stands in for thallus wetness;
+      ! it is diagnostic only -- neither this routine nor the quantity it produces holds or
+      ! moves water.
       !
       ! That is a statement about moss, not about the model. The host does prognose
       ! intercepted canopy water (liquid plus snow), and fwet_veg below is derived from it.
@@ -893,12 +902,19 @@ module FatesPatchMod
       ! quantity for the patch, shared with any vascular cohorts in it and governed by the
       ! host's leaf-interception scheme rather than by moss thallus hydrology.
       !
+      ! This routine sets fwet_moss_soil_liq, fwet_moss_canopy and fwet_moss_liq, then
+      ! refreshes moss_wetness_scaler. The liquid proxy drives moss photosynthetic capacity
+      ! (through the scaler), moss leaf maintenance respiration (through the scaler, unless
+      ! hlm_moss_scale_resp_by_fwet is false), the moss CO2 water film and moss fuel
+      ! moisture. A later change moves the film and fuel moisture to the total proxy.
+      ! See UpdateMossFwetTot.
+      !
       ! Two properties of the inputs are worth knowing:
       !
-      ! (1) h2o_vol_top is liquid volumetric water, top soil layer, not total: it comes from
-      !     bc_in%h2o_liqvol_sl(1), which both the daily dynamics driver and wrap_btran fill
-      !     with liquid-only water. A frozen top soil layer therefore reads as dry, since
-      !     freezing removes water from the liquid phase that this proxy sees.
+      ! (1) h2o_liqvol_top is liquid volumetric water, top soil layer, not total: it comes
+      !     from bc_in%h2o_liqvol_sl(1), which both the daily dynamics driver and wrap_btran
+      !     fill with liquid-only water. A frozen top soil layer therefore reads as dry,
+      !     since freezing removes water from the liquid phase that this proxy sees.
       !
       ! (2) fwet_veg is CTSM's canopy wetted fraction, which CTSM caps at its
       !     maximum_leaf_wetted_fraction parameter (0.05 on the standard parameter file).
@@ -912,10 +928,63 @@ module FatesPatchMod
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this         ! patch
       real(r8),                intent(in)    :: fwet_veg     ! canopy wetted fraction [0-1]
-      real(r8),                intent(in)    :: h2o_vol_top  ! liquid volumetric water, top soil layer [m3/m3]
+      real(r8),                intent(in)    :: h2o_liqvol_top  ! liquid volumetric water, top soil layer [m3/m3]
       real(r8),                intent(in)    :: watsat_top   ! porosity of top soil layer [m3/m3]
 
-      ! LOCALS:
+      this%fwet_moss_soil_liq = MossSoilSaturation(h2o_liqvol_top, watsat_top)
+      this%fwet_moss_canopy   = fwet_veg
+      this%fwet_moss_liq      = max(this%fwet_moss_soil_liq, fwet_veg)
+
+      ! The scaler is a pure function of the proxy just set, so it is refreshed here,
+      ! immediately, and inherits the proxy's daily frequency -- which is exactly the
+      ! frequency at which it is meaningful.
+      call this%UpdateMossWetnessScaler()
+
+    end subroutine UpdateMossFwetLiq
+
+    !===========================================================================
+
+    subroutine UpdateMossFwetTot(this, fwet_veg, h2o_totvol_top, watsat_top)
+      !
+      ! DESCRIPTION:
+      ! Diagnoses the total-water moss wetness proxy on a patch: the wetter of the top soil
+      ! layer's total (liquid plus ice) saturation and the canopy wetted fraction. It is
+      ! the counterpart of UpdateMossFwetLiq, which describes what the proxy stands for and
+      ! the caveats on fwet_veg; those apply here unchanged.
+      !
+      ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy and fwet_moss_tot, and
+      ! touches nothing else. In particular it leaves moss_wetness_scaler alone, because
+      ! the scaler follows the liquid proxy. The total proxy is meant to drive the moss CO2
+      ! water film and moss fuel moisture, so that a frozen top soil layer does not read as
+      ! dry. h2o_totvol_top comes from bc_in%h2o_totvol_sl(1), which both the daily
+      ! dynamics driver and wrap_btran fill with liquid plus ice.
+
+      ! ARGUMENTS:
+      class(fates_patch_type), intent(inout) :: this            ! patch
+      real(r8),                intent(in)    :: fwet_veg        ! canopy wetted fraction [0-1]
+      real(r8),                intent(in)    :: h2o_totvol_top  ! total volumetric water, top soil layer [m3/m3]
+      real(r8),                intent(in)    :: watsat_top      ! porosity of top soil layer [m3/m3]
+
+      this%fwet_moss_soil_tot = MossSoilSaturation(h2o_totvol_top, watsat_top)
+      this%fwet_moss_canopy   = fwet_veg
+      this%fwet_moss_tot      = max(this%fwet_moss_soil_tot, fwet_veg)
+
+    end subroutine UpdateMossFwetTot
+
+    !===========================================================================
+
+    pure function MossSoilSaturation(h2o_vol_top, watsat_top) result(soil_saturation)
+      !
+      ! DESCRIPTION:
+      ! Saturation of the top soil layer, clamped to [0, 1], for either water phase. Zero
+      ! where the porosity is not positive (the host's -999 sentinel, for instance), which
+      ! guards the division.
+
+      ! ARGUMENTS:
+      real(r8), intent(in) :: h2o_vol_top  ! volumetric water of one phase, top soil layer [m3/m3]
+      real(r8), intent(in) :: watsat_top   ! porosity of top soil layer [m3/m3]
+
+      ! RESULT:
       real(r8) :: soil_saturation ! top soil layer saturation [0-1]
 
       if (watsat_top > nearzero) then
@@ -924,42 +993,33 @@ module FatesPatchMod
         soil_saturation = 0.0_r8
       end if
 
-      this%fwet_moss_soil   = soil_saturation
-      this%fwet_moss_canopy = fwet_veg
-      this%fwet_moss        = max(soil_saturation, fwet_veg)
-
-      ! The scaler is a pure function of the proxy just set, so it is refreshed here,
-      ! immediately, and inherits the proxy's daily frequency -- which is exactly the
-      ! frequency at which it is meaningful.
-      call this%UpdateMossWetnessScaler()
-
-    end subroutine UpdateMossFwet
+    end function MossSoilSaturation
 
     !===========================================================================
 
     subroutine UpdateMossWetnessScaler(this)
       !
       ! DESCRIPTION:
-      ! Diagnoses the moss wetness scaler from the moss wetness proxy: the factor by which
-      ! moss photosynthetic capacity -- and, unless hlm_moss_scale_resp_by_fwet is off,
-      ! moss leaf maintenance respiration -- is reduced when the moss is drier than the
-      ! threshold at which it performs fully.
+      ! Diagnoses the moss wetness scaler from the liquid-water moss wetness proxy: the
+      ! factor by which moss photosynthetic capacity -- and, unless
+      ! hlm_moss_scale_resp_by_fwet is off, moss leaf maintenance respiration -- is reduced
+      ! when the moss is drier than the threshold at which it performs fully.
       !
       ! This is the ONE definition of that factor. It is called from three places, and
       ! each matters:
       !
-      !   (1) UpdateMossFwet above, every time the proxy is refreshed, which is once per
-      !       day in the dynamics sequence.
+      !   (1) UpdateMossFwetLiq above, every time the liquid proxy is refreshed, which is
+      !       once per day in the dynamics sequence.
       !   (2) the restart read (main/FatesRestartInterfaceMod.F90), immediately after
-      !       fwet_moss is restored.
+      !       fwet_moss_liq is restored.
       !   (3) patch fusion (biogeochem/EDPatchDynamicsMod.F90), immediately after
-      !       fwet_moss is fused.
+      !       fwet_moss_liq is fused.
       !
       ! (2) is why this quantity needs no restart field of its own: it is recomputed from
-      ! fwet_moss, which IS restarted. Without (2) a restarted run would photosynthesize
+      ! fwet_moss_liq, which IS restarted. Without (2) a restarted run would photosynthesize
       ! with a zeroed scaler until the first daily update and would not match a
       ! straight-through run. (3) exists so fusion cannot leave the scaler inconsistent
-      ! with the fwet_moss it was supposedly derived from -- see that site for why
+      ! with the fwet_moss_liq it was supposedly derived from -- see that site for why
       ! recomputing and area-weighting are not the same thing.
 
       ! ARGUMENTS:
@@ -968,7 +1028,7 @@ module FatesPatchMod
       ! hlm_moss_vcmax_fwet_thresh is validated by the host as strictly positive and no
       ! greater than 1, so this division is safe and the min() is the only thing that can
       ! bind. FATES itself only checks that it was set at all (check_allset).
-      this%moss_wetness_scaler = min(1.0_r8, this%fwet_moss/hlm_moss_vcmax_fwet_thresh)
+      this%moss_wetness_scaler = min(1.0_r8, this%fwet_moss_liq/hlm_moss_vcmax_fwet_thresh)
 
     end subroutine UpdateMossWetnessScaler
 

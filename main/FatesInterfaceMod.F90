@@ -299,6 +299,7 @@ contains
     fates%bc_in(s)%watsat_sl(:)        = 0.0_r8
     fates%bc_in(s)%tempk_sl(:)         = 0.0_r8
     fates%bc_in(s)%h2o_liqvol_sl(:)    = 0.0_r8
+    fates%bc_in(s)%h2o_totvol_sl(:)    = 0.0_r8
     fates%bc_in(s)%fcansno_pa(:)       = 0.0_r8
     fates%bc_in(s)%fwet_veg_pa(:)      = 0.0_r8
     fates%bc_in(s)%albgr_dir_rb(:)     = 0.0_r8
@@ -534,6 +535,7 @@ contains
       allocate(bc_in%watsat_sl(nlevsoil_in))
       allocate(bc_in%tempk_sl(nlevsoil_in))
       allocate(bc_in%h2o_liqvol_sl(nlevsoil_in))
+      allocate(bc_in%h2o_totvol_sl(nlevsoil_in))
       
       !BGC
       if(do_fates_salinity) then

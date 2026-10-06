@@ -437,18 +437,27 @@ contains
                         ! notion of which PFT is moss; keep it that way.
                         is_moss = (prt_params%vascular(ft) == ifalse)
                         if (is_moss) then
-                           ! NaN tripwire: catches a proxy that was never set. fwet_moss
-                           ! is NaN-initialised in FatesPatchMod's NanValues, so a patch
-                           ! that no UpdateMossFwet call, ZeroValues or restart read has
-                           ! reached would otherwise feed NaN into the moss CO2 solve.
-                           if (currentPatch%fwet_moss /= currentPatch%fwet_moss) then
-                              write(fates_log(),*) 'currentPatch%fwet_moss is NaN for a moss cohort.'
-                              write(fates_log(),*) 'It should have been set by UpdateMossFwet,'
+                           ! NaN tripwire: catches a proxy that was never set. Both proxies
+                           ! are NaN-initialised in FatesPatchMod's NanValues, so a patch
+                           ! that no UpdateMossFwetLiq or UpdateMossFwetTot call, ZeroValues
+                           ! or restart read has reached would otherwise feed NaN into the
+                           ! moss CO2 solve or the capacity scaler.
+                           if (currentPatch%fwet_moss_tot /= currentPatch%fwet_moss_tot) then
+                              write(fates_log(),*) 'currentPatch%fwet_moss_tot is NaN for a moss cohort.'
+                              write(fates_log(),*) 'It should have been set by UpdateMossFwetTot,'
                               write(fates_log(),*) 'or zeroed by ZeroValues or the restart read.'
                               write(fates_log(),*) 'pft: ',ft
                               call endrun(msg=errMsg(sourcefile, __LINE__))
                            end if
-                           fwet_moss_tot_arg = currentPatch%fwet_moss
+                           if (currentPatch%fwet_moss_liq /= currentPatch%fwet_moss_liq) then
+                              write(fates_log(),*) 'currentPatch%fwet_moss_liq is NaN for a moss cohort.'
+                              write(fates_log(),*) 'It should have been set by UpdateMossFwetLiq,'
+                              write(fates_log(),*) 'or zeroed by ZeroValues or the restart read.'
+                              write(fates_log(),*) 'pft: ',ft
+                              call endrun(msg=errMsg(sourcefile, __LINE__))
+                           end if
+                           ! Still the liquid proxy; a later change switches this to the total proxy.
+                           fwet_moss_tot_arg = currentPatch%fwet_moss_liq
                            moss_wetness_scaler_arg = currentPatch%moss_wetness_scaler
                         else
                            fwet_moss_tot_arg = 0._r8  ! ignored: is_moss is false
