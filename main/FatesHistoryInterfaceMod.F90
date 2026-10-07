@@ -488,6 +488,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_moss_fwet_soil_liq_si
   integer :: ih_moss_fwet_soil_tot_si
   integer :: ih_moss_fwet_canopy_tot_si
+  integer :: ih_moss_fwet_canopy_liq_si
   integer :: ih_moss_wetness_scaler_si
   integer :: ih_moss_height_si
   integer :: ih_rx_burn_window_si
@@ -2798,6 +2799,8 @@ contains
                     cpatch%fwet_moss_soil_tot * cpatch%area * AREA_INV
                this%hvars(ih_moss_fwet_canopy_tot_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_tot_si)%r81d(io_si) + &
                     cpatch%fwet_moss_canopy_tot * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_canopy_liq_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_liq_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_canopy_liq * cpatch%area * AREA_INV
                this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) = this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) + &
                     cpatch%MossWetnessScaler() * cpatch%area * AREA_INV
             end if
@@ -6966,7 +6969,7 @@ contains
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_LIQ', units='1',       &
             long='moss wetness proxy from liquid water: the wetter of top soil layer liquid saturation and '// &
-                 'canopy wetted fraction; drives moss photosynthetic capacity and respiration', &
+                 'canopy wetted fraction from canopy liquid; drives moss photosynthetic capacity and respiration', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_liq_si)
@@ -6974,7 +6977,7 @@ contains
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_TOT', units='1',       &
             long='moss wetness proxy from total (liquid plus ice) water: the wetter of top soil layer total '// &
-                 'saturation and canopy wetted fraction; drives the moss CO2 water film and fuel moisture', &
+                 'saturation and canopy wetted fraction from canopy snow plus liquid; drives CO2 water film and fuel moisture', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_tot_si)
@@ -6995,10 +6998,17 @@ contains
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY_TOT', units='1',       &
-            long='canopy wetted fraction from canopy snow plus liquid; ingredient of both moss wetness proxies', &
+            long='canopy wetted fraction from canopy snow plus liquid; ingredient of the total moss wetness proxy', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_tot_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY_LIQ', units='1',       &
+            long='canopy wetted fraction from canopy liquid alone; ingredient of the liquid moss wetness proxy', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_moss_fwet_canopy_liq_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_HEIGHT', units='m',       &

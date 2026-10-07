@@ -230,7 +230,7 @@ contains
        currentPatch => currentSite%oldest_patch
        do while(associated(currentPatch))
           if (currentPatch%nocomp_pft_label /= nocomp_bareground) then
-             call currentPatch%UpdateMossFwetLiq(bc_in%fwet_veg_pa(currentPatch%patchno), &
+             call currentPatch%UpdateMossFwetLiq(bc_in%fwet_veg_liq_pa(currentPatch%patchno), &
                   bc_in%h2o_liqvol_sl(1), bc_in%watsat_sl(1))
              call currentPatch%UpdateMossFwetTot(bc_in%fwet_veg_pa(currentPatch%patchno), &
                   bc_in%h2o_totvol_sl(1), bc_in%watsat_sl(1))

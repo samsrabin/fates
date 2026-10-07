@@ -540,6 +540,10 @@ module FatesInterfaceTypesMod
       ! fraction of canopy that is wet (0-1)
       real(r8), allocatable :: fwet_veg_pa(:)
 
+      ! fraction of canopy that is wet from canopy liquid alone (0-1); fwet_veg_pa above
+      ! counts canopy snow plus liquid
+      real(r8), allocatable :: fwet_veg_liq_pa(:)
+
       ! Abledo of the ground for direct radiation, by site broadband (0-1)
       real(r8), allocatable :: albgr_dir_rb(:)
 

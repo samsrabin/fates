@@ -226,12 +226,14 @@ module FatesPatchMod
 
     ! moss wetness proxies and their ingredients (all 0-1); see UpdateMossFwetLiq and
     ! UpdateMossFwetTot. The liquid proxy is built from liquid soil water, the total proxy
-    ! from liquid plus ice; both share the canopy ingredient.
+    ! from liquid plus ice. Each has its own canopy ingredient: the liquid proxy's comes from
+    ! canopy liquid alone, the total proxy's from canopy snow plus liquid.
     real(r8)              :: fwet_moss_liq           ! moss wetness proxy from liquid soil water [0-1]
     real(r8)              :: fwet_moss_tot           ! moss wetness proxy from total soil water [0-1]
     real(r8)              :: fwet_moss_soil_liq      ! top soil layer liquid saturation ingredient [0-1]
     real(r8)              :: fwet_moss_soil_tot      ! top soil layer total saturation ingredient [0-1]
     real(r8)              :: fwet_moss_canopy_tot    ! canopy wetted fraction (canopy snow plus liquid) ingredient [0-1]
+    real(r8)              :: fwet_moss_canopy_liq    ! canopy wetted fraction (canopy liquid alone) ingredient [0-1]
 
     ! The moss wetness scaler is not a member: MossWetnessScaler() evaluates it on demand.
 
@@ -543,6 +545,7 @@ module FatesPatchMod
       this%fwet_moss_soil_liq           = nan
       this%fwet_moss_soil_tot           = nan
       this%fwet_moss_canopy_tot             = nan
+      this%fwet_moss_canopy_liq             = nan
       this%ros_front                    = nan
       this%ros_back                     = nan   
       this%tau_l                        = nan
@@ -640,6 +643,7 @@ module FatesPatchMod
       this%fwet_moss_soil_liq                = 0.0_r8
       this%fwet_moss_soil_tot                = 0.0_r8
       this%fwet_moss_canopy_tot                  = 0.0_r8
+      this%fwet_moss_canopy_liq                  = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
       this%tau_l                             = 0.0_r8
@@ -882,52 +886,58 @@ module FatesPatchMod
 
     !===========================================================================
 
-    subroutine UpdateMossFwetLiq(this, fwet_veg, h2o_liqvol_top, watsat_top)
+    subroutine UpdateMossFwetLiq(this, fwet_veg_liq, h2o_liqvol_top, watsat_top)
       !
       ! DESCRIPTION:
       ! Diagnoses the liquid-water moss wetness proxy on a patch: the wetter of the top soil
-      ! layer's liquid saturation and the canopy wetted fraction. Moss carries no thallus
-      ! water state of its own in this design, so this proxy stands in for thallus wetness;
-      ! it is diagnostic only -- neither this routine nor the quantity it produces holds or
-      ! moves water.
+      ! layer's liquid saturation and the canopy wetted fraction from canopy liquid alone.
+      ! Moss carries no thallus water state of its own in this design, so this proxy
+      ! stands in for thallus wetness; it is diagnostic only -- neither this routine nor the
+      ! quantity it produces holds or moves water.
       !
       ! That is a statement about moss, not about the model. The host does prognose
-      ! intercepted canopy water (liquid plus snow), and fwet_veg below is derived from it.
-      ! What moss lacks is a pool of its own: that interception bucket is a whole-canopy
-      ! quantity for the patch, shared with any vascular cohorts in it and governed by the
-      ! host's leaf-interception scheme rather than by moss thallus hydrology.
+      ! intercepted canopy water (liquid plus snow), and fwet_veg_liq below is derived from
+      ! its liquid part. What moss lacks is a pool of its own: that interception bucket is
+      ! a whole-canopy quantity for the patch, shared with any vascular cohorts in it and
+      ! governed by the host's leaf-interception scheme rather than by moss thallus hydrology.
       !
-      ! This routine sets fwet_moss_soil_liq, fwet_moss_canopy_tot and fwet_moss_liq. The
-      ! liquid proxy drives moss photosynthetic capacity (through the scaler) and moss
-      ! leaf maintenance respiration (through the scaler, unless
+      ! This routine sets fwet_moss_soil_liq, fwet_moss_canopy_liq and fwet_moss_liq, and
+      ! touches nothing else. The liquid proxy drives moss photosynthetic capacity (through
+      ! the scaler) and moss leaf maintenance respiration (through the scaler, unless
       ! hlm_moss_scale_resp_by_fwet is false). It does not drive the moss CO2 water film
       ! or moss fuel moisture, which read the total proxy. See UpdateMossFwetTot.
       !
-      ! Two properties of the inputs are worth knowing:
+      ! Three properties of the inputs are worth knowing:
       !
       ! (1) h2o_liqvol_top is liquid volumetric water, top soil layer, not total: it comes
       !     from bc_in%h2o_liqvol_sl(1), which both the daily dynamics driver and wrap_btran
       !     fill with liquid-only water. A frozen top soil layer therefore reads as dry,
       !     since freezing removes water from the liquid phase that this proxy sees.
       !
-      ! (2) fwet_veg is CTSM's canopy wetted fraction, which CTSM caps at its
-      !     maximum_leaf_wetted_fraction parameter (0.05 on the standard parameter file).
+      ! (2) fwet_veg_liq is CTSM's canopy wetted fraction computed from canopy liquid alone
+      !     (fwet_liq_patch). CTSM computes it with the same expression and caps it at the
+      !     same maximum_leaf_wetted_fraction parameter (0.05 on the standard parameter
+      !     file) as its snow-plus-liquid fwet, which UpdateMossFwetTot takes.
       !     The canopy ingredient therefore almost never exceeds the soil one, and
       !     interception has far less influence on the proxy than the soil moisture does.
       !     That cap is a single global scalar on the host parameter file rather than a
       !     per-PFT one, so it cannot be raised for moss without raising it for every PFT.
       !     This is a known limitation, kept because it is the literal quantity the design
-      !     calls for; FATES_MOSS_FWET_CANOPY_TOT reports it so the ceiling is visible.
+      !     calls for; FATES_MOSS_FWET_CANOPY_LIQ and FATES_MOSS_FWET_CANOPY_TOT report the
+      !     two canopy ingredients so the ceiling is visible.
+      !
+      ! (3) fwet_veg_liq leaves out canopy snow, so it never exceeds the total proxy's
+      !     canopy ingredient, and a canopy holding only snow reads as dry here.
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this         ! patch
-      real(r8),                intent(in)    :: fwet_veg     ! canopy wetted fraction [0-1]
+      real(r8),                intent(in)    :: fwet_veg_liq ! canopy wetted fraction from canopy liquid alone [0-1]
       real(r8),                intent(in)    :: h2o_liqvol_top  ! liquid volumetric water, top soil layer [m3/m3]
       real(r8),                intent(in)    :: watsat_top   ! porosity of top soil layer [m3/m3]
 
       this%fwet_moss_soil_liq = MossSoilSaturation(h2o_liqvol_top, watsat_top)
-      this%fwet_moss_canopy_tot   = fwet_veg
-      this%fwet_moss_liq      = max(this%fwet_moss_soil_liq, fwet_veg)
+      this%fwet_moss_canopy_liq   = fwet_veg_liq
+      this%fwet_moss_liq      = max(this%fwet_moss_soil_liq, fwet_veg_liq)
 
     end subroutine UpdateMossFwetLiq
 
@@ -937,9 +947,10 @@ module FatesPatchMod
       !
       ! DESCRIPTION:
       ! Diagnoses the total-water moss wetness proxy on a patch: the wetter of the top soil
-      ! layer's total (liquid plus ice) saturation and the canopy wetted fraction. It is
-      ! the counterpart of UpdateMossFwetLiq, which describes what the proxy stands for and
-      ! the caveats on fwet_veg; those apply here unchanged.
+      ! layer's total (liquid plus ice) saturation and the canopy wetted fraction from
+      ! canopy snow plus liquid. It is the counterpart of UpdateMossFwetLiq, which describes
+      ! what the proxy stands for and the caveats on its canopy input; the cap in caveat (2)
+      ! applies to fwet_veg here unchanged.
       !
       ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy_tot and fwet_moss_tot, and
       ! touches nothing else. The total proxy drives the moss CO2 water film and moss
@@ -949,7 +960,7 @@ module FatesPatchMod
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this            ! patch
-      real(r8),                intent(in)    :: fwet_veg        ! canopy wetted fraction [0-1]
+      real(r8),                intent(in)    :: fwet_veg        ! canopy wetted fraction from canopy snow plus liquid [0-1]
       real(r8),                intent(in)    :: h2o_totvol_top  ! total volumetric water, top soil layer [m3/m3]
       real(r8),                intent(in)    :: watsat_top      ! porosity of top soil layer [m3/m3]
 
