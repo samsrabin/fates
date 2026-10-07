@@ -1,0 +1,122 @@
+module test_MossFwetScalerLinear
+  !
+  ! DESCRIPTION:
+  !   Tests the part of fates_patch_type::UpdateMossWetnessScaler that scales moss
+  !   photosynthetic capacity linearly with the liquid wetness proxy, over several proxy
+  !   values. It lives apart from test_MossFwet because a parameterized test case cannot
+  !   share a module with that file's plain TestCase.
+  !
+  use FatesConstantsMod,      only : r8 => fates_r8
+  use FatesPatchMod,          only : fates_patch_type
+  use FatesInterfaceTypesMod, only : hlm_moss_vcmax_fwet_thresh
+  use test_MossFwet,          only : test_vcmax_thresh_scaler
+  use test_MossFwet,          only : marker_fwet_tot
+  use test_MossFwet,          only : marker_soil_liq, marker_soil_tot
+  use test_MossFwet,          only : marker_canopy, marker_scaler
+  use funit
+
+  implicit none
+
+  ! The liquid proxy values the test runs at
+  @testParameter
+  type, extends(AbstractTestParameter) :: ProxyCase
+     real(r8) :: fwet_moss_liq ! liquid moss wetness proxy [0-1]
+   contains
+     procedure :: toString
+  end type ProxyCase
+
+  @testCase(constructor=newTestScalerLinear, testParameters={getParameters()})
+  type, extends(ParameterizedTestCase) :: TestScalerLinear
+     type(fates_patch_type) :: patch ! patch carrying the six moss wetness members
+     real(r8) :: fwet_moss_liq       ! liquid moss wetness proxy this run sets [0-1]
+   contains
+     procedure :: setUp
+  end type TestScalerLinear
+
+  real(r8), parameter :: tol = 1.e-13_r8
+
+  ! The three proxies are fixed fractions of the threshold, each well inside (0,1) and
+  ! distinct, so that the three runs have three different scalers. Quarters keep the
+  ! arithmetic exact in binary.
+  real(r8), parameter :: frac_low = 0.25_r8  ! proxy as a fraction of the threshold [0-1]
+  real(r8), parameter :: frac_mid = 0.5_r8   ! proxy as a fraction of the threshold [0-1]
+  real(r8), parameter :: frac_high = 0.75_r8 ! proxy as a fraction of the threshold [0-1]
+
+  contains
+
+    function newTestScalerLinear(testParameter) result(test)
+      type(ProxyCase), intent(in) :: testParameter
+      type(TestScalerLinear)      :: test
+
+      test%fwet_moss_liq = testParameter%fwet_moss_liq
+    end function newTestScalerLinear
+
+    function getParameters() result(params)
+      type(ProxyCase), allocatable :: params(:)
+
+      allocate(params(3))
+      params(1)%fwet_moss_liq = frac_low*test_vcmax_thresh_scaler
+      params(2)%fwet_moss_liq = frac_mid*test_vcmax_thresh_scaler
+      params(3)%fwet_moss_liq = frac_high*test_vcmax_thresh_scaler
+    end function getParameters
+
+    function toString(this) result(string)
+      class(ProxyCase), intent(in) :: this
+      character(:), allocatable :: string
+      character(len=32) :: buf
+
+      write(buf, '(f7.4)') this%fwet_moss_liq
+      string = 'fwet_moss_liq=' // trim(adjustl(buf))
+    end function toString
+
+    subroutine setUp(this)
+      class(TestScalerLinear), intent(inout) :: this ! test object
+
+      ! the host scalar is a module variable that persists across tests, so set it here
+      hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh_scaler
+
+      this%patch%fwet_moss_liq = this%fwet_moss_liq
+      this%patch%fwet_moss_tot = marker_fwet_tot
+      this%patch%fwet_moss_soil_liq = marker_soil_liq
+      this%patch%fwet_moss_soil_tot = marker_soil_tot
+      this%patch%fwet_moss_canopy = marker_canopy
+      this%patch%moss_wetness_scaler = marker_scaler
+    end subroutine setUp
+
+    @Test
+    subroutine UpdateMossWetnessScaler_ProxyBelowThreshold_ScalesLinearly(this)
+      ! UpdateMossWetnessScaler must cut moss photosynthetic capacity in proportion to the
+      ! liquid proxy when the moss is drier than the wetness at which it performs fully.
+      !
+      ! Runs at three liquid proxy values, all below the threshold, so that a scaler that
+      ! is right only at one proxy (a fixed fraction, an offset, a ratio against the wrong
+      ! scale) fails at the others. This is the only one of the three threshold cases
+      ! whose result is not full capacity, so the only one that pins the proportionality
+      ! at all; its siblings in test_MossFwet both sit on the clamp. The proxy is set
+      ! directly here rather than through UpdateMossFwetLiq, which is how the restart read
+      ! and patch fusion call this routine.
+      !
+      ! The threshold differs from the one the UpdateMossFwetLiq cases run at, so that
+      ! replacing the host scalar in the source with either literal fails somewhere.
+      !
+      ! The ingredients are asserted to still hold their setUp markers: this routine must
+      ! leave them alone, and the restart and fusion callers depend on that. The proxies
+      ! are not asserted here, and do not need to be: the liquid one is the quantity this
+      ! routine reads, and that it survives the call is covered by the UpdateMossFwetLiq
+      ! cases, which read the proxy back after the refresh call this routine is reached
+      ! from.
+      class(TestScalerLinear), intent(inout) :: this ! test object
+      real(r8) :: expect_scaler                      ! fwet_moss_liq/test_vcmax_thresh_scaler [0-1]
+
+      expect_scaler = this%fwet_moss_liq/test_vcmax_thresh_scaler
+
+      call this%patch%UpdateMossWetnessScaler()
+
+      @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
+      @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
+      @assertEqual(marker_canopy, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+
+    end subroutine UpdateMossWetnessScaler_ProxyBelowThreshold_ScalesLinearly
+
+end module test_MossFwetScalerLinear
