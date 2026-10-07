@@ -221,7 +221,7 @@ module FatesFuelMod
 
     !-------------------------------------------------------------------------------------
     
-    subroutine UpdateFuelMoisture(this, sav_fuel, drying_ratio, fwet_moss, fireWeatherClass)
+    subroutine UpdateFuelMoisture(this, sav_fuel, drying_ratio, fwet_moss_tot, fireWeatherClass)
       ! DESCRIPTION:
       !   Updates fuel moisture depending on what fire weather class is in use
       
@@ -229,7 +229,7 @@ module FatesFuelMod
       class(fuel_type),    intent(inout) :: this                       ! fuel class
       real(r8),            intent(in)    :: sav_fuel(num_fuel_classes) ! surface area to volume ratio of all fuel types [/cm]
       real(r8),            intent(in)    :: drying_ratio               ! drying ratio
-      real(r8),            intent(in)    :: fwet_moss                  ! moss wetness proxy; ignored if moss fuel classes absent [0-1]
+      real(r8),            intent(in)    :: fwet_moss_tot              ! total-water moss wetness proxy; ignored if moss fuel classes absent [0-1]
       class(fire_weather), intent(in)    :: fireWeatherClass           ! fireWeatherClass
       
       real(r8) :: moisture(num_fuel_classes)               ! fuel moisture [m3/m3]
@@ -261,20 +261,20 @@ module FatesFuelMod
         ! map is instead floored at its intercept. An intercept at or above the class's MEF
         ! therefore makes that class permanently non-flammable rather than merely hard to
         ! ignite: effective_moisture never falls below 1, and CalculateFuelBurnt's "very
-        ! wet litter" branch zeroes frac_burnt at every value of fwet_moss.
+        ! wet litter" branch zeroes frac_burnt at every value of fwet_moss_tot.
         !
         ! MEF is MEF_a - MEF_b*log(sav_fuel) (MoistureOfExtinction, below), so for moss it
         ! is fixed by the moss entries of fates_fire_SAV on the FATES parameter file and by
         ! nothing else, rising as SAV falls: at the shipped SAV of 66 /cm it is 0.2475
-        ! m3/m3. A moss class burns while fwet_moss is under
+        ! m3/m3. A moss class burns while fwet_moss_tot is under
         ! (MEF - hlm_moss_fuel_moisture_*_intercept)/hlm_moss_fuel_moisture_*_slope, both
         ! set by the host; at the shipped intercept of 0 and slope of 0.7 that puts both
-        ! moss classes' extinction at fwet_moss = 0.354.
+        ! moss classes' extinction at fwet_moss_tot = 0.354.
         if (fuel_classes%moss_classes_present()) then
           moisture(fuel_classes%live_moss()) = max(0.0_r8,                              &
-            hlm_moss_fuel_moisture_live_intercept + hlm_moss_fuel_moisture_live_slope*fwet_moss)
+            hlm_moss_fuel_moisture_live_intercept + hlm_moss_fuel_moisture_live_slope*fwet_moss_tot)
           moisture(fuel_classes%dead_moss()) = max(0.0_r8,                              &
-            hlm_moss_fuel_moisture_dead_intercept + hlm_moss_fuel_moisture_dead_slope*fwet_moss)
+            hlm_moss_fuel_moisture_dead_intercept + hlm_moss_fuel_moisture_dead_slope*fwet_moss_tot)
         end if
 
         this%average_moisture_notrunks = 0.0_r8

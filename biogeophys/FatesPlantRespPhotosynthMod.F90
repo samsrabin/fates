@@ -456,8 +456,7 @@ contains
                               write(fates_log(),*) 'pft: ',ft
                               call endrun(msg=errMsg(sourcefile, __LINE__))
                            end if
-                           ! Still the liquid proxy; a later change switches this to the total proxy.
-                           fwet_moss_tot_arg = currentPatch%fwet_moss_liq
+                           fwet_moss_tot_arg = currentPatch%fwet_moss_tot
                            moss_wetness_scaler_arg = currentPatch%moss_wetness_scaler
                         else
                            fwet_moss_tot_arg = 0._r8  ! ignored: is_moss is false
