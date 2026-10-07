@@ -12,7 +12,7 @@ module test_MossFwetScalerLinear
   use test_MossFwet,          only : test_vcmax_thresh_scaler
   use test_MossFwet,          only : marker_fwet_tot
   use test_MossFwet,          only : marker_soil_liq, marker_soil_tot
-  use test_MossFwet,          only : marker_canopy
+  use test_MossFwet,          only : marker_canopy_tot
   use funit
 
   implicit none
@@ -79,7 +79,7 @@ module test_MossFwetScalerLinear
       this%patch%fwet_moss_tot = marker_fwet_tot
       this%patch%fwet_moss_soil_liq = marker_soil_liq
       this%patch%fwet_moss_soil_tot = marker_soil_tot
-      this%patch%fwet_moss_canopy = marker_canopy
+      this%patch%fwet_moss_canopy_tot = marker_canopy_tot
     end subroutine setUp
 
     @Test
@@ -109,7 +109,7 @@ module test_MossFwetScalerLinear
 
       @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
       @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
-      @assertEqual(marker_canopy, this%patch%fwet_moss_canopy, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_scaler, this%patch%MossWetnessScaler(), tolerance=tol)
 
     end subroutine MossWetnessScaler_ProxyBelowThreshold_ScalesLinearly
