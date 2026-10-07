@@ -487,7 +487,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_moss_fwet_tot_si
   integer :: ih_moss_fwet_soil_liq_si
   integer :: ih_moss_fwet_soil_tot_si
-  integer :: ih_moss_fwet_canopy_si
+  integer :: ih_moss_fwet_canopy_tot_si
   integer :: ih_moss_wetness_scaler_si
   integer :: ih_moss_height_si
   integer :: ih_rx_burn_window_si
@@ -2796,8 +2796,8 @@ contains
                     cpatch%fwet_moss_soil_liq * cpatch%area * AREA_INV
                this%hvars(ih_moss_fwet_soil_tot_si)%r81d(io_si) = this%hvars(ih_moss_fwet_soil_tot_si)%r81d(io_si) + &
                     cpatch%fwet_moss_soil_tot * cpatch%area * AREA_INV
-               this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) + &
-                    cpatch%fwet_moss_canopy * cpatch%area * AREA_INV
+               this%hvars(ih_moss_fwet_canopy_tot_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_tot_si)%r81d(io_si) + &
+                    cpatch%fwet_moss_canopy_tot * cpatch%area * AREA_INV
                this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) = this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) + &
                     cpatch%MossWetnessScaler() * cpatch%area * AREA_INV
             end if
@@ -6994,11 +6994,11 @@ contains
             index = ih_moss_fwet_soil_tot_si)
 
        ! TODO: Before merge, change these to default 'inactive'
-       call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY', units='1',       &
-            long='canopy wetted fraction ingredient of both moss wetness proxies', &
+       call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY_TOT', units='1',       &
+            long='canopy wetted fraction from canopy snow plus liquid; ingredient of both moss wetness proxies', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
-            index = ih_moss_fwet_canopy_si)
+            index = ih_moss_fwet_canopy_tot_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_HEIGHT', units='m',       &

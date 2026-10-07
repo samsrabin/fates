@@ -231,7 +231,7 @@ module FatesPatchMod
     real(r8)              :: fwet_moss_tot           ! moss wetness proxy from total soil water [0-1]
     real(r8)              :: fwet_moss_soil_liq      ! top soil layer liquid saturation ingredient [0-1]
     real(r8)              :: fwet_moss_soil_tot      ! top soil layer total saturation ingredient [0-1]
-    real(r8)              :: fwet_moss_canopy        ! canopy wetted fraction ingredient [0-1]
+    real(r8)              :: fwet_moss_canopy_tot    ! canopy wetted fraction (canopy snow plus liquid) ingredient [0-1]
 
     ! The moss wetness scaler is not a member: MossWetnessScaler() evaluates it on demand.
 
@@ -542,7 +542,7 @@ module FatesPatchMod
       this%fwet_moss_tot                = nan
       this%fwet_moss_soil_liq           = nan
       this%fwet_moss_soil_tot           = nan
-      this%fwet_moss_canopy             = nan
+      this%fwet_moss_canopy_tot             = nan
       this%ros_front                    = nan
       this%ros_back                     = nan   
       this%tau_l                        = nan
@@ -639,7 +639,7 @@ module FatesPatchMod
       this%fwet_moss_tot                     = 0.0_r8
       this%fwet_moss_soil_liq                = 0.0_r8
       this%fwet_moss_soil_tot                = 0.0_r8
-      this%fwet_moss_canopy                  = 0.0_r8
+      this%fwet_moss_canopy_tot                  = 0.0_r8
       this%ros_front                         = 0.0_r8
       this%ros_back                          = 0.0_r8
       this%tau_l                             = 0.0_r8
@@ -897,7 +897,7 @@ module FatesPatchMod
       ! quantity for the patch, shared with any vascular cohorts in it and governed by the
       ! host's leaf-interception scheme rather than by moss thallus hydrology.
       !
-      ! This routine sets fwet_moss_soil_liq, fwet_moss_canopy and fwet_moss_liq. The
+      ! This routine sets fwet_moss_soil_liq, fwet_moss_canopy_tot and fwet_moss_liq. The
       ! liquid proxy drives moss photosynthetic capacity (through the scaler) and moss
       ! leaf maintenance respiration (through the scaler, unless
       ! hlm_moss_scale_resp_by_fwet is false). It does not drive the moss CO2 water film
@@ -917,7 +917,7 @@ module FatesPatchMod
       !     That cap is a single global scalar on the host parameter file rather than a
       !     per-PFT one, so it cannot be raised for moss without raising it for every PFT.
       !     This is a known limitation, kept because it is the literal quantity the design
-      !     calls for; FATES_MOSS_FWET_CANOPY reports it so the ceiling is visible.
+      !     calls for; FATES_MOSS_FWET_CANOPY_TOT reports it so the ceiling is visible.
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this         ! patch
@@ -926,7 +926,7 @@ module FatesPatchMod
       real(r8),                intent(in)    :: watsat_top   ! porosity of top soil layer [m3/m3]
 
       this%fwet_moss_soil_liq = MossSoilSaturation(h2o_liqvol_top, watsat_top)
-      this%fwet_moss_canopy   = fwet_veg
+      this%fwet_moss_canopy_tot   = fwet_veg
       this%fwet_moss_liq      = max(this%fwet_moss_soil_liq, fwet_veg)
 
     end subroutine UpdateMossFwetLiq
@@ -941,7 +941,7 @@ module FatesPatchMod
       ! the counterpart of UpdateMossFwetLiq, which describes what the proxy stands for and
       ! the caveats on fwet_veg; those apply here unchanged.
       !
-      ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy and fwet_moss_tot, and
+      ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy_tot and fwet_moss_tot, and
       ! touches nothing else. The total proxy drives the moss CO2 water film and moss
       ! fuel moisture, so that a frozen top soil layer does not read as dry.
       ! h2o_totvol_top comes from bc_in%h2o_totvol_sl(1), which both the daily dynamics
@@ -954,7 +954,7 @@ module FatesPatchMod
       real(r8),                intent(in)    :: watsat_top      ! porosity of top soil layer [m3/m3]
 
       this%fwet_moss_soil_tot = MossSoilSaturation(h2o_totvol_top, watsat_top)
-      this%fwet_moss_canopy   = fwet_veg
+      this%fwet_moss_canopy_tot   = fwet_veg
       this%fwet_moss_tot      = max(this%fwet_moss_soil_tot, fwet_veg)
 
     end subroutine UpdateMossFwetTot

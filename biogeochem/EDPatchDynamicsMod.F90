@@ -3322,7 +3322,7 @@ contains
     rp%fwet_moss_tot           = (dp%fwet_moss_tot*dp%area + rp%fwet_moss_tot*rp%area) * inv_sum_area
     rp%fwet_moss_soil_liq      = (dp%fwet_moss_soil_liq*dp%area + rp%fwet_moss_soil_liq*rp%area) * inv_sum_area
     rp%fwet_moss_soil_tot      = (dp%fwet_moss_soil_tot*dp%area + rp%fwet_moss_soil_tot*rp%area) * inv_sum_area
-    rp%fwet_moss_canopy        = (dp%fwet_moss_canopy*dp%area + rp%fwet_moss_canopy*rp%area) * inv_sum_area
+    rp%fwet_moss_canopy_tot        = (dp%fwet_moss_canopy_tot*dp%area + rp%fwet_moss_canopy_tot*rp%area) * inv_sum_area
     rp%ros_front               = (dp%ros_front*dp%area + rp%ros_front*rp%area) * inv_sum_area
     rp%tau_l                   = (dp%tau_l*dp%area + rp%tau_l*rp%area) * inv_sum_area
     rp%tfc_ros              = (dp%tfc_ros*dp%area + rp%tfc_ros*rp%area) * inv_sum_area
