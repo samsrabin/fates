@@ -2799,7 +2799,7 @@ contains
                this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) = this%hvars(ih_moss_fwet_canopy_si)%r81d(io_si) + &
                     cpatch%fwet_moss_canopy * cpatch%area * AREA_INV
                this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) = this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) + &
-                    cpatch%moss_wetness_scaler * cpatch%area * AREA_INV
+                    cpatch%MossWetnessScaler() * cpatch%area * AREA_INV
             end if
 
             hio_nonrx_intensity_fracarea_product_si(io_si) = hio_nonrx_intensity_fracarea_product_si(io_si) + &

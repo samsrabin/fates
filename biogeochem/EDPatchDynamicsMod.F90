@@ -3323,19 +3323,6 @@ contains
     rp%fwet_moss_soil_liq      = (dp%fwet_moss_soil_liq*dp%area + rp%fwet_moss_soil_liq*rp%area) * inv_sum_area
     rp%fwet_moss_soil_tot      = (dp%fwet_moss_soil_tot*dp%area + rp%fwet_moss_soil_tot*rp%area) * inv_sum_area
     rp%fwet_moss_canopy        = (dp%fwet_moss_canopy*dp%area + rp%fwet_moss_canopy*rp%area) * inv_sum_area
-    ! The scaler could be fused either of two ways: area-weight the two patches' existing
-    ! scalers, or recompute min(1, fwet/threshold) from the fwet_moss_liq just fused above.
-    ! Because min() is nonlinear those disagree whenever the two patches straddle the
-    ! threshold, and the second is what the restart read does -- so we recompute, and the
-    ! two paths cannot drift apart.
-    !
-    ! Gated because the recompute divides by a threshold that FATES leaves unset when moss
-    ! is off. In a moss-off run the scaler simply stays at the zero it was initialised to,
-    ! and nothing reads it: the two photosynthesis reads are under is_moss, and the history
-    ! read is under this same hlm_use_moss gate.
-    if (hlm_use_moss == itrue) then
-       call rp%UpdateMossWetnessScaler()
-    end if
     rp%ros_front               = (dp%ros_front*dp%area + rp%ros_front*rp%area) * inv_sum_area
     rp%tau_l                   = (dp%tau_l*dp%area + rp%tau_l*rp%area) * inv_sum_area
     rp%tfc_ros              = (dp%tfc_ros*dp%area + rp%tfc_ros*rp%area) * inv_sum_area

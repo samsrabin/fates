@@ -457,7 +457,7 @@ contains
                               call endrun(msg=errMsg(sourcefile, __LINE__))
                            end if
                            fwet_moss_tot_arg = currentPatch%fwet_moss_tot
-                           moss_wetness_scaler_arg = currentPatch%moss_wetness_scaler
+                           moss_wetness_scaler_arg = currentPatch%MossWetnessScaler()
                         else
                            fwet_moss_tot_arg = 0._r8  ! ignored: is_moss is false
                            moss_wetness_scaler_arg = 1.0_r8
@@ -689,7 +689,7 @@ contains
                                  ! currentCohort%rdark in the carbon budget. Scaling here
                                  ! keeps the solve and the budget consistent.
                                  if (is_moss .and. hlm_moss_scale_resp_by_fwet == itrue) then
-                                    lmr_z(iv,ft,cl) = lmr_z(iv,ft,cl) * currentPatch%moss_wetness_scaler
+                                    lmr_z(iv,ft,cl) = lmr_z(iv,ft,cl) * moss_wetness_scaler_arg
                                  end if
                                  
                                  ! Pre-process PAR absorbed per unit leaf area for different schemes
