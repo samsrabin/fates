@@ -1,7 +1,7 @@
 module test_MossFwetScalerLinear
   !
   ! DESCRIPTION:
-  !   Tests the part of fates_patch_type::UpdateMossWetnessScaler that scales moss
+  !   Tests the part of fates_patch_type::MossWetnessScaler that scales moss
   !   photosynthetic capacity linearly with the liquid wetness proxy, over several proxy
   !   values. It lives apart from test_MossFwet because a parameterized test case cannot
   !   share a module with that file's plain TestCase.
@@ -12,7 +12,7 @@ module test_MossFwetScalerLinear
   use test_MossFwet,          only : test_vcmax_thresh_scaler
   use test_MossFwet,          only : marker_fwet_tot
   use test_MossFwet,          only : marker_soil_liq, marker_soil_tot
-  use test_MossFwet,          only : marker_canopy, marker_scaler
+  use test_MossFwet,          only : marker_canopy
   use funit
 
   implicit none
@@ -27,7 +27,7 @@ module test_MossFwetScalerLinear
 
   @testCase(constructor=newTestScalerLinear, testParameters={getParameters()})
   type, extends(ParameterizedTestCase) :: TestScalerLinear
-     type(fates_patch_type) :: patch ! patch carrying the six moss wetness members
+     type(fates_patch_type) :: patch ! patch carrying the five moss wetness members
      real(r8) :: fwet_moss_liq       ! liquid moss wetness proxy this run sets [0-1]
    contains
      procedure :: setUp
@@ -80,12 +80,11 @@ module test_MossFwetScalerLinear
       this%patch%fwet_moss_soil_liq = marker_soil_liq
       this%patch%fwet_moss_soil_tot = marker_soil_tot
       this%patch%fwet_moss_canopy = marker_canopy
-      this%patch%moss_wetness_scaler = marker_scaler
     end subroutine setUp
 
     @Test
-    subroutine UpdateMossWetnessScaler_ProxyBelowThreshold_ScalesLinearly(this)
-      ! UpdateMossWetnessScaler must cut moss photosynthetic capacity in proportion to the
+    subroutine MossWetnessScaler_ProxyBelowThreshold_ScalesLinearly(this)
+      ! MossWetnessScaler must cut moss photosynthetic capacity in proportion to the
       ! liquid proxy when the moss is drier than the wetness at which it performs fully.
       !
       ! Runs at three liquid proxy values, all below the threshold, so that a scaler that
@@ -93,30 +92,26 @@ module test_MossFwetScalerLinear
       ! scale) fails at the others. This is the only one of the three threshold cases
       ! whose result is not full capacity, so the only one that pins the proportionality
       ! at all; its siblings in test_MossFwet both sit on the clamp. The proxy is set
-      ! directly here rather than through UpdateMossFwetLiq, which is how the restart read
-      ! and patch fusion call this routine.
+      ! directly here rather than through UpdateMossFwetLiq.
       !
       ! The threshold differs from the one the UpdateMossFwetLiq cases run at, so that
       ! replacing the host scalar in the source with either literal fails somewhere.
       !
-      ! The ingredients are asserted to still hold their setUp markers: this routine must
-      ! leave them alone, and the restart and fusion callers depend on that. The proxies
-      ! are not asserted here, and do not need to be: the liquid one is the quantity this
-      ! routine reads, and that it survives the call is covered by the UpdateMossFwetLiq
-      ! cases, which read the proxy back after the refresh call this routine is reached
-      ! from.
+      ! The ingredients are asserted to still hold their setUp markers, which pins that
+      ! evaluating the scaler leaves every other member as seeded. The proxies are not
+      ! asserted here, and do not need to be: the liquid one is the quantity the scaler
+      ! reads, and that UpdateMossFwetLiq writes it correctly is covered by the
+      ! UpdateMossFwetLiq cases.
       class(TestScalerLinear), intent(inout) :: this ! test object
       real(r8) :: expect_scaler                      ! fwet_moss_liq/test_vcmax_thresh_scaler [0-1]
 
       expect_scaler = this%fwet_moss_liq/test_vcmax_thresh_scaler
 
-      call this%patch%UpdateMossWetnessScaler()
-
       @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
       @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(marker_canopy, this%patch%fwet_moss_canopy, tolerance=tol)
-      @assertEqual(expect_scaler, this%patch%moss_wetness_scaler, tolerance=tol)
+      @assertEqual(expect_scaler, this%patch%MossWetnessScaler(), tolerance=tol)
 
-    end subroutine UpdateMossWetnessScaler_ProxyBelowThreshold_ScalesLinearly
+    end subroutine MossWetnessScaler_ProxyBelowThreshold_ScalesLinearly
 
 end module test_MossFwetScalerLinear
