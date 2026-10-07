@@ -904,10 +904,9 @@ module FatesPatchMod
       !
       ! This routine sets fwet_moss_soil_liq, fwet_moss_canopy and fwet_moss_liq, then
       ! refreshes moss_wetness_scaler. The liquid proxy drives moss photosynthetic capacity
-      ! (through the scaler), moss leaf maintenance respiration (through the scaler, unless
-      ! hlm_moss_scale_resp_by_fwet is false), the moss CO2 water film and moss fuel
-      ! moisture. A later change moves the film and fuel moisture to the total proxy.
-      ! See UpdateMossFwetTot.
+      ! (through the scaler) and moss leaf maintenance respiration (through the scaler,
+      ! unless hlm_moss_scale_resp_by_fwet is false). It does not drive the moss CO2 water
+      ! film or moss fuel moisture, which read the total proxy. See UpdateMossFwetTot.
       !
       ! Two properties of the inputs are worth knowing:
       !
@@ -954,7 +953,7 @@ module FatesPatchMod
       !
       ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy and fwet_moss_tot, and
       ! touches nothing else. In particular it leaves moss_wetness_scaler alone, because
-      ! the scaler follows the liquid proxy. The total proxy is meant to drive the moss CO2
+      ! the scaler follows the liquid proxy. The total proxy drives the moss CO2
       ! water film and moss fuel moisture, so that a frozen top soil layer does not read as
       ! dry. h2o_totvol_top comes from bc_in%h2o_totvol_sl(1), which both the daily
       ! dynamics driver and wrap_btran fill with liquid plus ice.

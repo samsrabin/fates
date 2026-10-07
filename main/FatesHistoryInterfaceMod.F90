@@ -7011,9 +7011,7 @@ contains
        ! The long name says which consumers the scaler governs and which it does not, on
        ! purpose. The scaler follows the liquid proxy fwet_moss_liq and governs moss
        ! photosynthetic capacity and respiration, but not the moss CO2 water film or moss
-       ! fuel moisture, and nothing else in the history file would tell a reader that. (The
-       ! film and fuel moisture move to the total proxy in a later change; until then they
-       ! still read the liquid one.)
+       ! fuel moisture, and nothing else in the history file would tell a reader that.
        call this%set_history_var(vname='FATES_MOSS_WETNESS_SCALER', units='1',       &
             long='moss wetness scaler from the liquid-water proxy, applied to photosynthetic capacity and, '// &
                  'unless hlm_moss_scale_resp_by_fwet is false, leaf maintenance respiration; '// &
