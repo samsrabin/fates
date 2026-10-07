@@ -12,7 +12,7 @@ module test_MossFwetScalerLinear
   use test_MossFwet,          only : test_vcmax_thresh_scaler
   use test_MossFwet,          only : marker_fwet_tot
   use test_MossFwet,          only : marker_soil_liq, marker_soil_tot
-  use test_MossFwet,          only : marker_canopy_tot
+  use test_MossFwet,          only : marker_canopy_tot, marker_canopy_liq
   use funit
 
   implicit none
@@ -27,7 +27,7 @@ module test_MossFwetScalerLinear
 
   @testCase(constructor=newTestScalerLinear, testParameters={getParameters()})
   type, extends(ParameterizedTestCase) :: TestScalerLinear
-     type(fates_patch_type) :: patch ! patch carrying the five moss wetness members
+     type(fates_patch_type) :: patch ! patch carrying the six moss wetness members
      real(r8) :: fwet_moss_liq       ! liquid moss wetness proxy this run sets [0-1]
    contains
      procedure :: setUp
@@ -80,6 +80,7 @@ module test_MossFwetScalerLinear
       this%patch%fwet_moss_soil_liq = marker_soil_liq
       this%patch%fwet_moss_soil_tot = marker_soil_tot
       this%patch%fwet_moss_canopy_tot = marker_canopy_tot
+      this%patch%fwet_moss_canopy_liq = marker_canopy_liq
     end subroutine setUp
 
     @Test
@@ -104,13 +105,17 @@ module test_MossFwetScalerLinear
       ! UpdateMossFwetLiq cases.
       class(TestScalerLinear), intent(inout) :: this ! test object
       real(r8) :: expect_scaler                      ! fwet_moss_liq/test_vcmax_thresh_scaler [0-1]
+      real(r8) :: scaler                             ! the scaler, evaluated before any marker is read [0-1]
 
       expect_scaler = this%fwet_moss_liq/test_vcmax_thresh_scaler
 
+      scaler = this%patch%MossWetnessScaler()
+
+      @assertEqual(expect_scaler, scaler, tolerance=tol)
       @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
       @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
-      @assertEqual(expect_scaler, this%patch%MossWetnessScaler(), tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
 
     end subroutine MossWetnessScaler_ProxyBelowThreshold_ScalesLinearly
 

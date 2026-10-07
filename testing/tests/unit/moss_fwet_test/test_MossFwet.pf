@@ -19,7 +19,7 @@ module test_MossFwet
 
   @TestCase
   type, extends(TestCase) :: TestMossFwet
-     type(fates_patch_type) :: patch ! patch carrying the five moss wetness members
+     type(fates_patch_type) :: patch ! patch carrying the six moss wetness members
    contains
      procedure :: setUp
   end type TestMossFwet
@@ -34,7 +34,7 @@ module test_MossFwet
   ! distance to the answer a dropped inner clamp would give.
   real(r8), parameter :: tol_film_inner = 1.0e-24_r8
 
-  ! Markers seeded into the five patch members by setUp. They are distinct from each
+  ! Markers seeded into the six patch members by setUp. They are distinct from each
   ! other, so a value written into the wrong member is visible, and negative, so no
   ! marker can be mistaken for an expected result: every expected result below lies in
   ! [0,1]. Uninitialized-variable checking is off in this build, so an unseeded member
@@ -44,6 +44,7 @@ module test_MossFwet
   real(r8), parameter :: marker_soil_liq = -5.0_r8      ! seed for fwet_moss_soil_liq
   real(r8), parameter :: marker_soil_tot = -7.0_r8      ! seed for fwet_moss_soil_tot
   real(r8), parameter :: marker_canopy_tot = -9.0_r8        ! seed for fwet_moss_canopy_tot
+  real(r8), parameter :: marker_canopy_liq = -11.0_r8       ! seed for fwet_moss_canopy_liq
 
   ! Host scalars the tests run at, deliberately not the namelist defaults so that the
   ! tests do not depend on values the host may retune; those defaults are 0.6 for
@@ -91,6 +92,7 @@ module test_MossFwet
       this%patch%fwet_moss_soil_liq = marker_soil_liq
       this%patch%fwet_moss_soil_tot = marker_soil_tot
       this%patch%fwet_moss_canopy_tot = marker_canopy_tot
+      this%patch%fwet_moss_canopy_liq = marker_canopy_liq
 
     end subroutine setUp
 
@@ -110,24 +112,25 @@ module test_MossFwet
       ! UpdateMossFwetTot_SoilWetterThanCanopy_ProxyTakesSoil is the same case for the
       ! total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.125_r8                    ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.125_r8                ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.1875_r8             ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 0.375_r8                 ! h2o_liqvol_top/watsat_top [0-1]
       real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_SoilWetterThanCanopy_ProxyTakesSoil
 
     @Test
     subroutine UpdateMossFwetLiq_CanopyWetterThanSoil_ProxyTakesCanopy(this)
-      ! UpdateMossFwetLiq must take the liquid proxy from the canopy ingredient (snow plus
-      ! liquid) when the canopy is wetter than the top soil layer.
+      ! UpdateMossFwetLiq must take the liquid proxy from the canopy ingredient (liquid
+      ! only) when the canopy is wetter than the top soil layer.
       !
       ! The twin of UpdateMossFwetLiq_SoilWetterThanCanopy_ProxyTakesSoil, which differs
       ! only in which of the two ingredients is the larger; the porosity is the same in
@@ -137,16 +140,17 @@ module test_MossFwet
       ! UpdateMossFwetTot_CanopyWetterThanSoil_ProxyTakesCanopy is the same case for the
       ! total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.3125_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.3125_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.0625_r8             ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 0.125_r8                 ! h2o_liqvol_top/watsat_top [0-1]
-      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg_liq            ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_CanopyWetterThanSoil_ProxyTakesCanopy
@@ -172,16 +176,17 @@ module test_MossFwet
       ! of its pair, is not. UpdateMossFwetTot_WaterAtPorosity_SoilSaturationIsOne is the
       ! same case for the total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.0625_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.375_r8              ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = 0.375_r8                  ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 1.0_r8                   ! h2o_liqvol_top/watsat_top [0-1]
       real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_WaterAtPorosity_SoilSaturationIsOne
@@ -203,16 +208,17 @@ module test_MossFwet
       ! UpdateMossFwetTot_WaterAbovePorosity_SoilSaturationClampedToOne is the same case
       ! for the total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.0625_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.375_r8              ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = 0.25_r8                   ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 1.0_r8                   ! the ratio overshoots and is clamped [0-1]
       real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_WaterAbovePorosity_SoilSaturationClampedToOne
@@ -223,23 +229,24 @@ module test_MossFwet
       ! liquid water content comes in negative.
       !
       ! The only liquid-proxy case in which the lower clamp binds, so the only one that
-      ! catches its removal from this routine. The canopy ingredient (snow plus liquid) is
+      ! catches its removal from this routine. The canopy ingredient (liquid only) is
       ! the wetter of the two here, which keeps the proxy away from zero and so keeps a
       ! clamped-to-zero soil ingredient distinguishable from a proxy that has also
       ! collapsed.
       ! UpdateMossFwetTot_NegativeSoilWater_SoilSaturationClampedToZero is the same case
       ! for the total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.1875_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.1875_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = -0.125_r8             ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 0.0_r8                   ! the ratio undershoots and is clamped [0-1]
-      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg_liq            ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_NegativeSoilWater_SoilSaturationClampedToZero
@@ -264,16 +271,17 @@ module test_MossFwet
       ! rejects. UpdateMossFwetTot_SentinelPorosity_GuardZeroesSoil is the same
       ! case for the total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.4375_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.4375_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = watsat_sentinel       ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = watsat_sentinel           ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 0.0_r8                   ! the porosity check rejects it [0-1]
-      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg_liq            ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_SentinelPorosity_GuardZeroesSoil
@@ -302,16 +310,17 @@ module test_MossFwet
       ! UpdateMossFwetTot_PorosityBelowNearzero_GuardZeroesSoil is the same case
       ! for the total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.4375_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.4375_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.75_r8               ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = watsat_below_nearzero     ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 0.0_r8                   ! the porosity check rejects it [0-1]
-      real(r8), parameter :: expect_proxy = fwet_veg                ! the wetter ingredient [0-1]
+      real(r8), parameter :: expect_proxy = fwet_veg_liq            ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_PorosityBelowNearzero_GuardZeroesSoil
@@ -335,42 +344,44 @@ module test_MossFwet
       ! UpdateMossFwetTot_PorosityAboveNearzero_GuardAdmitsSoil is the same case
       ! for the total proxy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.0625_r8               ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.25_r8*watsat_above_nearzero ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = watsat_above_nearzero     ! porosity of top soil layer [m3/m3]
       real(r8), parameter :: expect_soil = 0.25_r8                  ! h2o_liqvol_top/watsat_top [0-1]
       real(r8), parameter :: expect_proxy = expect_soil             ! the wetter ingredient [0-1]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
-      @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(fwet_veg_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_PorosityAboveNearzero_GuardAdmitsSoil
 
     @Test
     subroutine UpdateMossFwetLiq_TotalProxySeeded_TotalUntouched(this)
-      ! UpdateMossFwetLiq must leave the total proxy and its soil ingredient exactly as it
+      ! UpdateMossFwetLiq must leave the total proxy and its two ingredients exactly as it
       ! found them.
       !
-      ! setUp seeds all five members with distinct negative markers; after the call the
-      ! total proxy and the total soil ingredient must still hold theirs. The inputs are an
-      ! ordinary in-range case, chosen so that the liquid values the routine writes (soil
-      ! 0.375, proxy 0.375, canopy_tot 0.125) are none of them a marker, so a routine that
-      ! also wrote the liquid results into the total members, or zeroed them, is caught
-      ! either way. The liquid members it does write are pinned by
-      ! the UpdateMossFwetLiq carry-over cases above. The twin is
+      ! setUp seeds all six members with distinct negative markers; after the call the
+      ! total proxy, the total soil ingredient and the total canopy ingredient must still
+      ! hold theirs. The inputs are an ordinary in-range case, chosen so that the liquid
+      ! values the routine writes (soil 0.375, proxy 0.375, canopy_liq 0.125) are none of
+      ! them a marker, so a routine that also wrote the liquid results into the total
+      ! members, or zeroed them, is caught either way. The liquid members it does write
+      ! are pinned by the UpdateMossFwetLiq carry-over cases above. The twin is
       ! UpdateMossFwetTot_LiquidProxySeeded_LiquidUntouched.
       class(TestMossFwet), intent(inout) :: this                    ! test object
-      real(r8), parameter :: fwet_veg = 0.125_r8                    ! canopy wetted fraction [0-1]
+      real(r8), parameter :: fwet_veg_liq = 0.125_r8                ! canopy wetted fraction, liquid only [0-1]
       real(r8), parameter :: h2o_liqvol_top = 0.1875_r8             ! liquid volumetric water, top soil layer [m3/m3]
       real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
 
-      call this%patch%UpdateMossFwetLiq(fwet_veg, h2o_liqvol_top, watsat_top)
+      call this%patch%UpdateMossFwetLiq(fwet_veg_liq, h2o_liqvol_top, watsat_top)
 
       @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(marker_fwet_tot, this%patch%fwet_moss_tot, tolerance=tol)
+      @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetLiq_TotalProxySeeded_TotalUntouched
 
@@ -386,9 +397,10 @@ module test_MossFwet
       ! Uses the same numbers as UpdateMossFwetLiq_SoilWetterThanCanopy_ProxyTakesSoil,
       ! whose description says why these values, but asserts the total-proxy soil
       ! ingredient and proxy (fwet_moss_soil_tot, fwet_moss_tot) where that test asserts
-      ! the liquid ones; both assert fwet_moss_canopy_tot; the two routines are
-      ! required to compute their soil ingredient the same way. The twin within this
-      ! routine is UpdateMossFwetTot_CanopyWetterThanSoil_ProxyTakesCanopy.
+      ! the liquid ones; each asserts its own canopy member (fwet_moss_canopy_tot here,
+      ! fwet_moss_canopy_liq there); the two routines are required to compute their soil
+      ! ingredient the same way. The twin within this routine is
+      ! UpdateMossFwetTot_CanopyWetterThanSoil_ProxyTakesCanopy.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.125_r8                    ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_totvol_top = 0.1875_r8             ! total volumetric water, top soil layer [m3/m3]
@@ -400,6 +412,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_SoilWetterThanCanopy_ProxyTakesSoil
@@ -412,8 +425,9 @@ module test_MossFwet
       ! Uses the same numbers as UpdateMossFwetLiq_CanopyWetterThanSoil_ProxyTakesCanopy,
       ! whose description says why these values, but asserts the total-proxy soil
       ! ingredient and proxy (fwet_moss_soil_tot, fwet_moss_tot) where that test asserts
-      ! the liquid ones; both assert fwet_moss_canopy_tot. The twin within this
-      ! routine is UpdateMossFwetTot_SoilWetterThanCanopy_ProxyTakesSoil.
+      ! the liquid ones; each asserts its own canopy member (fwet_moss_canopy_tot here,
+      ! fwet_moss_canopy_liq there). The twin within this routine is
+      ! UpdateMossFwetTot_SoilWetterThanCanopy_ProxyTakesSoil.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.3125_r8                   ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_totvol_top = 0.0625_r8             ! total volumetric water, top soil layer [m3/m3]
@@ -425,6 +439,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_CanopyWetterThanSoil_ProxyTakesCanopy
@@ -437,9 +452,10 @@ module test_MossFwet
       ! Uses the same numbers as UpdateMossFwetLiq_WaterAtPorosity_SoilSaturationIsOne,
       ! whose description says what a case already at the limit can and cannot pin, but
       ! asserts the total-proxy soil ingredient and proxy (fwet_moss_soil_tot,
-      ! fwet_moss_tot) where that test asserts the liquid ones; both assert
-      ! fwet_moss_canopy_tot. The twin within this routine, the one that catches a dropped
-      ! upper clamp, is UpdateMossFwetTot_WaterAbovePorosity_SoilSaturationClampedToOne.
+      ! fwet_moss_tot) where that test asserts the liquid ones; each asserts its own
+      ! canopy member (fwet_moss_canopy_tot here, fwet_moss_canopy_liq there). The twin
+      ! within this routine, the one that catches a dropped upper clamp, is
+      ! UpdateMossFwetTot_WaterAbovePorosity_SoilSaturationClampedToOne.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_totvol_top = 0.375_r8              ! total volumetric water, top soil layer [m3/m3]
@@ -451,6 +467,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_WaterAtPorosity_SoilSaturationIsOne
@@ -463,9 +480,10 @@ module test_MossFwet
       ! Uses the same numbers as
       ! UpdateMossFwetLiq_WaterAbovePorosity_SoilSaturationClampedToOne, but asserts the
       ! total-proxy soil ingredient and proxy (fwet_moss_soil_tot, fwet_moss_tot) where
-      ! that test asserts the liquid ones; both assert fwet_moss_canopy_tot.
-      ! This is the total-proxy case that has to grow into the limit, so it is the one
-      ! that catches a dropped upper clamp in this routine; its twin
+      ! that test asserts the liquid ones; each asserts its own canopy member
+      ! (fwet_moss_canopy_tot here, fwet_moss_canopy_liq there). This is the total-proxy
+      ! case that has to grow into the limit, so it is the one that catches a dropped
+      ! upper clamp in this routine; its twin
       ! UpdateMossFwetTot_WaterAtPorosity_SoilSaturationIsOne cannot.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
@@ -478,6 +496,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_WaterAbovePorosity_SoilSaturationClampedToOne
@@ -491,8 +510,9 @@ module test_MossFwet
       ! UpdateMossFwetLiq_NegativeSoilWater_SoilSaturationClampedToZero, whose description
       ! says why the canopy ingredient is the wetter one here, but asserts the total-proxy
       ! soil ingredient and proxy (fwet_moss_soil_tot, fwet_moss_tot) where that test
-      ! asserts the liquid ones; both assert fwet_moss_canopy_tot. The only
-      ! total-proxy case in which the lower clamp binds.
+      ! asserts the liquid ones; each asserts its own canopy member (fwet_moss_canopy_tot
+      ! here, fwet_moss_canopy_liq there). The only total-proxy case in which the lower
+      ! clamp binds.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.1875_r8                   ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_totvol_top = -0.125_r8             ! total volumetric water, top soil layer [m3/m3]
@@ -504,6 +524,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_NegativeSoilWater_SoilSaturationClampedToZero
@@ -517,8 +538,9 @@ module test_MossFwet
       ! description says why the sentinel has to be in the soil water as well as the
       ! porosity for a deleted porosity check to show, but asserts the total-proxy soil
       ! ingredient and proxy (fwet_moss_soil_tot, fwet_moss_tot) where that test asserts
-      ! the liquid ones; both assert fwet_moss_canopy_tot. The twin within this
-      ! routine is UpdateMossFwetTot_PorosityBelowNearzero_GuardZeroesSoil.
+      ! the liquid ones; each asserts its own canopy member (fwet_moss_canopy_tot here,
+      ! fwet_moss_canopy_liq there). The twin within this routine is
+      ! UpdateMossFwetTot_PorosityBelowNearzero_GuardZeroesSoil.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.4375_r8                   ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_totvol_top = watsat_sentinel       ! total volumetric water, top soil layer [m3/m3]
@@ -530,6 +552,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_SentinelPorosity_GuardZeroesSoil
@@ -543,7 +566,8 @@ module test_MossFwet
       ! whose description says how tightly this porosity bounds the threshold of the
       ! porosity check in MossSoilSaturation from below, but asserts the total-proxy soil
       ! ingredient and proxy (fwet_moss_soil_tot, fwet_moss_tot) where that test asserts
-      ! the liquid ones; both assert fwet_moss_canopy_tot. It pairs with
+      ! the liquid ones; each asserts its own canopy member (fwet_moss_canopy_tot here,
+      ! fwet_moss_canopy_liq there). It pairs with
       ! UpdateMossFwetTot_PorosityAboveNearzero_GuardAdmitsSoil, which bounds it from
       ! above, and with UpdateMossFwetTot_SentinelPorosity_GuardZeroesSoil, which differs
       ! only in the porosity it rejects.
@@ -558,6 +582,7 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_PorosityBelowNearzero_GuardZeroesSoil
@@ -569,10 +594,11 @@ module test_MossFwet
       !
       ! Uses the same numbers as UpdateMossFwetLiq_PorosityAboveNearzero_GuardAdmitsSoil,
       ! but asserts the total-proxy soil ingredient and proxy (fwet_moss_soil_tot,
-      ! fwet_moss_tot) where that test asserts the liquid ones; both assert
-      ! fwet_moss_canopy_tot. The only total-proxy case that has to grow into acceptance;
-      ! with UpdateMossFwetTot_PorosityBelowNearzero_GuardZeroesSoil it holds this
-      ! routine's threshold inside a factor of eight.
+      ! fwet_moss_tot) where that test asserts the liquid ones; each asserts its own
+      ! canopy member (fwet_moss_canopy_tot here, fwet_moss_canopy_liq there). The only
+      ! total-proxy case that has to grow into acceptance; with
+      ! UpdateMossFwetTot_PorosityBelowNearzero_GuardZeroesSoil it holds this routine's
+      ! threshold inside a factor of eight.
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_veg = 0.0625_r8                   ! canopy wetted fraction [0-1]
       real(r8), parameter :: h2o_totvol_top = 0.25_r8*watsat_above_nearzero ! total volumetric water, top soil layer [m3/m3]
@@ -584,17 +610,19 @@ module test_MossFwet
 
       @assertEqual(expect_soil, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(fwet_veg, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
       @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_PorosityAboveNearzero_GuardAdmitsSoil
 
     @Test
     subroutine UpdateMossFwetTot_LiquidProxySeeded_LiquidUntouched(this)
-      ! UpdateMossFwetTot must leave the liquid proxy and its soil ingredient exactly as
+      ! UpdateMossFwetTot must leave the liquid proxy and its two ingredients exactly as
       ! it found them.
       !
-      ! setUp seeds all five members with distinct negative markers; after the call the
-      ! liquid proxy and the liquid soil ingredient must still hold theirs. The inputs
+      ! setUp seeds all six members with distinct negative markers; after the call the
+      ! liquid proxy, the liquid soil ingredient and the liquid canopy ingredient must
+      ! still hold theirs. The inputs
       ! match UpdateMossFwetLiq_TotalProxySeeded_TotalUntouched, the twin, so the two
       ! differ only in which routine is called and which members must survive it.
       class(TestMossFwet), intent(inout) :: this                    ! test object
@@ -606,6 +634,7 @@ module test_MossFwet
 
       @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
       @assertEqual(marker_fwet_liq, this%patch%fwet_moss_liq, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_LiquidProxySeeded_LiquidUntouched
 
@@ -628,7 +657,7 @@ module test_MossFwet
       ! clamp, while this case is caught by a threshold replaced with a literal, which
       ! also catches MossWetnessScaler_ProxyBelowThreshold_ScalesLinearly.
       !
-      ! The three ingredients are asserted to still hold their setUp markers, which pins
+      ! The four ingredients are asserted to still hold their setUp markers, which pins
       ! that evaluating the scaler leaves every other member as seeded. The proxies are
       ! not asserted here, and do not need to be: the liquid one is the quantity the
       ! scaler reads, and that UpdateMossFwetLiq writes it correctly is covered by the
@@ -636,14 +665,18 @@ module test_MossFwet
       class(TestMossFwet), intent(inout) :: this                    ! test object
       real(r8), parameter :: fwet_moss_liq = test_vcmax_thresh_scaler ! liquid moss wetness proxy, at the threshold [0-1]
       real(r8), parameter :: expect_scaler = fwet_moss_liq/test_vcmax_thresh_scaler ! exactly one [0-1]
+      real(r8) :: scaler                                          ! the scaler, evaluated before any marker is read [0-1]
 
       hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh_scaler
       this%patch%fwet_moss_liq = fwet_moss_liq
 
+      scaler = this%patch%MossWetnessScaler()
+
+      @assertEqual(expect_scaler, scaler, tolerance=tol)
       @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
       @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
-      @assertEqual(expect_scaler, this%patch%MossWetnessScaler(), tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
 
     end subroutine MossWetnessScaler_ProxyAtThreshold_ReachesFullCapacity
 
@@ -656,7 +689,7 @@ module test_MossFwet
       ! only one that catches its removal; the sibling sitting exactly at the threshold
       ! reads the same result whether the clamp is there or not.
       !
-      ! The three ingredients are asserted to still hold their setUp markers, which pins
+      ! The four ingredients are asserted to still hold their setUp markers, which pins
       ! that evaluating the scaler leaves every other member as seeded. The proxies are
       ! not asserted here, and do not need to be: the liquid one is the quantity the
       ! scaler reads, and that UpdateMossFwetLiq writes it correctly is covered by the
@@ -665,14 +698,18 @@ module test_MossFwet
       real(r8), parameter :: above_multiple = 2.5_r8                ! how many thresholds wet the proxy is [-]
       real(r8), parameter :: fwet_moss_liq = above_multiple*test_vcmax_thresh_scaler ! liquid moss wetness proxy [0-1]
       real(r8), parameter :: expect_scaler = 1.0_r8                 ! full capacity: above_multiple overshoots and is clamped [0-1]
+      real(r8) :: scaler                                          ! the scaler, evaluated before any marker is read [0-1]
 
       hlm_moss_vcmax_fwet_thresh = test_vcmax_thresh_scaler
       this%patch%fwet_moss_liq = fwet_moss_liq
 
+      scaler = this%patch%MossWetnessScaler()
+
+      @assertEqual(expect_scaler, scaler, tolerance=tol)
       @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
       @assertEqual(marker_soil_tot, this%patch%fwet_moss_soil_tot, tolerance=tol)
       @assertEqual(marker_canopy_tot, this%patch%fwet_moss_canopy_tot, tolerance=tol)
-      @assertEqual(expect_scaler, this%patch%MossWetnessScaler(), tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
 
     end subroutine MossWetnessScaler_ProxyAboveThreshold_HeldAtFullCapacity
 
