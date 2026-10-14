@@ -6977,7 +6977,7 @@ contains
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_TOT', units='1',       &
             long='moss wetness proxy from total (liquid plus ice) water: the wetter of top soil layer total '// &
-                 'saturation and canopy wetted fraction from canopy snow plus liquid; drives CO2 water film and fuel moisture', &
+                 'saturation and canopy wetted fraction from canopy snow+liquid; drives moss CO2 water film and fuel moisture', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_dyna_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_tot_si)

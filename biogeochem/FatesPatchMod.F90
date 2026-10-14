@@ -230,12 +230,11 @@ module FatesPatchMod
     ! canopy liquid alone, the total proxy's from canopy snow plus liquid.
     real(r8)              :: fwet_moss_liq           ! moss wetness proxy from liquid soil water [0-1]
     real(r8)              :: fwet_moss_tot           ! moss wetness proxy from total soil water [0-1]
+    ! The four ingredient members below are diagnostic-only: only history output, restart and patch fusion read them.
     real(r8)              :: fwet_moss_soil_liq      ! top soil layer liquid saturation ingredient [0-1]
     real(r8)              :: fwet_moss_soil_tot      ! top soil layer total saturation ingredient [0-1]
     real(r8)              :: fwet_moss_canopy_tot    ! canopy wetted fraction (canopy snow plus liquid) ingredient [0-1]
     real(r8)              :: fwet_moss_canopy_liq    ! canopy wetted fraction (canopy liquid alone) ingredient [0-1]
-
-    ! The moss wetness scaler is not a member: MossWetnessScaler() evaluates it on demand.
 
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
