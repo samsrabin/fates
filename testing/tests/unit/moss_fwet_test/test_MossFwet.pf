@@ -13,6 +13,7 @@ module test_MossFwet
   use FatesInterfaceTypesMod, only : hlm_moss_vcmax_fwet_thresh
   use LeafBiophysicsMod,      only : MossCO2FilmFactor
   use LeafBiophysicsMod,      only : lb_params
+  use FatesUnitTestUtils,     only : endrun_msg
   use funit
 
   implicit none
@@ -409,6 +410,87 @@ module test_MossFwet
 
     end subroutine UpdateMossFwetLiq_TotalProxySeeded_TotalUntouched
 
+    @Test
+    subroutine UpdateMossFwetLiq_SnowBuried_CanopyZero(this)
+      ! By convention, we set fwet_moss_canopy_liq to zero when buried by snow. This is to force the
+      ! moss liquid proxy, fwet_moss_liq, to use the soil saturation in such cases. At the time of writing, this avoids potentially weird results due to a FATES floor on LAI and SAI. Once that's removed, this convention is still useful, because a patch with ELAI+ESAI=0 would have zero water capacity.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 2._r8                       ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = 1.75_r8                       ! canopy liquid water [mm H2O]
+      real(r8), parameter :: expect_fwet_moss_canopy_liq = 0._r8    ! by convention; see test header
+      real(r8), parameter :: exposed_vai = 0._r8                    ! exposed LAI+SAI [m2/m2]
+      ! Soil drier than canopy, but the liquid proxy (fwet_moss_liq) should still take the soil's value because we're setting the canopy component to zero.
+      real(r8), parameter :: h2o_liqvol_top = 0.1875_r8             ! liquid volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      real(r8), parameter :: expect_soil = h2o_liqvol_top / watsat_top
+
+      call this%patch%UpdateMossFwetLiq(liqcan, liqcanmx, exposed_vai, h2o_liqvol_top, watsat_top)
+
+      @assertEqual(expect_fwet_moss_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(expect_soil, this%patch%fwet_moss_soil_liq, tolerance=tol)
+      @assertEqual(expect_soil, this%patch%fwet_moss_liq, tolerance=tol)
+
+    end subroutine UpdateMossFwetLiq_SnowBuried_CanopyZero
+
+    @Test
+    subroutine UpdateMossFwetLiq_StoreAboveCapacity_CanopyClampedToOne(this)
+      ! If the HLM says liquid storage is above capacity, fwet_moss_canopy_liq must not exceed 1. At the time of writing, this can happen because drip in CLM only happens on timesteps with precipitation -- if liquid storage starts at capacity on a day with no precipitation where exposed VAI decreases, it'll go above 1.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 2._r8                       ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = 1.5 * liqcanmx                ! canopy liquid water [mm H2O]
+      real(r8), parameter :: expect_fwet_moss_canopy_liq = 1._r8    ! by convention; see test header
+      ! Exposed VAI > 0 is all that matters
+      real(r8), parameter :: exposed_vai = 0.625_r8                 ! exposed LAI+SAI [m2/m2]
+      ! Note that we're not testing soil water here
+      real(r8), parameter :: h2o_liqvol_top = 0._r8                 ! liquid volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+
+      call this%patch%UpdateMossFwetLiq(liqcan, liqcanmx, exposed_vai, h2o_liqvol_top, watsat_top)
+
+      @assertEqual(expect_fwet_moss_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+
+    end subroutine UpdateMossFwetLiq_StoreAboveCapacity_CanopyClampedToOne
+
+    @Test
+    subroutine UpdateMossFwetLiq_StoreBelowZero_CanopyClampedToZero(this)
+      ! If the HLM says liquid storage is negative somehow, fwet_moss_canopy_liq must be zero. Defensive against what would hopefully just be roundoff-level discrepancies.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 2._r8                       ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = -100                          ! canopy liquid water [mm H2O]
+      real(r8), parameter :: expect_fwet_moss_canopy_liq = 0._r8    ! by convention; see test header
+      ! Exposed VAI > 0 is all that matters
+      real(r8), parameter :: exposed_vai = 0.625_r8                 ! exposed LAI+SAI [m2/m2]
+      ! Note that we're not testing soil water here
+      real(r8), parameter :: h2o_liqvol_top = 0._r8                 ! liquid volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+
+      call this%patch%UpdateMossFwetLiq(liqcan, liqcanmx, exposed_vai, h2o_liqvol_top, watsat_top)
+
+      @assertEqual(expect_fwet_moss_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+
+    end subroutine UpdateMossFwetLiq_StoreBelowZero_CanopyClampedToZero
+
+    @Test
+    subroutine UpdateMossFwetLiq_ExposedAreaNoCapacity_Aborts(this)
+      ! If there is exposed vegetation but the HLM says liquid storage capacity is (near) zero, that should throw an error.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 0.25_r8 * nearzero          ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: exposed_vai = 0.625_r8                 ! exposed LAI+SAI [m2/m2]
+      ! None of the rest of these parameters matter for this test
+      real(r8), parameter :: liqcan = 24.87_r8                      ! canopy liquid water [mm H2O]
+      real(r8), parameter :: h2o_liqvol_top = 0._r8                 ! liquid volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      ! Expected error message for failure
+      character(len=:), allocatable   :: expected_msg
+
+      expected_msg = endrun_msg("Problem in UpdateMossFwetLiq: Liquid storage capacity is zero despite there being exposed vegetation")
+
+      call this%patch%UpdateMossFwetLiq(liqcan, liqcanmx, exposed_vai, h2o_liqvol_top, watsat_top)
+
+      @assertExceptionRaised(expected_msg)
+
+    end subroutine UpdateMossFwetLiq_ExposedAreaNoCapacity_Aborts
+
     ! ======================================================================================
     ! UpdateMossFwetTot: the total-water proxy and its two ingredients
     ! ======================================================================================
@@ -723,6 +805,135 @@ module test_MossFwet
       @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
 
     end subroutine UpdateMossFwetTot_LiquidProxySeeded_LiquidUntouched
+
+    @Test
+    subroutine UpdateMossFwetTot_SnowFracLarger_CanopyFollowsSnow(this)
+      ! When canopy snow water as fraction of capacity exceeds the equivalent for liquid water, UpdateMossFwetTot() must set patch%fwet_moss_canopy_tot to the snow value. All the UpdateMossFwetTot* cases test the reverse, so this test has no one counterpart.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 2._r8                       ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = 0.25_r8                       ! canopy liquid water [mm H2O]
+      real(r8), parameter :: snocanmx = 4._r8                       ! canopy snow water capacity [mm H2O]
+      real(r8), parameter :: snocan = 1.875_r8                         ! canopy snow water [mm H2O]
+      real(r8), parameter :: expect_proxy = snocan/snocanmx         ! the wetter ingredient [0-1]
+      real(r8), parameter :: exposed_vai = 1.5_r8                   ! exposed LAI+SAI [m2/m2]
+      real(r8), parameter :: total_vai = 3._r8                      ! total LAI+SAI [m2/m2]
+      ! Note that we're not testing soil total water here
+      real(r8), parameter :: h2o_totvol_top = 0._r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+
+      call this%patch%UpdateMossFwetTot(liqcan, liqcanmx, snocan, snocanmx, exposed_vai, total_vai, h2o_totvol_top, watsat_top)
+
+      @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
+      @assertEqual(marker_fwet_liq, this%patch%fwet_moss_liq, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+
+    end subroutine UpdateMossFwetTot_SnowFracLarger_CanopyFollowsSnow
+
+    @Test
+    subroutine UpdateMossFwetTot_SnowBuried_CanopyOne(this)
+      ! When there is no exposed vegetation, fwet_moss_canopy_tot must be set to 1. This convention is designed to ensure that, when moss is buried by snow, it's not read as dry.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 2._r8                       ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = 0.25_r8                       ! canopy liquid water [mm H2O]
+      real(r8), parameter :: snocanmx = 8._r8                       ! canopy snow water capacity [mm H2O]
+      real(r8), parameter :: snocan = 7._r8                         ! canopy snow water [mm H2O]
+      real(r8), parameter :: expect_proxy = 1._r8                   ! by convention (see test header)
+      real(r8), parameter :: exposed_vai = 0._r8                    ! exposed LAI+SAI [m2/m2]
+      real(r8), parameter :: total_vai = 3._r8                      ! total LAI+SAI [m2/m2]
+      ! Note that we're not testing soil total water here
+      real(r8), parameter :: h2o_totvol_top = 0._r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+
+      call this%patch%UpdateMossFwetTot(liqcan, liqcanmx, snocan, snocanmx, exposed_vai, total_vai, h2o_totvol_top, watsat_top)
+
+      @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
+      @assertEqual(marker_fwet_liq, this%patch%fwet_moss_liq, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss_tot, tolerance=tol)
+
+    end subroutine UpdateMossFwetTot_SnowBuried_CanopyOne
+
+    @Test
+    subroutine UpdateMossFwetTot_SnowBuried_CanopyOne_DryCanopy(this)
+      ! When there is no exposed vegetation, fwet_moss_canopy_tot must be set to 1. This convention is designed to ensure that, when moss is buried by snow, it's not read as dry, *even if somehow the HLM has no canopy water*.
+      !
+      ! As UpdateMossFwetTot_SnowBuried_CanopyOne, minus the canopy water.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 2._r8                       ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = 0._r8                         ! canopy liquid water [mm H2O]
+      real(r8), parameter :: snocanmx = 8._r8                       ! canopy snow water capacity [mm H2O]
+      real(r8), parameter :: snocan = 0._r8                         ! canopy snow water [mm H2O]
+      real(r8), parameter :: expect_proxy = 1._r8                   ! by convention (see test header)
+      real(r8), parameter :: exposed_vai = 0._r8                    ! exposed LAI+SAI [m2/m2]
+      real(r8), parameter :: total_vai = 3._r8                      ! total LAI+SAI [m2/m2]
+      ! Note that we're not testing soil total water here
+      real(r8), parameter :: h2o_totvol_top = 0._r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+
+      call this%patch%UpdateMossFwetTot(liqcan, liqcanmx, snocan, snocanmx, exposed_vai, total_vai, h2o_totvol_top, watsat_top)
+
+      @assertEqual(marker_soil_liq, this%patch%fwet_moss_soil_liq, tolerance=tol)
+      @assertEqual(marker_fwet_liq, this%patch%fwet_moss_liq, tolerance=tol)
+      @assertEqual(marker_canopy_liq, this%patch%fwet_moss_canopy_liq, tolerance=tol)
+      @assertEqual(expect_proxy, this%patch%fwet_moss_canopy_tot, tolerance=tol)
+
+    end subroutine UpdateMossFwetTot_SnowBuried_CanopyOne_DryCanopy
+
+    @Test
+    subroutine UpdateMossFwetTot_ExposedAreaNoLiqCapacity_Aborts(this)
+      ! If there is exposed vegetation but the HLM says liquid storage capacity is (near) zero, that should throw an error.
+      !
+      ! Counterpart of UpdateMossFwetTot_ExposedAreaNoSnowCapacity_Aborts.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: liqcanmx = 0.25_r8 * nearzero          ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: exposed_vai = 2.34_r8                  ! exposed LAI+SAI [m2/m2]
+      ! None of the rest of these parameters matter for this test
+      real(r8), parameter :: liqcan = 0._r8                         ! canopy liquid water [mm H2O]
+      real(r8), parameter :: snocanmx = 8._r8                       ! canopy snow water capacity [mm H2O]
+      real(r8), parameter :: snocan = 0._r8                         ! canopy snow water [mm H2O]
+      real(r8), parameter :: total_vai = 3._r8                      ! total LAI+SAI [m2/m2]
+      ! Note that we're not testing soil total water here
+      real(r8), parameter :: h2o_totvol_top = 0._r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      ! Expected error message for failure
+      character(len=:), allocatable   :: expected_msg
+
+      expected_msg = endrun_msg("Problem in UpdateMossFwetTot: Liquid storage capacity is zero despite there being exposed vegetation")
+
+      call this%patch%UpdateMossFwetTot(liqcan, liqcanmx, snocan, snocanmx, exposed_vai, total_vai, h2o_totvol_top, watsat_top)
+
+      @assertExceptionRaised(expected_msg)
+
+    end subroutine UpdateMossFwetTot_ExposedAreaNoLiqCapacity_Aborts
+
+    @Test
+    subroutine UpdateMossFwetTot_ExposedAreaNoSnowCapacity_Aborts(this)
+      ! If there is exposed vegetation but the HLM says snow storage capacity is (near) zero, that should throw an error.
+      !
+      ! Counterpart of UpdateMossFwetTot_ExposedAreaNoLiqCapacity_Aborts.
+      class(TestMossFwet), intent(inout) :: this                    ! test object
+      real(r8), parameter :: snocanmx = 0.25_r8 * nearzero          ! canopy snow water capacity [mm H2O]
+      real(r8), parameter :: exposed_vai = 2.34_r8                  ! exposed LAI+SAI [m2/m2]
+      ! None of the rest of these parameters matter for this test
+      real(r8), parameter :: liqcanmx = 3.25_r8                     ! canopy liquid water capacity [mm H2O]
+      real(r8), parameter :: liqcan = 0._r8                         ! canopy liquid water [mm H2O]
+      real(r8), parameter :: snocan = 0._r8                         ! canopy snow water [mm H2O]
+      real(r8), parameter :: total_vai = 3._r8                      ! total LAI+SAI [m2/m2]
+      ! Note that we're not testing soil total water here
+      real(r8), parameter :: h2o_totvol_top = 0._r8                 ! total volumetric water, top soil layer [m3/m3]
+      real(r8), parameter :: watsat_top = 0.5_r8                    ! porosity of top soil layer [m3/m3]
+      ! Expected error message for failure
+      character(len=:), allocatable   :: expected_msg
+
+      expected_msg = endrun_msg("Problem in UpdateMossFwetTot: Snow storage capacity is zero despite there being exposed vegetation")
+
+      call this%patch%UpdateMossFwetTot(liqcan, liqcanmx, snocan, snocanmx, exposed_vai, total_vai, h2o_totvol_top, watsat_top)
+
+      @assertExceptionRaised(expected_msg)
+
+    end subroutine UpdateMossFwetTot_ExposedAreaNoSnowCapacity_Aborts
 
     ! ======================================================================================
     ! MossWetnessScaler: derived from the liquid proxy alone
