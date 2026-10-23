@@ -124,6 +124,7 @@ module EDMainMod
   ! !PUBLIC MEMBER FUNCTIONS:
   public  :: ed_ecosystem_dynamics
   public  :: ed_update_site
+  public  :: UpdateMossWetness
     
   !
   ! !PRIVATE MEMBER FUNCTIONS:
@@ -210,33 +211,6 @@ contains
       else
         call satellite_phenology(currentSite, bc_in )
       end if ! SP phenology
-    end if
-
-
-    ! Diagnose the moss wetness proxy. This deliberately does not follow the SPITFIRE
-    ! convention, where grass's equivalent quantities (livegrass via UpdateLiveNonwoody, fuel
-    ! moisture via UpdateFuelMoisture) are computed inside UpdateFuelCharacteristics, and
-    ! therefore run only when SPITFIRE is active (hlm_spitfire_mode > hlm_sf_nofire_def). The
-    ! moss proxy is meant to be consumed both by the fire model's fuel moisture calculation and
-    ! by moss physiology in the sub-daily photosynthesis step. Because the latter runs even when
-    ! fire is off and in satellite-phenology (SP) mode, the proxy cannot be updated inside the
-    ! fire path; it must instead be updated here, outside the ST3/SP gate and ahead of
-    ! DailyFireModel, regardless of whether fire is active. This is deliberately the *only*
-    ! writer: each proxy reads a field whose water phase is the same at this daily fill and
-    ! at the sub-daily canopy flux steps (h2o_liqvol_sl is liquid, h2o_totvol_sl is liquid
-    ! plus ice), so a second, sub-daily writer of a proxy would simply overwrite today's
-    ! value rather than disagree about what it means.
-    if (hlm_use_moss == itrue) then
-       currentPatch => currentSite%oldest_patch
-       do while(associated(currentPatch))
-          if (currentPatch%nocomp_pft_label /= nocomp_bareground) then
-             call currentPatch%UpdateMossFwetLiq(bc_in%fwet_veg_liq_pa(currentPatch%patchno), &
-                  bc_in%h2o_liqvol_sl(1), bc_in%watsat_sl(1))
-             call currentPatch%UpdateMossFwetTot(bc_in%fwet_veg_pa(currentPatch%patchno), &
-                  bc_in%h2o_totvol_sl(1), bc_in%watsat_sl(1))
-          end if
-          currentPatch => currentPatch%younger
-       end do
     end if
 
     if (hlm_use_ed_st3.eq.ifalse.and.hlm_use_sp.eq.ifalse) then   ! Bypass if ST3
@@ -1222,5 +1196,37 @@ contains
     enddo
 
  end subroutine bypass_dynamics
+
+  !-------------------------------------------------------------------------------!
+
+  subroutine UpdateMossWetness(currentSite, bc_in)
+    ! !DESCRIPTION:
+    ! Diagnose the moss wetness proxies. This is deliberately the *only* writer, and it runs every timestep. It is called from an HLM that has filled every site (including ones without exposed vegetation) with real values. It runs before photosynthesis and fire, both of which need it.
+    !
+    ! !ARGUMENTS
+    type(ed_site_type), intent(inout), target  :: currentSite
+    type(bc_in_type)        , intent(in)             :: bc_in
+    !
+    ! !LOCALS
+    type(fates_patch_type), pointer :: currentPatch
+
+    if (hlm_use_moss == ifalse) then
+       return
+    end if
+
+    currentPatch => currentSite%oldest_patch
+    do while(associated(currentPatch))
+       if (currentPatch%nocomp_pft_label == nocomp_bareground) then
+          currentPatch => currentPatch%younger
+          cycle
+       end if
+       call currentPatch%UpdateMossFwetLiq(bc_in%fwet_veg_liq_pa(currentPatch%patchno), &
+            bc_in%h2o_liqvol_sl(1), bc_in%watsat_sl(1))
+       call currentPatch%UpdateMossFwetTot(bc_in%fwet_veg_pa(currentPatch%patchno), &
+            bc_in%h2o_totvol_sl(1), bc_in%watsat_sl(1))
+       currentPatch => currentPatch%younger
+    end do
+
+  end subroutine UpdateMossWetness
 
 end module EDMainMod

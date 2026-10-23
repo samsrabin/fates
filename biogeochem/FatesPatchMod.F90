@@ -909,8 +909,8 @@ module FatesPatchMod
       ! Three properties of the inputs are worth knowing:
       !
       ! (1) h2o_liqvol_top is liquid volumetric water, top soil layer, not total: it comes
-      !     from bc_in%h2o_liqvol_sl(1), which both the daily dynamics driver and wrap_btran
-      !     fill with liquid-only water. A frozen top soil layer therefore reads as dry,
+      !     from bc_in%h2o_liqvol_sl(1), which the HLM fills every timestep
+      !     with liquid-only water. A frozen top soil layer therefore reads as dry,
       !     since freezing removes water from the liquid phase that this proxy sees.
       !
       ! (2) fwet_veg_liq is CTSM's canopy wetted fraction computed from canopy liquid alone
@@ -927,6 +927,8 @@ module FatesPatchMod
       !
       ! (3) fwet_veg_liq leaves out canopy snow, so it never exceeds the total proxy's
       !     canopy ingredient, and a canopy holding only snow reads as dry here.
+      !
+      ! Called every timestep by UpdateMossWetness().
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this         ! patch
@@ -954,8 +956,10 @@ module FatesPatchMod
       ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy_tot and fwet_moss_tot, and
       ! touches nothing else. The total proxy drives the moss CO2 water film and moss
       ! fuel moisture, so that a frozen top soil layer does not read as dry.
-      ! h2o_totvol_top comes from bc_in%h2o_totvol_sl(1), which both the daily dynamics
-      ! driver and wrap_btran fill with liquid plus ice.
+      ! h2o_totvol_top comes from bc_in%h2o_totvol_sl(1), which the HLM fills every timestep
+      ! with liquid plus ice.
+      !
+      ! Called every timestep by UpdateMossWetness().
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this            ! patch
