@@ -60,6 +60,7 @@ module EDCanopyStructureMod
 
   public :: canopy_structure
   public :: canopy_spread
+  public :: calc_areaindex_unfloored
   public :: calc_areaindex
   public :: canopy_summarization
   public :: update_hlm_dynamics
@@ -1550,7 +1551,7 @@ contains
 
   ! =====================================================================================
 
-  function calc_areaindex(cpatch,ai_type) result(ai)
+  function calc_areaindex_unfloored(cpatch,ai_type) result(ai)
 
     ! ----------------------------------------------------------------------------------
     ! This subroutine calculates the exposed leaf area index of a patch
@@ -1566,9 +1567,6 @@ contains
 
     integer :: cl,ft
     real(r8) :: ai
-    ! TODO: THIS MIN LAI IS AN ARTIFACT FROM TESTING LONG-AGO AND SHOULD BE REMOVED
-    ! THIS HAS BEEN KEPT THUS FAR TO MAINTAIN B4B IN TESTING OTHER COMMITS
-    real(r8),parameter :: ai_min = 0.1_r8
 
     real(r8),pointer   :: ai_profile
 
@@ -1604,13 +1602,33 @@ contains
        enddo
     else
 
-       write(fates_log(),*) 'Unsupported area index sent to calc_areaindex'
+       write(fates_log(),*) 'Unsupported area index sent to calc_areaindex_unfloored'
        call endrun(msg=errMsg(sourcefile, __LINE__))
     end if
 
-    ai = max(ai_min,ai)
-
     return
+
+  end function calc_areaindex_unfloored
+
+  ! ===============================================================================================
+
+  function calc_areaindex(cpatch, ai_type) result(ai_floored)
+
+    ! ----------------------------------------------------------------------------------
+    ! This function applies a floor to the area index produced by
+    ! calc_areaindex_unfloored().
+    ! TODO: THIS MIN LAI IS AN ARTIFACT FROM TESTING LONG-AGO AND SHOULD BE REMOVED
+    ! THIS HAS BEEN KEPT THUS FAR TO MAINTAIN B4B IN TESTING OTHER COMMITS
+    ! ----------------------------------------------------------------------------------
+
+    ! Arguments
+    type(fates_patch_type),intent(in), target :: cpatch
+    character(len=*),intent(in)            :: ai_type
+
+    real(r8),parameter :: ai_min = 0.1_r8
+    real(r8) :: ai_floored
+
+    ai_floored = max(ai_min, calc_areaindex_unfloored(cpatch, ai_type))
 
   end function calc_areaindex
 
