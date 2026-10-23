@@ -215,12 +215,6 @@ module FatesRestartInterfaceMod
   integer :: ir_seedgerm_decay_litt
   integer :: ir_seed_prod_co
   integer :: ir_livegrass_pa
-  integer :: ir_fwet_moss_liq_pa
-  integer :: ir_fwet_moss_tot_pa
-  integer :: ir_fwet_moss_soil_liq_pa
-  integer :: ir_fwet_moss_soil_tot_pa
-  integer :: ir_fwet_moss_canopy_tot_pa
-  integer :: ir_fwet_moss_canopy_liq_pa
   integer :: ir_age_pa
   integer :: ir_area_pa
   integer :: ir_agesinceanthrodist_pa
@@ -1070,38 +1064,6 @@ contains
          long_name='total AGB from grass, by patch', &
          units='kgC/m2', flushval = flushzero, &
          hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_livegrass_pa )
-
-    if (hlm_use_moss == itrue) then
-       call this%set_restart_var(vname='fates_fwet_moss_liq', vtype=cohort_r8, &
-            long_name='moss wetness proxy from liquid water, by patch', &
-            units='fraction', flushval = flushzero, &
-            hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fwet_moss_liq_pa )
-
-       call this%set_restart_var(vname='fates_fwet_moss_tot', vtype=cohort_r8, &
-            long_name='moss wetness proxy from total (liquid plus ice) water, by patch', &
-            units='fraction', flushval = flushzero, &
-            hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fwet_moss_tot_pa )
-
-       call this%set_restart_var(vname='fates_fwet_moss_soil_liq', vtype=cohort_r8, &
-            long_name='top soil layer saturation ingredient of the liquid moss wetness proxy, by patch', &
-            units='fraction', flushval = flushzero, &
-            hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fwet_moss_soil_liq_pa )
-
-       call this%set_restart_var(vname='fates_fwet_moss_soil_tot', vtype=cohort_r8, &
-            long_name='top soil layer saturation ingredient of the total moss wetness proxy, by patch', &
-            units='fraction', flushval = flushzero, &
-            hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fwet_moss_soil_tot_pa )
-
-       call this%set_restart_var(vname='fates_fwet_moss_canopy_tot', vtype=cohort_r8, &
-            long_name='canopy wetted fraction (canopy snow plus liquid) ingredient of the total moss wetness proxy, by patch', &
-            units='fraction', flushval = flushzero, &
-            hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fwet_moss_canopy_tot_pa )
-
-       call this%set_restart_var(vname='fates_fwet_moss_canopy_liq', vtype=cohort_r8, &
-            long_name='canopy wetted fraction (canopy liquid alone) ingredient of the liquid moss wetness proxy, by patch', &
-            units='fraction', flushval = flushzero, &
-            hlms='CLM:ALM', initialize=initialize_variables, ivar=ivar, index = ir_fwet_moss_canopy_liq_pa )
-    end if
 
     call this%set_restart_var(vname='fates_age', vtype=cohort_r8, &
          long_name='age of the ED patch', units='yr', flushval = flushzero, &
@@ -2836,14 +2798,6 @@ contains
              ! deal with patch level fields here
              !
              rio_livegrass_pa(io_idx_co_1st)   = cpatch%livegrass
-             if (hlm_use_moss == itrue) then
-                this%rvars(ir_fwet_moss_liq_pa)%r81d(io_idx_co_1st)        = cpatch%fwet_moss_liq
-                this%rvars(ir_fwet_moss_tot_pa)%r81d(io_idx_co_1st)        = cpatch%fwet_moss_tot
-                this%rvars(ir_fwet_moss_soil_liq_pa)%r81d(io_idx_co_1st)   = cpatch%fwet_moss_soil_liq
-                this%rvars(ir_fwet_moss_soil_tot_pa)%r81d(io_idx_co_1st)   = cpatch%fwet_moss_soil_tot
-                this%rvars(ir_fwet_moss_canopy_tot_pa)%r81d(io_idx_co_1st) = cpatch%fwet_moss_canopy_tot
-                this%rvars(ir_fwet_moss_canopy_liq_pa)%r81d(io_idx_co_1st) = cpatch%fwet_moss_canopy_liq
-             end if
              rio_age_pa(io_idx_co_1st)         = cpatch%age
              rio_patchdistturbcat_pa(io_idx_co_1st)   = cpatch%land_use_label
              rio_agesinceanthrodist_pa(io_idx_co_1st) = cpatch%age_since_anthro_disturbance
@@ -3893,23 +3847,6 @@ contains
              ! deal with patch level fields here
              !
              cpatch%livegrass          = rio_livegrass_pa(io_idx_co_1st)
-             if (hlm_use_moss == itrue) then
-                cpatch%fwet_moss_liq      = this%rvars(ir_fwet_moss_liq_pa)%r81d(io_idx_co_1st)
-                cpatch%fwet_moss_tot      = this%rvars(ir_fwet_moss_tot_pa)%r81d(io_idx_co_1st)
-                cpatch%fwet_moss_soil_liq = this%rvars(ir_fwet_moss_soil_liq_pa)%r81d(io_idx_co_1st)
-                cpatch%fwet_moss_soil_tot = this%rvars(ir_fwet_moss_soil_tot_pa)%r81d(io_idx_co_1st)
-                cpatch%fwet_moss_canopy_tot = this%rvars(ir_fwet_moss_canopy_tot_pa)%r81d(io_idx_co_1st)
-                cpatch%fwet_moss_canopy_liq = this%rvars(ir_fwet_moss_canopy_liq_pa)%r81d(io_idx_co_1st)
-                ! The moss wetness scaler is deliberately NOT a restart field: it is
-                ! evaluated from fwet_moss_liq, which is one, by MossWetnessScaler.
-             else
-                cpatch%fwet_moss_liq       = 0.0_r8
-                cpatch%fwet_moss_tot       = 0.0_r8
-                cpatch%fwet_moss_soil_liq  = 0.0_r8
-                cpatch%fwet_moss_soil_tot  = 0.0_r8
-                cpatch%fwet_moss_canopy_tot    = 0.0_r8
-                cpatch%fwet_moss_canopy_liq    = 0.0_r8
-             end if
              cpatch%age                = rio_age_pa(io_idx_co_1st)
              cpatch%land_use_label       = rio_patchdistturbcat_pa(io_idx_co_1st)
              cpatch%age_since_anthro_disturbance   = rio_agesinceanthrodist_pa(io_idx_co_1st)
