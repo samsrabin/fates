@@ -489,6 +489,7 @@ module FatesHistoryInterfaceMod
   integer :: ih_moss_fwet_soil_tot_si
   integer :: ih_moss_fwet_canopy_tot_si
   integer :: ih_moss_fwet_canopy_liq_si
+  integer :: ih_snow_buried_area_si
   integer :: ih_moss_wetness_scaler_si
   integer :: ih_moss_height_si
   integer :: ih_rx_burn_window_si
@@ -5303,6 +5304,7 @@ contains
      ! FATES_GPP is updated here, but not FATES_GPP_AP.
      ! ---------------------------------------------------------------------------------
 
+    use EDCanopyStructureMod, only : calc_areaindex_unfloored
     !
     ! Arguments
     class(fates_history_interface_type)                 :: this
@@ -5323,6 +5325,7 @@ contains
     real(r8) :: n_perm2             ! number of plants per square meter
     real(r8) :: sum_area_rad        ! sum of patch canopy areas
     real(r8),allocatable :: age_area_rad(:)
+    real(r8) :: exposed_vai, total_vai  ! exposed and total vegetative area index (LAI+SAI) [m2 m-2]
 
     type(fates_patch_type),pointer  :: cpatch
     type(fates_cohort_type),pointer :: ccohort
@@ -5410,6 +5413,17 @@ contains
                     cpatch%fwet_moss_canopy_liq * cpatch%area * AREA_INV
                this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) = this%hvars(ih_moss_wetness_scaler_si)%r81d(io_si) + &
                     cpatch%MossWetnessScaler() * cpatch%area * AREA_INV
+               ! Snow-buried criterion; must match the one UpdateMossWetness passes to UpdateMossFwetLiq/UpdateMossFwetTot.
+               if (cpatch%nocomp_pft_label /= nocomp_bareground) then
+                  exposed_vai = calc_areaindex_unfloored(cpatch,'elai') + &
+                       calc_areaindex_unfloored(cpatch,'esai')
+                  total_vai = calc_areaindex_unfloored(cpatch,'tlai') + &
+                       calc_areaindex_unfloored(cpatch,'tsai')
+                  if (exposed_vai <= 0._r8 .and. total_vai > 0._r8) then
+                     this%hvars(ih_snow_buried_area_si)%r81d(io_si) = this%hvars(ih_snow_buried_area_si)%r81d(io_si) + &
+                          cpatch%area * AREA_INV
+                  end if
+               end if
                cpatch => cpatch%younger
             end do
          end if
@@ -9421,6 +9435,13 @@ contains
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_hifr_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_liq_si)
+
+       ! TODO: Before merge, change these to default 'inactive'
+       call this%set_history_var(vname='FATES_SNOW_BURIED_AREA', units='m2 m-2',       &
+            long='area fraction of non-bareground patches whose vegetation is entirely snow-buried (no exposed leaf or stem area, some leaf or stem area)', &
+            use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
+            upfreq=group_hifr_simple, ivar=ivar, initialize=initialize_variables,               &
+            index = ih_snow_buried_area_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        ! The long name says which consumers the scaler governs and which it does not, on
