@@ -1203,12 +1203,16 @@ contains
     ! !DESCRIPTION:
     ! Diagnose the moss wetness proxies. This is deliberately the *only* writer, and it runs every timestep. It is called from an HLM that has filled every site (including ones without exposed vegetation) with real values. It runs before photosynthesis and fire, both of which need it.
     !
+    ! !USES:
+    use EDCanopyStructureMod, only : calc_areaindex_unfloored
+    !
     ! !ARGUMENTS
     type(ed_site_type), intent(inout), target  :: currentSite
     type(bc_in_type)        , intent(in)             :: bc_in
     !
     ! !LOCALS
     type(fates_patch_type), pointer :: currentPatch
+    real(r8) :: exposed_vai, total_vai  ! exposed and total vegetative area index (LAI+SAI) [m2 m-2]
 
     if (hlm_use_moss == ifalse) then
        return
@@ -1220,9 +1224,18 @@ contains
           currentPatch => currentPatch%younger
           cycle
        end if
-       call currentPatch%UpdateMossFwetLiq(bc_in%fwet_veg_liq_pa(currentPatch%patchno), &
+       exposed_vai = calc_areaindex_unfloored(currentPatch,'elai') + &
+            calc_areaindex_unfloored(currentPatch,'esai')
+       total_vai = calc_areaindex_unfloored(currentPatch,'tlai') + &
+            calc_areaindex_unfloored(currentPatch,'tsai')
+       call currentPatch%UpdateMossFwetLiq( &
+            bc_in%liqcan_pa(currentPatch%patchno), bc_in%liqcanmx_pa(currentPatch%patchno), &
+            exposed_vai, &
             bc_in%h2o_liqvol_sl(1), bc_in%watsat_sl(1))
-       call currentPatch%UpdateMossFwetTot(bc_in%fwet_veg_pa(currentPatch%patchno), &
+       call currentPatch%UpdateMossFwetTot( &
+            bc_in%liqcan_pa(currentPatch%patchno), bc_in%liqcanmx_pa(currentPatch%patchno), &
+            bc_in%snocan_pa(currentPatch%patchno), bc_in%snocanmx_pa(currentPatch%patchno), &
+            exposed_vai, total_vai, &
             bc_in%h2o_totvol_sl(1), bc_in%watsat_sl(1))
        currentPatch => currentPatch%younger
     end do

@@ -227,14 +227,14 @@ module FatesPatchMod
     ! moss wetness proxies and their ingredients (all 0-1); see UpdateMossFwetLiq and
     ! UpdateMossFwetTot. The liquid proxy is built from liquid soil water, the total proxy
     ! from liquid plus ice. Each has its own canopy ingredient: the liquid proxy's comes from
-    ! canopy liquid alone, the total proxy's from canopy snow plus liquid.
+    ! canopy liquid alone, the total proxy's from canopy snow or liquid.
     real(r8)              :: fwet_moss_liq           ! moss wetness proxy from liquid soil water [0-1]
     real(r8)              :: fwet_moss_tot           ! moss wetness proxy from total soil water [0-1]
     ! The four ingredient members below are diagnostic-only: only history output, restart and patch fusion read them.
     real(r8)              :: fwet_moss_soil_liq      ! top soil layer liquid saturation ingredient [0-1]
     real(r8)              :: fwet_moss_soil_tot      ! top soil layer total saturation ingredient [0-1]
-    real(r8)              :: fwet_moss_canopy_tot    ! canopy wetted fraction (canopy snow plus liquid) ingredient [0-1]
-    real(r8)              :: fwet_moss_canopy_liq    ! canopy wetted fraction (canopy liquid alone) ingredient [0-1]
+    real(r8)              :: fwet_moss_canopy_tot    ! canopy water storage (snow or liquid) ingredient [0-1]
+    real(r8)              :: fwet_moss_canopy_liq    ! canopy water storage (liquid alone) ingredient [0-1]
 
     ! fire spread
     real(r8)              :: ros_front               ! rate of forward  spread of fire [m/min]
@@ -885,18 +885,18 @@ module FatesPatchMod
 
     !===========================================================================
 
-    subroutine UpdateMossFwetLiq(this, fwet_veg_liq, h2o_liqvol_top, watsat_top)
+    subroutine UpdateMossFwetLiq(this, liqcan, liqcanmx, exposed_vai, h2o_liqvol_top, watsat_top)
       !
       ! DESCRIPTION:
       ! Diagnoses the liquid-water moss wetness proxy on a patch: the wetter of the top soil
-      ! layer's liquid saturation and the canopy wetted fraction from canopy liquid alone.
+      ! layer's liquid saturation and the canopy water storage from canopy liquid alone.
       ! Moss carries no thallus water state of its own in this design, so this proxy
       ! stands in for thallus wetness; it is diagnostic only -- neither this routine nor the
       ! quantity it produces holds or moves water.
       !
       ! That is a statement about moss, not about the model. The host does prognose
-      ! intercepted canopy water (liquid plus snow), and fwet_veg_liq below is derived from
-      ! its liquid part. What moss lacks is a pool of its own: that interception bucket is
+      ! intercepted canopy water (liquid plus snow), passed in here as liqcan and its maximum
+      ! liqcanmx. What moss lacks is a pool of its own: that interception bucket is
       ! a whole-canopy quantity for the patch, shared with any vascular cohorts in it and
       ! governed by the host's leaf-interception scheme rather than by moss thallus hydrology.
       !
@@ -906,52 +906,53 @@ module FatesPatchMod
       ! hlm_moss_scale_resp_by_fwet is false). It does not drive the moss CO2 water film
       ! or moss fuel moisture, which read the total proxy. See UpdateMossFwetTot.
       !
-      ! Three properties of the inputs are worth knowing:
+      ! Two properties of the inputs are worth knowing:
       !
       ! (1) h2o_liqvol_top is liquid volumetric water, top soil layer, not total: it comes
       !     from bc_in%h2o_liqvol_sl(1), which the HLM fills every timestep
       !     with liquid-only water. A frozen top soil layer therefore reads as dry,
       !     since freezing removes water from the liquid phase that this proxy sees.
       !
-      ! (2) fwet_veg_liq is CTSM's canopy wetted fraction computed from canopy liquid alone
-      !     (fwet_liq_patch). CTSM computes it with the same expression and caps it at the
-      !     same maximum_leaf_wetted_fraction parameter (0.05 on the standard parameter
-      !     file) as its snow-plus-liquid fwet, which UpdateMossFwetTot takes.
-      !     The canopy ingredient therefore almost never exceeds the soil one, and
-      !     interception has far less influence on the proxy than the soil moisture does.
-      !     That cap is a single global scalar on the host parameter file rather than a
-      !     per-PFT one, so it cannot be raised for moss without raising it for every PFT.
-      !     This is a known limitation, kept because it is the literal quantity the design
-      !     calls for; FATES_MOSS_FWET_CANOPY_LIQ and FATES_MOSS_FWET_CANOPY_TOT report the
-      !     two canopy ingredients so the ceiling is visible.
-      !
-      ! (3) fwet_veg_liq leaves out canopy snow, so it never exceeds the total proxy's
+      ! (2) liqcan leaves out canopy snow, so it never exceeds the total proxy's
       !     canopy ingredient, and a canopy holding only snow reads as dry here.
       !
       ! Called every timestep by UpdateMossWetness().
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this         ! patch
-      real(r8),                intent(in)    :: fwet_veg_liq ! canopy wetted fraction from canopy liquid alone [0-1]
+      real(r8),                intent(in)    :: liqcan   ! canopy liquid water [kg H2O m-2]
+      real(r8),                intent(in)    :: liqcanmx ! canopy liquid water capacity [kg H2O m-2]
+      real(r8),                intent(in)    :: exposed_vai ! exposed vegetative area index (leaf+stem area index) [m2 m-2]
       real(r8),                intent(in)    :: h2o_liqvol_top  ! liquid volumetric water, top soil layer [m3/m3]
       real(r8),                intent(in)    :: watsat_top   ! porosity of top soil layer [m3/m3]
 
       this%fwet_moss_soil_liq = MossSoilSaturation(h2o_liqvol_top, watsat_top)
-      this%fwet_moss_canopy_liq   = fwet_veg_liq
-      this%fwet_moss_liq      = max(this%fwet_moss_soil_liq, fwet_veg_liq)
+      if (exposed_vai <= 0._r8) then
+         this%fwet_moss_canopy_liq = 0._r8
+      else
+         if (liqcanmx <= nearzero) then
+            write(fates_log(), *) 'exposed_vai = ', exposed_vai
+            write(fates_log(), *) 'liqcan      = ', liqcan
+            write(fates_log(), *) 'liqcanmx    = ', liqcanmx
+            call endrun(msg='Problem in UpdateMossFwetLiq: Liquid storage capacity is zero despite there being exposed vegetation')
+            ! return call is needed for unit testing
+            return
+         end if
+         this%fwet_moss_canopy_liq = CanopyStorageFraction(liqcan, liqcanmx)
+      end if
+      this%fwet_moss_liq = max(this%fwet_moss_soil_liq, this%fwet_moss_canopy_liq)
 
     end subroutine UpdateMossFwetLiq
 
     !===========================================================================
 
-    subroutine UpdateMossFwetTot(this, fwet_veg, h2o_totvol_top, watsat_top)
+    subroutine UpdateMossFwetTot(this, liqcan, liqcanmx, snocan, snocanmx, exposed_vai, total_vai, h2o_totvol_top, watsat_top)
       !
       ! DESCRIPTION:
       ! Diagnoses the total-water moss wetness proxy on a patch: the wetter of the top soil
-      ! layer's total (liquid plus ice) saturation and the canopy wetted fraction from
-      ! canopy snow plus liquid. It is the counterpart of UpdateMossFwetLiq, which describes
-      ! what the proxy stands for and the caveats on its canopy input; the cap in caveat (2)
-      ! applies to fwet_veg here unchanged.
+      ! layer's total (liquid plus ice) saturation and the canopy water from the maximum of
+      ! canopy snow and liquid fractions of capacity. It is the counterpart of UpdateMossFwetLiq, which describes
+      ! what the proxy stands for and the caveats on its canopy input.
       !
       ! This routine sets fwet_moss_soil_tot, fwet_moss_canopy_tot and fwet_moss_tot, and
       ! touches nothing else. The total proxy drives the moss CO2 water film and moss
@@ -963,13 +964,42 @@ module FatesPatchMod
 
       ! ARGUMENTS:
       class(fates_patch_type), intent(inout) :: this            ! patch
-      real(r8),                intent(in)    :: fwet_veg        ! canopy wetted fraction from canopy snow plus liquid [0-1]
+      real(r8),                intent(in)    :: liqcan   ! canopy liquid water [kg H2O m-2]
+      real(r8),                intent(in)    :: liqcanmx ! canopy liquid water capacity [kg H2O m-2]
+      real(r8),                intent(in)    :: snocan   ! canopy snow water [kg H2O m-2]
+      real(r8),                intent(in)    :: snocanmx ! canopy snow water capacity [kg H2O m-2]
+      real(r8),                intent(in)    :: exposed_vai ! exposed vegetative area index (leaf+stem area index) [m2 m-2]
+      real(r8),                intent(in)    :: total_vai   ! total vegetative area index (leaf+stem area index) [m2 m-2]
       real(r8),                intent(in)    :: h2o_totvol_top  ! total volumetric water, top soil layer [m3/m3]
       real(r8),                intent(in)    :: watsat_top      ! porosity of top soil layer [m3/m3]
 
       this%fwet_moss_soil_tot = MossSoilSaturation(h2o_totvol_top, watsat_top)
-      this%fwet_moss_canopy_tot   = fwet_veg
-      this%fwet_moss_tot      = max(this%fwet_moss_soil_tot, fwet_veg)
+      if (exposed_vai <= 0._r8) then
+         ! Ensure that snow-buried moss is not read as dry, but rather fully saturated
+         if (total_vai > 0._r8) then
+            this%fwet_moss_canopy_tot = 1._r8
+         else
+            this%fwet_moss_canopy_tot = 0._r8
+         end if
+      else
+         if (liqcanmx <= nearzero) then
+            write(fates_log(), *) 'exposed_vai = ', exposed_vai
+            write(fates_log(), *) 'liqcan      = ', liqcan
+            write(fates_log(), *) 'liqcanmx    = ', liqcanmx
+            call endrun(msg='Problem in UpdateMossFwetTot: Liquid storage capacity is zero despite there being exposed vegetation')
+            ! return call is needed for unit testing
+            return
+         else if (snocanmx <= nearzero) then
+            write(fates_log(), *) 'exposed_vai = ', exposed_vai
+            write(fates_log(), *) 'snocan      = ', snocan
+            write(fates_log(), *) 'snocanmx    = ', snocanmx
+            call endrun(msg='Problem in UpdateMossFwetTot: Snow storage capacity is zero despite there being exposed vegetation')
+            ! return call is needed for unit testing
+            return
+         end if
+         this%fwet_moss_canopy_tot = max(CanopyStorageFraction(liqcan, liqcanmx), CanopyStorageFraction(snocan, snocanmx))
+      end if
+      this%fwet_moss_tot = max(this%fwet_moss_soil_tot, this%fwet_moss_canopy_tot)
 
     end subroutine UpdateMossFwetTot
 
@@ -996,6 +1026,23 @@ module FatesPatchMod
       end if
 
     end function MossSoilSaturation
+
+    !===========================================================================
+
+    pure function CanopyStorageFraction(water, capacity) result(storage_fraction)
+    !
+    ! !DESCRIPTION:
+    ! Given an amount of water and a capacity, calculates the fractional storage. As a pure function, CanopyStorageFraction can't guard against near-zero denominator, so its callers must do so.
+    !
+    ! !ARGUMENTS
+    real(r8), intent(in) :: water     ! [kg m-2]
+    real(r8), intent(in) :: capacity  ! [kg m-2]
+    ! !RESULT
+    real(r8) :: storage_fraction  ! [unitless]
+
+    storage_fraction = min(1._r8, max(0._r8, water/capacity))
+
+    end function CanopyStorageFraction
 
     !===========================================================================
 

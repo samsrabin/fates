@@ -9381,15 +9381,15 @@ contains
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_LIQ', units='1',       &
             long='moss wetness proxy from liquid water: the wetter of top soil layer liquid saturation and '// &
-                 'canopy wetted fraction from canopy liquid; drives moss photosynthetic capacity and respiration', &
+                 'canopy liquid water as fraction of capacity; drives moss photosynthetic capacity and respiration', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_hifr_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_liq_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_TOT', units='1',       &
-            long='moss wetness proxy from total (liquid plus ice) water: the wetter of top soil layer total '// &
-                 'saturation and canopy wetted fraction from canopy snow+liquid; drives moss CO2 water film and fuel moisture', &
+            long='moss wetness proxy from total (liquid plus ice/snow) water: the wetter of top soil layer total '// &
+                 'saturation and canopy water as fraction of capacity; drives moss CO2 water film and fuel moisture', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_hifr_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_tot_si)
@@ -9410,14 +9410,14 @@ contains
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY_TOT', units='1',       &
-            long='canopy wetted fraction from canopy snow plus liquid; ingredient of the total moss wetness proxy', &
+            long='canopy total (snow+liquid) water as fraction of capacity; ingredient of the total moss wetness proxy', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_hifr_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_tot_si)
 
        ! TODO: Before merge, change these to default 'inactive'
        call this%set_history_var(vname='FATES_MOSS_FWET_CANOPY_LIQ', units='1',       &
-            long='canopy wetted fraction from canopy liquid alone; ingredient of the liquid moss wetness proxy', &
+            long='canopy liquid water as fraction of capacity; ingredient of the liquid moss wetness proxy', &
             use_default='active', avgflag='A', vtype=site_r8, hlms='CLM:ALM', &
             upfreq=group_hifr_simple, ivar=ivar, initialize=initialize_variables,               &
             index = ih_moss_fwet_canopy_liq_si)

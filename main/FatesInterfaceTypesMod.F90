@@ -537,12 +537,17 @@ module FatesInterfaceTypesMod
       ! fraction of canopy that is covered in snow
       real(r8), allocatable :: fcansno_pa(:)
        
-      ! fraction of canopy that is wet (0-1)
-      real(r8), allocatable :: fwet_veg_pa(:)
+      ! canopy liquid water [kg H2O m-2]
+      real(r8), allocatable :: liqcan_pa(:)
 
-      ! fraction of canopy that is wet from canopy liquid alone (0-1); fwet_veg_pa above
-      ! counts canopy snow plus liquid
-      real(r8), allocatable :: fwet_veg_liq_pa(:)
+      ! canopy liquid water capacity [kg H2O m-2]
+      real(r8), allocatable :: liqcanmx_pa(:)
+
+      ! canopy snow water [kg H2O m-2]
+      real(r8), allocatable :: snocan_pa(:)
+
+      ! canopy snow water capacity [kg H2O m-2]
+      real(r8), allocatable :: snocanmx_pa(:)
 
       ! Abledo of the ground for direct radiation, by site broadband (0-1)
       real(r8), allocatable :: albgr_dir_rb(:)

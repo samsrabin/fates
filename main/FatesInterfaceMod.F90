@@ -301,8 +301,10 @@ contains
     fates%bc_in(s)%h2o_liqvol_sl(:)    = 0.0_r8
     fates%bc_in(s)%h2o_totvol_sl(:)    = 0.0_r8
     fates%bc_in(s)%fcansno_pa(:)       = 0.0_r8
-    fates%bc_in(s)%fwet_veg_pa(:)      = 0.0_r8
-    fates%bc_in(s)%fwet_veg_liq_pa(:)  = 0.0_r8
+    fates%bc_in(s)%liqcan_pa(:)        = 0.0_r8
+    fates%bc_in(s)%liqcanmx_pa(:)      = 0.0_r8
+    fates%bc_in(s)%snocan_pa(:)        = 0.0_r8
+    fates%bc_in(s)%snocanmx_pa(:)      = 0.0_r8
     fates%bc_in(s)%albgr_dir_rb(:)     = 0.0_r8
     fates%bc_in(s)%albgr_dif_rb(:)     = 0.0_r8
     fates%bc_in(s)%max_rooting_depth_index_col = 0
@@ -560,8 +562,10 @@ contains
       ! Canopy Radiation
       bc_in%coszen = nan
       allocate(bc_in%fcansno_pa(maxpatch_total))
-      allocate(bc_in%fwet_veg_pa(maxpatch_total))
-      allocate(bc_in%fwet_veg_liq_pa(maxpatch_total))
+      allocate(bc_in%liqcan_pa(maxpatch_total))
+      allocate(bc_in%liqcanmx_pa(maxpatch_total))
+      allocate(bc_in%snocan_pa(maxpatch_total))
+      allocate(bc_in%snocanmx_pa(maxpatch_total))
       allocate(bc_in%albgr_dir_rb(num_swb))
       allocate(bc_in%albgr_dif_rb(num_swb))
 
